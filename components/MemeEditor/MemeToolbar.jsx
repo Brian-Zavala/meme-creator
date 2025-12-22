@@ -162,6 +162,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
             </div>
           </div>
         )}
+
         {/* IMAGE CONTROLS */}
         {activeTab === "image" && (
           <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
@@ -190,7 +191,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
             <div className="flex flex-col gap-4 border-t sm:border-t-0 sm:border-l border-slate-800 pt-6 sm:pt-0 sm:pl-6">
               <div className="flex items-center gap-3">
-                <Cloud className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <Blur className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
                   type="range" min="0" max="10" step="0.5" name="blur"
                   value={meme.filters?.blur ?? 0}
@@ -200,7 +201,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 />
               </div>
               <div className="flex items-center gap-3">
-                <Circle className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <Grayscale className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
                   type="range" min="0" max="100" name="grayscale"
                   value={meme.filters?.grayscale ?? 0}
@@ -213,7 +214,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
             <div className="flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-slate-800 pt-6 lg:pt-0 lg:pl-6">
               <div className="flex items-center gap-3">
-                <History className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <Sepia className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
                   type="range" min="0" max="100" name="sepia"
                   value={meme.filters?.sepia ?? 0}
@@ -223,7 +224,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 />
               </div>
               <div className="flex items-center gap-3">
-                <Sparkles className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <Saturate className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
                   type="range" min="0" max="300" name="saturate"
                   value={meme.filters?.saturate ?? 100}
@@ -236,7 +237,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
             <div className="flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-slate-800 pt-6 lg:pt-0 lg:pl-6">
               <div className="flex items-center gap-3">
-                <RotateCw className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <HueRotate className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
                   type="range" min="0" max="360" name="hueRotate"
                   value={meme.filters?.hueRotate ?? 0}
@@ -246,7 +247,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 />
               </div>
               <div className="flex items-center gap-3">
-                <Repeat className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <Invert className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
                   type="range" min="0" max="100" name="invert"
                   value={meme.filters?.invert ?? 0}

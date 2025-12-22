@@ -194,7 +194,7 @@ export default function Main() {
     });
     
     // Clamp to professional range
-    return Math.max(14, Math.min(75, Math.round(size)));
+    return Math.max(2, Math.min(120, Math.round(size)));
   };
 
   // --- Effects ---

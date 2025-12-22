@@ -104,7 +104,6 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
               display: "inline-block",
               textAlign: "center",
               padding: meme.textBgColor !== 'transparent' ? '0.2em 0.4em' : '0',
-              borderRadius: "4px",
               fontSize: `${meme.fontSize}px`,
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: "Impact, sans-serif",

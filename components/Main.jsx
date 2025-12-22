@@ -131,13 +131,14 @@ export default function Main() {
   const [generating, setGenerating] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
   const [flashColor, setFlashColor] = useState(null); // 'red' | 'green' | null
-  const [mediaType, setMediaType] = useState("image"); // 'image' | 'video'
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
   const globalLastTapRef = useRef(0);
   const longPressTimerRef = useRef(null);
   const startPosRef = useRef({ x: 0, y: 0 });
   const [statusMessage, setStatusMessage] = useState("");
+  const requestCounterRef = useRef(0);
+  const defaultMemesRef = useRef([]);
 
   // Shuffle bag state to prevent repeats
   const [imageDeck, setImageDeck] = useState([]);
@@ -301,6 +302,7 @@ export default function Main() {
       .then((res) => res.json())
       .then((data) => {
         setAllMemes(data.data.memes);
+        defaultMemesRef.current = data.data.memes;
         setLoading(false);
       })
       .catch(() => {
@@ -319,24 +321,28 @@ export default function Main() {
 
   // --- Handlers ---
 
-  async function getMemeImage() {
+  async function getMemeImage(forcedMode) {
+    const requestId = ++requestCounterRef.current;
+    const activeMode = forcedMode || mode;
+    
     setStatusMessage("Fetching new meme template...");
     setGenerating(true);
 
     // GIF / Tenor Mode
-    if (mode === "video") {
+    if (activeMode === "video") {
       let currentMemes = allMemes;
       
       // If we haven't searched anything yet or the list is from Imgflip, fetch trending Tenor GIFs
-      const isTenorData = allMemes.length > 0 && allMemes[0].url.includes("tenor.com");
+      const isTenorData = currentMemes.length > 0 && currentMemes[0].url.includes("tenor.com");
       
       if (!isTenorData) {
         setStatusMessage("Fetching trending GIFs...");
         const results = await searchTenor(""); // featured
+        if (requestId !== requestCounterRef.current) return;
+        
         if (results.length > 0) {
           currentMemes = results;
           setAllMemes(results);
-          // We need to pick from the new results immediately
         } else {
           toast.error("Failed to load trending GIFs");
           setGenerating(false);
@@ -348,6 +354,8 @@ export default function Main() {
       const cleanName = newMeme.name.replace(/\s+/g, "-");
 
       const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
+
+      if (requestId !== requestCounterRef.current) return;
 
       updateState({
         ...meme,
@@ -362,9 +370,20 @@ export default function Main() {
     }
 
     // Static Image / ImgFlip Mode
-    if (allMemes.length === 0) return;
+    let currentMemes = allMemes;
+    const isTenorData = currentMemes.length > 0 && currentMemes[0].url.includes("tenor.com");
+    
+    if (isTenorData || currentMemes.length === 0) {
+       currentMemes = defaultMemesRef.current;
+       if (currentMemes.length > 0) setAllMemes(currentMemes);
+    }
 
-    const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
+    if (currentMemes.length === 0) {
+      setGenerating(false);
+      return;
+    }
+
+    const newMeme = getNextItem(currentMemes, imageDeck, setImageDeck);
     const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
 
     const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
@@ -379,14 +398,17 @@ export default function Main() {
         reader.readAsDataURL(blob);
       });
 
+      if (requestId !== requestCounterRef.current) return;
+
       updateState({ ...meme, imageUrl: dataUrl, name: cleanName, fontSize: optimizedFontSize, isVideo: false });
       setStatusMessage(`New meme template loaded: ${cleanName}`);
     } catch {
+      if (requestId !== requestCounterRef.current) return;
       updateState({ ...meme, imageUrl: newMeme.url, name: cleanName, fontSize: optimizedFontSize, isVideo: false });
       toast.error("CORS limit: download might fail");
       setStatusMessage(`New meme template loaded (CORS fallback): ${cleanName}`);
     } finally {
-      setGenerating(false);
+      if (requestId === requestCounterRef.current) setGenerating(false);
     }
   }
 
@@ -718,15 +740,22 @@ export default function Main() {
     setSearchQuery("");
     setLoading(true);
     setMode("image");
-    // Reload the original Imgflip images
-    fetch("https://api.imgflip.com/get_memes")
-      .then((res) => res.json())
-      .then((data) => {
-        setAllMemes(data.data.memes);
-        setLoading(false);
-        toast("Back to standard images");
-        setStatusMessage("Restored default image templates.");
-      });
+    
+    if (defaultMemesRef.current.length > 0) {
+      setAllMemes(defaultMemesRef.current);
+      setLoading(false);
+    } else {
+      fetch("https://api.imgflip.com/get_memes")
+        .then((res) => res.json())
+        .then((data) => {
+          setAllMemes(data.data.memes);
+          defaultMemesRef.current = data.data.memes;
+          setLoading(false);
+        });
+    }
+    
+    toast("Back to standard images");
+    setStatusMessage("Restored default image templates.");
   }
 
   return (
@@ -831,26 +860,22 @@ export default function Main() {
         {/* MEDIA TYPE SELECTOR - Moved inside the column to fix desktop layout */}
         <div className="relative">
           <select
-            value={mediaType}
-                      onChange={(e) => {
-                        const newMode = e.target.value;
-                        setMediaType(newMode);
-            
-                        startTransition(() => {
-                          setMode(newMode); // Sync UI state
-            
-                          if (newMode === "image") {
-                            // If switching back to images, restore Imgflip
-                            clearSearch();
-                          } else {
-                            // If switching to video, we prepare for GIFs
-                            setStatusMessage("Switched to Video/GIF mode");
-                            toast("GIF Mode Active");
-                          }
-                          // Immediately pull a fresh template for the new mode
-                          getMemeImage();
-                        });
-                      }}            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold"
+            value={mode}
+            onChange={(e) => {
+              const newMode = e.target.value;
+              setMode(newMode);
+
+              startTransition(() => {
+                if (newMode === "image") {
+                  clearSearch();
+                } else {
+                  setStatusMessage("Switched to Video/GIF mode");
+                  toast("GIF Mode Active");
+                }
+                getMemeImage(newMode);
+              });
+            }}
+            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold"
           >
             <option value="image">🖼️ Static Images (ImgFlip)</option>
             <option value="video">🎥 Animated GIFs (Tenor)</option>

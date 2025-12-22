@@ -13,11 +13,13 @@ import {
   Aperture as HueRotate,
   Droplet as Saturate,
   FlipVertical as Invert,
+  Paintbrush as Brush,
 } from "lucide-react";
 
 export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit }) {
   const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
   const hasStickers = meme.stickers && meme.stickers.length > 0;
+  const hasText = meme.texts.some(t => t.content.trim().length > 0);
 
   return (
     <div
@@ -100,7 +102,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 )}
             </div>
 
-            <div className="md:col-span-5 flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-8">
+            <div className="md:col-span-4 flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-8">
               <MoveHorizontal className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
               <label htmlFor="max-width-slider" className="sr-only">Text Max Width</label>
               <input
@@ -117,25 +119,49 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               />
             </div>
 
-            <div className="md:col-span-2 flex items-center justify-center md:justify-end gap-3 border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-8">
-              <Palette className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
-              <div className="relative overflow-hidden w-8 h-8 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500">
-                <label htmlFor="text-color-picker" className="sr-only">Text Color</label>
-                <input
-                  id="text-color-picker"
-                  type="color"
-                  name="textColor"
-                  value={meme.textColor}
-                  onChange={handleStyleChange}
-                  onBlur={handleStyleCommit} 
-                  className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                  title="Text Color"
-                />
+            <div className="md:col-span-3 flex items-center justify-center md:justify-end gap-4 border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-8">
+              <div className="flex items-center gap-2" title="Text Color">
+                <Palette className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <div className="relative overflow-hidden w-8 h-8 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500">
+                  <input
+                    id="text-color-picker"
+                    type="color"
+                    name="textColor"
+                    value={meme.textColor}
+                    onChange={handleStyleChange}
+                    onBlur={handleStyleCommit} 
+                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                  />
+                </div>
               </div>
+
+              {hasText && (
+                <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300" title="Background Color">
+                  <Brush className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                  <div className="relative overflow-hidden w-8 h-8 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500">
+                    <input
+                      id="text-bg-color-picker"
+                      type="color"
+                      name="textBgColor"
+                      value={meme.textBgColor === 'transparent' ? '#000000' : meme.textBgColor}
+                      onChange={handleStyleChange}
+                      onBlur={handleStyleCommit} 
+                      className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                    />
+                  </div>
+                  {meme.textBgColor !== 'transparent' && (
+                    <button 
+                      onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
+                      className="text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
-
         {/* IMAGE CONTROLS */}
         {activeTab === "image" && (
           <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">

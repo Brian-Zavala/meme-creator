@@ -856,7 +856,7 @@ export default function Main() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search Tenor GIFs (e.g. 'coding', 'cat')..."
+                  placeholder="Search Tenor GIFs..."
                   className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:ring-2 focus:ring-[oklch(53%_0.187_39)] outline-none transition-all placeholder:text-slate-500"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

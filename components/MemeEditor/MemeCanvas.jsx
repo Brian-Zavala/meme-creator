@@ -86,12 +86,13 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
         ))}
         
         {meme.texts.map((textItem) => {
+          if (!textItem.content.trim()) return null;
           const stroke = Math.max(1, meme.fontSize / 25);
           return (
           <h2
             key={textItem.id}
             onPointerDown={(e) => onPointerDown(e, textItem.id)}
-            className={`absolute w-full text-center uppercase tracking-tighter leading-tight whitespace-pre-wrap break-words px-4 select-none touch-none z-40 ${
+            className={`absolute uppercase tracking-tighter leading-tight whitespace-pre-wrap break-words px-4 select-none touch-none z-40 ${
               draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
             }`}
             style={{
@@ -99,6 +100,11 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
               top: `${textItem.y}%`,
               transform: "translate(-50%, -50%)",
               color: meme.textColor,
+              backgroundColor: meme.textBgColor,
+              display: "inline-block",
+              textAlign: "center",
+              padding: meme.textBgColor !== 'transparent' ? '0.2em 0.4em' : '0',
+              borderRadius: "4px",
               fontSize: `${meme.fontSize}px`,
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: "Impact, sans-serif",

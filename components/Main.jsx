@@ -355,9 +355,13 @@ export default function Main() {
     setStatusMessage("Magic captions generated.");
   }
 
-  function handleStyleChange(event) {
+  function handleStyleChange(event, shouldCommit = false) {
     const { value, name } = event.currentTarget;
-    updateTransient((prev) => ({ ...prev, [name]: value }));
+    if (shouldCommit) {
+      updateState({ ...meme, [name]: value });
+    } else {
+      updateTransient((prev) => ({ ...prev, [name]: value }));
+    }
   }
 
   function handleFilterChange(event) {
@@ -404,7 +408,9 @@ export default function Main() {
       ],
       stickers: [],
       fontSize: 40,
+      stickerSize: 60,
       textColor: "#ffffff",
+      textBgColor: "transparent",
       filters: {
         contrast: 100,
         brightness: 100,
@@ -413,7 +419,7 @@ export default function Main() {
         sepia: 0,
         hueRotate: 0,
         saturate: 100,
-        invert: 0,
+        invert: 0
       },
     }));
     toast("Canvas cleared", { icon: "🧹" });

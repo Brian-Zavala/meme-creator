@@ -44,6 +44,7 @@ export default function Main() {
       imageUrl: "http://i.imgflip.com/1bij.jpg",
       name: "Meme Name",
       textColor: "#ffffff",
+      textBgColor: "transparent",
       textShadow: "#000000",
       fontSize: 40,
       maxWidth: 100,
@@ -532,46 +533,107 @@ export default function Main() {
     if (!memeRef.current) return;
 
     if (mode === "video") {
-      const promise = (async () => {
+      const generateAndShare = async () => {
         const blob = await exportGif(meme, meme.texts, meme.stickers);
         const file = new File([blob], `meme-${Date.now()}.gif`, { type: "image/gif" });
+        const url = URL.createObjectURL(blob);
         
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "My Animated Meme" });
-          triggerFireworks();
-          setStatusMessage("Share dialog opened for GIF.");
-        } else {
-          // Fallback: Copy blob to clipboard if possible, or just notify
-          try {
-            await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-            toast.success("GIF copied to clipboard!");
-          } catch {
-            toast.error("Sharing not supported on this browser");
+        try {
+          // 1. Try Native Share
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: "My Animated Meme" });
+            triggerFireworks();
+            return "Shared via system";
+          } else {
+            throw new Error("Native share unavailable");
           }
-        }
-      })();
+        } catch (shareErr) {
+          console.log("Native share failed, trying clipboard loophole...", shareErr);
+          
+          try {
+            // 2. Try the HTML Loophole (Base64 GIF inside HTML)
+            const reader = new FileReader();
+            const base64Data = await new Promise((resolve) => {
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
 
-      toast.promise(promise, {
-        loading: "Preparing GIF for sharing...",
-        success: "Ready to share!",
-        error: "Error preparing GIF",
+            // Modern browsers prefer Blobs in ClipboardItem
+            const htmlBlob = new Blob([`<img src="${base64Data}">`], { type: "text/html" });
+            const textBlob = new Blob(["Check out my meme!"], { type: "text/plain" });
+            
+            const clipboardData = {
+              "text/plain": textBlob,
+              "text/html": htmlBlob
+            };
+
+            await navigator.clipboard.write([new ClipboardItem(clipboardData)]);
+            return "Copied to clipboard";
+          } catch (clipErr) {
+            console.error("Clipboard loophole failed:", clipErr);
+            
+            // 3. Last Resort Clipboard: Try to copy a static PNG instead of failing entirely
+            try {
+              const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000" });
+              const pngBlob = await new Promise(r => canvas.toBlob(r, "image/png"));
+              await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
+              return "Copied static version";
+            } catch (finalErr) {
+              throw new Error("Sharing not supported - please use Download");
+            }
+          }
+        } finally {
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+      };
+
+      toast.promise(generateAndShare(), {
+        loading: "Preparing Ultra Share...",
+        success: (msg) => {
+          if (msg === "Copied to clipboard") return "GIF copied! Paste (Ctrl+V) into chat.";
+          if (msg === "Copied static version") return "Copied static version (GIF copy failed)";
+          return "Shared successfully!";
+        },
+        error: (err) => err.message,
+      }, {
+        success: { duration: 5000 }
       });
       return;
     }
 
-    const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-    canvas.toBlob(async (blob) => {
-      const file = new File([blob], `meme-${Date.now()}.png`, { type: "image/png" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "My Meme" });
-        triggerFireworks();
-        setStatusMessage("Share dialog opened.");
-      } else {
-        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-        toast.success("Copied to clipboard!");
-        setStatusMessage("Meme copied to clipboard.");
-      }
-    }, "image/png");
+    // Static Image logic
+    const handleImageShare = async () => {
+      const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], `meme-${Date.now()}.png`, { type: "image/png" });
+          
+          try {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({ files: [file], title: "My Meme" });
+              triggerFireworks();
+              resolve("Shared via system");
+            } else {
+              throw new Error();
+            }
+          } catch {
+            try {
+              await navigator.clipboard.write([new ClipboardItem({ "image/png": blob, "text/plain": new Blob(["My Meme"], {type: 'text/plain'}) })]);
+              resolve("Copied to clipboard");
+            } catch (e) {
+              console.error("Image clipboard failed:", e);
+              reject(new Error("Sharing limited - use Download instead"));
+            }
+          }
+        }, "image/png");
+      });
+    };
+
+    toast.promise(handleImageShare(), {
+      loading: "Preparing image...",
+      success: (msg) => msg === "Copied to clipboard" ? "Image copied! Paste to share." : "Shared successfully!",
+      error: (err) => err.message,
+    });
   }
 
   async function handleTenorSearch(e) {

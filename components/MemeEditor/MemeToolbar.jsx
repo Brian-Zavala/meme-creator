@@ -57,63 +57,52 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
       </div>
 
       {/* Controls Area */}
-      <div className="flex items-center gap-6 px-4 py-3 min-h-[64px] overflow-x-auto no-scrollbar">
+      <div className="flex flex-col gap-6 px-4 py-5 min-h-[64px]">
+        
         {/* TEXT CONTROLS */}
         {activeTab === "text" && (
-          <div id="text-tools-panel" role="tabpanel" className="flex items-center gap-6 w-full">
-            <div className={`flex ${hasStickers ? "flex-col items-start gap-2" : "items-center gap-3"} flex-1`}>
-              <div className="flex items-center gap-3 w-full">
-                <Type className="w-4 h-4 text-slate-400" aria-hidden="true" />
-                <label htmlFor="font-size-slider" className="sr-only">
-                  Font Size
-                </label>
-                <input
-                  id="font-size-slider"
-                  type="range"
-                  min="10"
-                  max="80"
-                  name="fontSize"
-                  value={meme.fontSize}
-                  onChange={handleStyleChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full min-w-max accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full"
-                  title="Font Size"
-                  aria-valuemin="10"
-                  aria-valuemax="80"
-                  aria-valuenow={meme.fontSize}
-                />
-              </div>
-
-              {hasStickers && (
-                <div className="flex items-center gap-3 w-full animate-in slide-in-from-top-1 fade-in duration-300">
-                  <Smile className="w-4 h-4 text-slate-400" aria-hidden="true" />
-                  <label htmlFor="sticker-size-slider" className="sr-only">
-                    Sticker Size
-                  </label>
+          <div id="text-tools-panel" role="tabpanel" className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center w-full">
+            <div className={`md:col-span-5 flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-3'}`}>
+                <div className="flex items-center gap-3 w-full">
+                  <Type className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                  <label htmlFor="font-size-slider" className="sr-only">Font Size</label>
                   <input
-                    id="sticker-size-slider"
+                    id="font-size-slider"
                     type="range"
-                    min="20"
-                    max="150"
-                    name="stickerSize"
-                    value={meme.stickerSize || 60}
+                    min="10"
+                    max="80"
+                    name="fontSize"
+                    value={meme.fontSize}
                     onChange={handleStyleChange}
                     onMouseUp={handleStyleCommit}
-                    className="w-full  accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full opacity-90 "
-                    title="Sticker Size"
-                    aria-valuemin="20"
-                    aria-valuemax="150"
-                    aria-valuenow={meme.stickerSize || 60}
+                    className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full h-1.5"
+                    title="Font Size"
                   />
                 </div>
-              )}
+                
+                {hasStickers && (
+                    <div className="flex items-center gap-3 w-full animate-in slide-in-from-top-1 fade-in duration-300">
+                      <Smile className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+                      <label htmlFor="sticker-size-slider" className="sr-only">Sticker Size</label>
+                      <input
+                        id="sticker-size-slider"
+                        type="range"
+                        min="20"
+                        max="150"
+                        name="stickerSize"
+                        value={meme.stickerSize || 60}
+                        onChange={handleStyleChange}
+                        onMouseUp={handleStyleCommit}
+                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full opacity-90 h-1.5"
+                        title="Sticker Size"
+                      />
+                    </div>
+                )}
             </div>
 
-            <div className="flex items-center gap-3 flex-1 border-l border-slate-700 pl-6">
-              <MoveHorizontal className="w-4 h-4 text-slate-400" aria-hidden="true" />
-              <label htmlFor="max-width-slider" className="sr-only">
-                Text Max Width
-              </label>
+            <div className="md:col-span-5 flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-8">
+              <MoveHorizontal className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
+              <label htmlFor="max-width-slider" className="sr-only">Text Max Width</label>
               <input
                 id="max-width-slider"
                 type="range"
@@ -123,27 +112,22 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 value={meme.maxWidth}
                 onChange={handleStyleChange}
                 onMouseUp={handleStyleCommit}
-                className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full"
+                className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full h-1.5"
                 title="Text Width (Wrap)"
-                aria-valuemin="20"
-                aria-valuemax="100"
-                aria-valuenow={meme.maxWidth}
               />
             </div>
 
-            <div className="flex items-center gap-3 border-l border-slate-700 pl-6">
-              <Palette className="w-4 h-4 text-slate-400" aria-hidden="true" />
+            <div className="md:col-span-2 flex items-center justify-center md:justify-end gap-3 border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-8">
+              <Palette className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
               <div className="relative overflow-hidden w-8 h-8 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500">
-                <label htmlFor="text-color-picker" className="sr-only">
-                  Text Color
-                </label>
+                <label htmlFor="text-color-picker" className="sr-only">Text Color</label>
                 <input
                   id="text-color-picker"
                   type="color"
                   name="textColor"
                   value={meme.textColor}
                   onChange={handleStyleChange}
-                  onBlur={handleStyleCommit}
+                  onBlur={handleStyleCommit} 
                   className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
                   title="Text Color"
                 />
@@ -154,133 +138,94 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
         {/* IMAGE CONTROLS */}
         {activeTab === "image" && (
-          <div id="image-tools-panel" role="tabpanel" className="flex items-center gap-6 w-auto min-w-max pb-1">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <Contrast className="w-4 h-4 text-slate-400" aria-hidden="true" />
+          <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Contrast className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  name="contrast"
+                  type="range" min="0" max="200" name="contrast"
                   value={meme.filters?.contrast ?? 100}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Contrast"
                 />
               </div>
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <Sun className="w-4 h-4 text-slate-400" aria-hidden="true" />
+              <div className="flex items-center gap-3">
+                <Sun className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  name="brightness"
+                  type="range" min="0" max="200" name="brightness"
                   value={meme.filters?.brightness ?? 100}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Brightness"
                 />
               </div>
             </div>
 
-            <div className="w-px h-12 bg-slate-700"></div>
-
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <Blur className="w-4 h-4 text-slate-400" aria-hidden="true" />
+            <div className="flex flex-col gap-4 border-t sm:border-t-0 sm:border-l border-slate-800 pt-6 sm:pt-0 sm:pl-6">
+              <div className="flex items-center gap-3">
+                <Cloud className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.5"
-                  name="blur"
+                  type="range" min="0" max="10" step="0.5" name="blur"
                   value={meme.filters?.blur ?? 0}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Blur"
                 />
               </div>
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <Grayscale className="w-4 h-4 text-slate-400" aria-hidden="true" />
+              <div className="flex items-center gap-3">
+                <Circle className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  name="grayscale"
+                  type="range" min="0" max="100" name="grayscale"
                   value={meme.filters?.grayscale ?? 0}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Grayscale"
                 />
               </div>
             </div>
 
-            <div className="w-px h-12 bg-slate-700"></div>
-
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <Sepia className="w-4 h-4 text-slate-400" aria-hidden="true" />
+            <div className="flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-slate-800 pt-6 lg:pt-0 lg:pl-6">
+              <div className="flex items-center gap-3">
+                <History className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  name="sepia"
+                  type="range" min="0" max="100" name="sepia"
                   value={meme.filters?.sepia ?? 0}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Sepia"
                 />
               </div>
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <Saturate className="w-4 h-4 text-slate-400" aria-hidden="true" />
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="300"
-                  name="saturate"
+                  type="range" min="0" max="300" name="saturate"
                   value={meme.filters?.saturate ?? 100}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Saturation"
                 />
               </div>
             </div>
 
-            <div className="w-px h-12 bg-slate-700"></div>
-
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <HueRotate className="w-4 h-4 text-slate-400" aria-hidden="true" />
+            <div className="flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-slate-800 pt-6 lg:pt-0 lg:pl-6">
+              <div className="flex items-center gap-3">
+                <RotateCw className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="360"
-                  name="hueRotate"
+                  type="range" min="0" max="360" name="hueRotate"
                   value={meme.filters?.hueRotate ?? 0}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Hue Rotate"
                 />
               </div>
-              <div className="flex items-center gap-3 min-w-[140px]">
-                <Invert className="w-4 h-4 text-slate-400" aria-hidden="true" />
+              <div className="flex items-center gap-3">
+                <Repeat className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  name="invert"
+                  type="range" min="0" max="100" name="invert"
                   value={meme.filters?.invert ?? 0}
-                  onChange={handleFilterChange}
-                  onMouseUp={handleStyleCommit}
-                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer"
+                  onChange={handleFilterChange} onMouseUp={handleStyleCommit}
+                  className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5"
                   title="Invert"
                 />
               </div>

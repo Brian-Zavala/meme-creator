@@ -19,7 +19,7 @@ import {
 export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit }) {
   const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
   const hasStickers = meme.stickers && meme.stickers.length > 0;
-  const hasText = meme.texts.some(t => t.content.trim().length > 0);
+  const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
 
   return (
     <div

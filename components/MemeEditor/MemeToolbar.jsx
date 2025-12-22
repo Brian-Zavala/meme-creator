@@ -71,8 +71,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                   <input
                     id="font-size-slider"
                     type="range"
-                    min="10"
-                    max="80"
+                    min="2"
+                    max="120"
                     name="fontSize"
                     value={meme.fontSize}
                     onChange={handleStyleChange}
@@ -89,8 +89,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         id="sticker-size-slider"
                         type="range"
-                        min="20"
-                        max="150"
+                        min="5"
+                        max="250"
                         name="stickerSize"
                         value={meme.stickerSize || 60}
                         onChange={handleStyleChange}

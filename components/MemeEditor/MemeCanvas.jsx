@@ -86,7 +86,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
         ))}
         
         {meme.texts.map((textItem) => {
-          if (!textItem.content.trim()) return null;
+          if (!(textItem.content || "").trim()) return null;
           const stroke = Math.max(1, meme.fontSize / 25);
           return (
           <h2

@@ -78,35 +78,49 @@ export default function Main() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if ("topText" in parsed) {
+        // Clean up session-specific blob URLs that won't work on reload
+        if (parsed.imageUrl && parsed.imageUrl.startsWith("blob:")) {
+          parsed.imageUrl = defaultState.imageUrl;
+          parsed.name = defaultState.name;
+          parsed.isVideo = defaultState.isVideo;
+        }
+        
+        // Handle migration from very old format
+        if (parsed && "topText" in parsed) {
           return {
             ...defaultState,
             imageUrl: parsed.imageUrl || defaultState.imageUrl,
             textColor: parsed.textColor || defaultState.textColor,
             fontSize: parsed.fontSize || defaultState.fontSize,
-            maxWidth: parsed.maxWidth || 100,
-            filters: parsed.filters || defaultState.filters,
             texts: [
               { id: "top", content: parsed.topText || "", x: parsed.topTextPos?.x ?? 50, y: parsed.topTextPos?.y ?? 5 },
-              {
-                id: "bottom",
-                content: parsed.bottomText || "",
-                x: parsed.bottomTextPos?.x ?? 50,
-                y: parsed.bottomTextPos?.y ?? 95,
-              },
+              { id: "bottom", content: parsed.bottomText || "", x: parsed.bottomTextPos?.x ?? 50, y: parsed.bottomTextPos?.y ?? 95 },
             ],
           };
         }
-        if (Array.isArray(parsed.texts)) {
+        // General migration and validation
+        if (parsed && Array.isArray(parsed.texts)) {
           return {
             ...defaultState,
             ...parsed,
-            stickers: parsed.stickers || [],
-            filters: parsed.filters || defaultState.filters,
+            // Ensure stickers and texts are valid arrays even if corrupted in storage
+            texts: parsed.texts.map(t => ({
+                id: t.id || crypto.randomUUID(),
+                content: typeof t.content === 'string' ? t.content : "",
+                x: typeof t.x === 'number' ? t.x : 50,
+                y: typeof t.y === 'number' ? t.y : 50
+            })),
+            stickers: Array.isArray(parsed.stickers) ? parsed.stickers.map(s => ({
+                id: s.id || crypto.randomUUID(),
+                url: s.url || "😀",
+                x: typeof s.x === 'number' ? s.x : 50,
+                y: typeof s.y === 'number' ? s.y : 50
+            })) : [],
+            filters: { ...defaultState.filters, ...(parsed.filters || {}) }
           };
         }
       } catch (e) {
-        console.error("Migration failed", e);
+        console.error("State hydration failed", e);
       }
     }
     return defaultState;
@@ -272,7 +286,7 @@ export default function Main() {
   }, [draggedId, updateTransient]);
 
   useEffect(() => {
-    const allFilled = meme.texts.every((t) => t.content.trim().length > 0);
+    const allFilled = meme.texts.every((t) => (t.content || "").trim().length > 0);
     if (allFilled && meme.texts.length < 10) {
       updateState((prev) => ({
         ...prev,
@@ -296,7 +310,11 @@ export default function Main() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("meme-generator-state", JSON.stringify(meme));
+    try {
+      localStorage.setItem("meme-generator-state", JSON.stringify(meme));
+    } catch (e) {
+      console.warn("Storage quota exceeded, state not saved locally.");
+    }
   }, [meme]);
 
   // --- Handlers ---
@@ -306,52 +324,53 @@ export default function Main() {
     setGenerating(true);
 
     // GIF / Tenor Mode
-        if (mode === "video") {
-          let currentMemes = allMemes;
-          
-          // If we haven't searched anything yet or the list is from Imgflip, fetch trending Tenor GIFs
-          const isTenorData = allMemes.length > 0 && allMemes[0].url.includes("tenor.com");
-          
-          if (!isTenorData) {
-            setStatusMessage("Fetching trending GIFs...");
-            const results = await searchTenor(""); // featured
-            if (results.length > 0) {
-              currentMemes = results;
-              setAllMemes(results);
-              // We need to pick from the new results immediately
-            } else {
-              toast.error("Failed to load trending GIFs");
-              setGenerating(false);
-              return;
-            }
-          }
-    
-          const newMeme = getNextItem(currentMemes, videoDeck, setVideoDeck);
-          const cleanName = newMeme.name.replace(/\s+/g, "-");
-    
-          const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
-    
-          updateState({
-            ...meme,
-            imageUrl: newMeme.url,
-            name: cleanName,
-            isVideo: false, // GIFs are images technically, but they animate
-            fontSize: optimizedFontSize,
-          });
-          setStatusMessage(`New GIF loaded: ${cleanName}`);
+    if (mode === "video") {
+      let currentMemes = allMemes;
+      
+      // If we haven't searched anything yet or the list is from Imgflip, fetch trending Tenor GIFs
+      const isTenorData = allMemes.length > 0 && allMemes[0].url.includes("tenor.com");
+      
+      if (!isTenorData) {
+        setStatusMessage("Fetching trending GIFs...");
+        const results = await searchTenor(""); // featured
+        if (results.length > 0) {
+          currentMemes = results;
+          setAllMemes(results);
+          // We need to pick from the new results immediately
+        } else {
+          toast.error("Failed to load trending GIFs");
           setGenerating(false);
           return;
         }
-    
-        // Static Image / ImgFlip Mode
-        if (allMemes.length === 0) return;
-    
-        const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
-        const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
-    
-        const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
-    
-        try {      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
+      }
+
+      const newMeme = getNextItem(currentMemes, videoDeck, setVideoDeck);
+      const cleanName = newMeme.name.replace(/\s+/g, "-");
+
+      const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
+
+      updateState({
+        ...meme,
+        imageUrl: newMeme.url,
+        name: cleanName,
+        isVideo: false, // GIFs are images technically, but they animate
+        fontSize: optimizedFontSize,
+      });
+      setStatusMessage(`New GIF loaded: ${cleanName}`);
+      setGenerating(false);
+      return;
+    }
+
+    // Static Image / ImgFlip Mode
+    if (allMemes.length === 0) return;
+
+    const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
+    const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
+
+    const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
+
+    try {
+      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
       if (!response.ok) throw new Error();
       const blob = await response.blob();
       const dataUrl = await new Promise((resolve) => {
@@ -425,19 +444,20 @@ export default function Main() {
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const isVid = file.type.startsWith("video/");
-        updateState((prev) => ({
-          ...prev,
-          imageUrl: e.target.result,
-          name: file.name.split(".")[0],
-          isVideo: isVid,
-        }));
-        toast.success(`Custom ${isVid ? "video" : "image"} uploaded!`);
-        setStatusMessage(`Custom upload: ${file.name}`);
-      };
-      reader.readAsDataURL(file);
+      // Use Object URL for performance and reliability
+      // This solves the 'black screen' issue with large files
+      const localUrl = URL.createObjectURL(file);
+      const isVid = file.type.startsWith("video/");
+      
+      updateState((prev) => ({
+        ...prev,
+        imageUrl: localUrl,
+        name: file.name.split(".")[0],
+        isVideo: isVid,
+      }));
+      
+      toast.success(`Custom ${isVid ? "video" : "image"} uploaded!`);
+      setStatusMessage(`Custom upload: ${file.name}`);
     }
   }
 

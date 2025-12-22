@@ -56,6 +56,22 @@ body {
   animation: pop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
 /* Glass Inputs */
 .input-glass {
   @apply bg-white/5 border border-white/10 backdrop-blur-sm transition-all duration-300;

@@ -1,52 +1,75 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 export default function useHistory(initialState) {
   const [state, setState] = useState(initialState);
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
+  
+  // Use a ref to always have access to the latest state for history pushes
+  // This prevents race conditions where the closure-captured 'state' is stale
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   // Standard update: Clears future, pushes current to past
-  // Use this for "committed" actions (add sticker, finish drag, etc.)
   const updateState = useCallback((newState) => {
-    setPast((prev) => [...prev, state]);
-    setState(newState);
-    setFuture([]);
-  }, [state]);
+    setState((current) => {
+      const resolvedState = typeof newState === "function" ? newState(current) : newState;
+      
+      // Only push to history if the state actually changed (basic shallow check for performance)
+      // or if it's a completely new object.
+      setPast((prev) => [...prev, current]);
+      setFuture([]);
+      
+      return resolvedState;
+    });
+  }, []);
 
   // Transient update: Updates state WITHOUT saving to history
-  // Use this for "in-progress" actions (dragging, sliding)
   const updateTransient = useCallback((newState) => {
-    setState(newState);
+    setState((current) => {
+      return typeof newState === "function" ? newState(current) : newState;
+    });
   }, []);
 
   const undo = useCallback(() => {
-    if (past.length === 0) return;
-    const previous = past[past.length - 1];
-    const newPast = past.slice(0, past.length - 1);
-    
-    setFuture((prev) => [state, ...prev]);
-    setState(previous);
-    setPast(newPast);
-  }, [state, past]);
+    setPast((currentPast) => {
+      if (currentPast.length === 0) return currentPast;
+      
+      const previous = currentPast[currentPast.length - 1];
+      const newPast = currentPast.slice(0, currentPast.length - 1);
+      
+      setState((currentState) => {
+        setFuture((prevFuture) => [currentState, ...prevFuture]);
+        return previous;
+      });
+      
+      return newPast;
+    });
+  }, []);
 
   const redo = useCallback(() => {
-    if (future.length === 0) return;
-    const next = future[0];
-    const newFuture = future.slice(1);
-
-    setPast((prev) => [...prev, state]);
-    setState(next);
-    setFuture(newFuture);
-  }, [state, future]);
+    setFuture((currentFuture) => {
+      if (currentFuture.length === 0) return currentFuture;
+      
+      const next = currentFuture[0];
+      const newFuture = currentFuture.slice(1);
+      
+      setState((currentState) => {
+        setPast((prevPast) => [...prevPast, currentState]);
+        return next;
+      });
+      
+      return newFuture;
+    });
+  }, []);
 
   return {
     state,
-    updateState,     // Commits to history
-    updateTransient, // Skips history
+    updateState,
+    updateTransient,
     undo,
     redo,
     canUndo: past.length > 0,
     canRedo: future.length > 0,
-    history: past // Exposed for debugging or advanced features
   };
 }

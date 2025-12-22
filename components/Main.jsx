@@ -126,7 +126,8 @@ export default function Main() {
     return defaultState;
   });
 
-  const [allMemes, setAllMemes] = useState([]);
+  const [allMemes, setAllMemes] = useState([]); // Imgflip images
+  const [allGifs, setAllGifs] = useState([]);   // Tenor GIFs
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
@@ -138,7 +139,6 @@ export default function Main() {
   const startPosRef = useRef({ x: 0, y: 0 });
   const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
-  const defaultMemesRef = useRef([]);
 
   // Shuffle bag state to prevent repeats
   const [imageDeck, setImageDeck] = useState([]);
@@ -302,7 +302,6 @@ export default function Main() {
       .then((res) => res.json())
       .then((data) => {
         setAllMemes(data.data.memes);
-        defaultMemesRef.current = data.data.memes;
         setLoading(false);
       })
       .catch(() => {
@@ -323,90 +322,107 @@ export default function Main() {
 
   async function getMemeImage(forcedMode) {
     const requestId = ++requestCounterRef.current;
-    const activeMode = forcedMode || mode;
+    // Use the forced mode if provided (for the selectbox change), otherwise use the current mode state
+    const activeMode = typeof forcedMode === 'string' ? forcedMode : mode;
     
-    setStatusMessage("Fetching new meme template...");
+    setStatusMessage(`Fetching new ${activeMode === 'video' ? 'GIF' : 'image'} template...`);
     setGenerating(true);
 
-    // GIF / Tenor Mode
-    if (activeMode === "video") {
-      let currentMemes = allMemes;
-      
-      // If we haven't searched anything yet or the list is from Imgflip, fetch trending Tenor GIFs
-      const isTenorData = currentMemes.length > 0 && currentMemes[0].url.includes("tenor.com");
-      
-      if (!isTenorData) {
-        setStatusMessage("Fetching trending GIFs...");
-        const results = await searchTenor(""); // featured
-        if (requestId !== requestCounterRef.current) return;
+    try {
+      // GIF / Tenor Mode
+      if (activeMode === "video") {
+        let currentGifs = allGifs;
         
-        if (results.length > 0) {
-          currentMemes = results;
-          setAllMemes(results);
-        } else {
-          toast.error("Failed to load trending GIFs");
-          setGenerating(false);
-          return;
+        // If we haven't searched anything yet or have no GIFs, fetch trending
+        if (currentGifs.length === 0) {
+          setStatusMessage("Fetching trending GIFs...");
+          const results = await searchTenor(""); // featured
+          if (requestId !== requestCounterRef.current) return;
+          
+          if (results.length > 0) {
+            currentGifs = results;
+            setAllGifs(results);
+          } else {
+            toast.error("Failed to load trending GIFs");
+            setGenerating(false);
+            return;
+          }
         }
+
+        const newMeme = getNextItem(currentGifs, videoDeck, setVideoDeck);
+        const cleanName = newMeme.name.replace(/\s+/g, "-");
+
+        if (requestId !== requestCounterRef.current) return;
+
+        updateState((prev) => {
+          const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts);
+          return {
+            ...prev,
+            imageUrl: newMeme.url,
+            name: cleanName,
+            isVideo: false, // GIFs are images technically, but they animate
+            fontSize: optimizedFontSize,
+          };
+        });
+        
+        setStatusMessage(`New GIF loaded: ${cleanName}`);
+        setGenerating(false);
+        return;
       }
 
-      const newMeme = getNextItem(currentMemes, videoDeck, setVideoDeck);
-      const cleanName = newMeme.name.replace(/\s+/g, "-");
+      // Static Image / ImgFlip Mode
+      const currentMemes = allMemes;
 
-      const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
+      if (currentMemes.length === 0) {
+        setGenerating(false);
+        return;
+      }
 
-      if (requestId !== requestCounterRef.current) return;
+      const newMeme = getNextItem(currentMemes, imageDeck, setImageDeck);
+      const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
 
-      updateState({
-        ...meme,
-        imageUrl: newMeme.url,
-        name: cleanName,
-        isVideo: false, // GIFs are images technically, but they animate
-        fontSize: optimizedFontSize,
-      });
-      setStatusMessage(`New GIF loaded: ${cleanName}`);
-      setGenerating(false);
-      return;
-    }
+      // Attempt CORS-safe fetch
+      try {
+        const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
+        if (!response.ok) throw new Error();
+        const blob = await response.blob();
+        const dataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
 
-    // Static Image / ImgFlip Mode
-    let currentMemes = allMemes;
-    const isTenorData = currentMemes.length > 0 && currentMemes[0].url.includes("tenor.com");
-    
-    if (isTenorData || currentMemes.length === 0) {
-       currentMemes = defaultMemesRef.current;
-       if (currentMemes.length > 0) setAllMemes(currentMemes);
-    }
+        if (requestId !== requestCounterRef.current) return;
 
-    if (currentMemes.length === 0) {
-      setGenerating(false);
-      return;
-    }
-
-    const newMeme = getNextItem(currentMemes, imageDeck, setImageDeck);
-    const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
-
-    const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
-
-    try {
-      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
-      if (!response.ok) throw new Error();
-      const blob = await response.blob();
-      const dataUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-
-      if (requestId !== requestCounterRef.current) return;
-
-      updateState({ ...meme, imageUrl: dataUrl, name: cleanName, fontSize: optimizedFontSize, isVideo: false });
-      setStatusMessage(`New meme template loaded: ${cleanName}`);
-    } catch {
-      if (requestId !== requestCounterRef.current) return;
-      updateState({ ...meme, imageUrl: newMeme.url, name: cleanName, fontSize: optimizedFontSize, isVideo: false });
-      toast.error("CORS limit: download might fail");
-      setStatusMessage(`New meme template loaded (CORS fallback): ${cleanName}`);
+        updateState((prev) => {
+          const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts);
+          return { 
+            ...prev, 
+            imageUrl: dataUrl, 
+            name: cleanName, 
+            fontSize: optimizedFontSize, 
+            isVideo: false 
+          };
+        });
+        setStatusMessage(`New meme template loaded: ${cleanName}`);
+      } catch {
+        if (requestId !== requestCounterRef.current) return;
+        updateState((prev) => {
+           const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts);
+           return { 
+             ...prev, 
+             imageUrl: newMeme.url, 
+             name: cleanName, 
+             fontSize: optimizedFontSize, 
+             isVideo: false 
+           };
+        });
+        toast.error("CORS limit: download might fail");
+        setStatusMessage(`New meme template loaded (CORS fallback): ${cleanName}`);
+      }
+    } catch (err) {
+      console.error("Error fetching meme:", err);
+      toast.error("Failed to load new template");
     } finally {
       if (requestId === requestCounterRef.current) setGenerating(false);
     }
@@ -442,7 +458,7 @@ export default function Main() {
   function handleStyleChange(event, shouldCommit = false) {
     const { value, name } = event.currentTarget;
     if (shouldCommit) {
-      updateState({ ...meme, [name]: value });
+      updateState((prev) => ({ ...prev, [name]: value }));
     } else {
       updateTransient((prev) => ({ ...prev, [name]: value }));
     }
@@ -460,14 +476,12 @@ export default function Main() {
   }
 
   function handleStyleCommit() {
-    updateState(meme);
+    updateState((prev) => prev); // This triggers a history push of the current state
   }
 
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
-      // Use Object URL for performance and reliability
-      // This solves the 'black screen' issue with large files
       const localUrl = URL.createObjectURL(file);
       const isVid = file.type.startsWith("video/");
       
@@ -552,7 +566,7 @@ export default function Main() {
     e.preventDefault();
     e.stopPropagation();
 
-    updateState(meme);
+    updateState((prev) => prev);
     startPosRef.current = { x: e.clientX, y: e.clientY };
     const isSticker = meme.stickers.some((s) => s.id === id);
 
@@ -718,7 +732,8 @@ export default function Main() {
     const results = await searchTenor(searchQuery);
 
     if (results.length > 0) {
-      setAllMemes(results); // REPLACES the Imgflip deck with GIFs
+      setAllGifs(results); // Update GIF deck
+      setVideoDeck([]);    // Reset shuffle bag for GIFs
       setMode("video");
       triggerFlash("green");
       toast.success(`Found ${results.length} GIFs! Randomize to see more.`);
@@ -728,7 +743,9 @@ export default function Main() {
       updateState((prev) => ({
         ...prev,
         imageUrl: firstMeme.url,
-        name: firstMeme.name,
+        name: firstMeme.name.replace(/\s+/g, "-"),
+        isVideo: false,
+        fontSize: calculateSmartFontSize(firstMeme.width, firstMeme.height, prev.texts)
       }));
     } else {
       toast.error("No GIFs found");
@@ -738,20 +755,17 @@ export default function Main() {
 
   function clearSearch() {
     setSearchQuery("");
-    setLoading(true);
     setMode("image");
     
-    if (defaultMemesRef.current.length > 0) {
-      setAllMemes(defaultMemesRef.current);
-      setLoading(false);
-    } else {
-      fetch("https://api.imgflip.com/get_memes")
-        .then((res) => res.json())
-        .then((data) => {
-          setAllMemes(data.data.memes);
-          defaultMemesRef.current = data.data.memes;
-          setLoading(false);
-        });
+    // We don't need to re-fetch allMemes if we already have them
+    if (allMemes.length === 0) {
+        setLoading(true);
+        fetch("https://api.imgflip.com/get_memes")
+            .then((res) => res.json())
+            .then((data) => {
+                setAllMemes(data.data.memes);
+                setLoading(false);
+            });
     }
     
     toast("Back to standard images");

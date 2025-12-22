@@ -583,105 +583,86 @@ export default function Main() {
 
     if (mode === "video") {
       const generateAndShare = async () => {
-        const blob = await exportGif(meme, meme.texts, meme.stickers);
-        const file = new File([blob], `meme-${Date.now()}.gif`, { type: "image/gif" });
-        const url = URL.createObjectURL(blob);
+        // Generate both for maximum compatibility
+        const [gifBlob, canvas] = await Promise.all([
+          exportGif(meme, meme.texts, meme.stickers),
+          html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000" })
+        ]);
+        
+        const pngBlob = await new Promise(r => canvas.toBlob(r, "image/png"));
+        const gifFile = new File([gifBlob], `meme-${Date.now()}.gif`, { type: "image/gif" });
         
         try {
-          // 1. Try Native Share
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: "My Animated Meme" });
+          // 1. Primary: Native Share (Mobile)
+          if (navigator.canShare && navigator.canShare({ files: [gifFile] })) {
+            await navigator.share({ files: [gifFile], title: "My Animated Meme" });
             triggerFireworks();
             return "Shared via system";
-          } else {
-            throw new Error("Native share unavailable");
           }
-        } catch (shareErr) {
-          console.log("Native share failed, trying clipboard loophole...", shareErr);
-          
+          throw new Error();
+        } catch {
+          // 2. The Ultra Clipboard Loophole
           try {
-            // 2. Try the HTML Loophole (Base64 GIF inside HTML)
             const reader = new FileReader();
-            const base64Data = await new Promise((resolve) => {
+            const base64Gif = await new Promise((resolve) => {
               reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
+              reader.readAsDataURL(gifBlob);
             });
 
-            // Modern browsers prefer Blobs in ClipboardItem
-            const htmlBlob = new Blob([`<img src="${base64Data}">`], { type: "text/html" });
-            const textBlob = new Blob(["Check out my meme!"], { type: "text/plain" });
-            
-            const clipboardData = {
-              "text/plain": textBlob,
-              "text/html": htmlBlob
+            // We provide PNG, HTML (with GIF), and Plain Text
+            // Chat apps will pick the best one they support
+            const clipboardItems = {
+              "image/png": pngBlob,
+              "text/plain": new Blob(["Check out my animated meme!"], { type: "text/plain" }),
+              "text/html": new Blob([`<html><body><img src="${base64Gif}" width="100%"></body></html>`], { type: "text/html" })
             };
 
-            await navigator.clipboard.write([new ClipboardItem(clipboardData)]);
+            await navigator.clipboard.write([new ClipboardItem(clipboardItems)]);
             return "Copied to clipboard";
-          } catch (clipErr) {
-            console.error("Clipboard loophole failed:", clipErr);
-            
-            // 3. Last Resort Clipboard: Try to copy a static PNG instead of failing entirely
-            try {
-              const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000" });
-              const pngBlob = await new Promise(r => canvas.toBlob(r, "image/png"));
-              await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
-              return "Copied static version";
-            } catch (finalErr) {
-              throw new Error("Sharing not supported - please use Download");
-            }
+          } catch (err) {
+            console.error("Clipboard failed", err);
+            throw new Error("Sharing limited - please use Download");
           }
-        } finally {
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
       };
 
       toast.promise(generateAndShare(), {
-        loading: "Preparing Ultra Share...",
-        success: (msg) => {
-          if (msg === "Copied to clipboard") return "GIF copied! Paste (Ctrl+V) into chat.";
-          if (msg === "Copied static version") return "Copied static version (GIF copy failed)";
-          return "Shared successfully!";
-        },
+        loading: "Preparing GIF share...",
+        success: (msg) => msg === "Copied to clipboard" ? "GIF copied! Paste (Ctrl+V) into chat." : "Shared successfully!",
         error: (err) => err.message,
-      }, {
-        success: { duration: 5000 }
-      });
+      }, { success: { duration: 5000 } });
       return;
     }
 
-    // Static Image logic
+    // Static Image Logic
     const handleImageShare = async () => {
       const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-      return new Promise((resolve, reject) => {
-        canvas.toBlob(async (blob) => {
-          const file = new File([blob], `meme-${Date.now()}.png`, { type: "image/png" });
-          
-          try {
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({ files: [file], title: "My Meme" });
-              triggerFireworks();
-              resolve("Shared via system");
-            } else {
-              throw new Error();
-            }
-          } catch {
-            try {
-              await navigator.clipboard.write([new ClipboardItem({ "image/png": blob, "text/plain": new Blob(["My Meme"], {type: 'text/plain'}) })]);
-              resolve("Copied to clipboard");
-            } catch (e) {
-              console.error("Image clipboard failed:", e);
-              reject(new Error("Sharing limited - use Download instead"));
-            }
-          }
-        }, "image/png");
-      });
+      const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+      const file = new File([blob], `meme-${Date.now()}.png`, { type: "image/png" });
+
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: "My Meme" });
+          triggerFireworks();
+          return "Shared via system";
+        }
+        throw new Error();
+      } catch {
+        const pngBlob = new Blob([blob], { type: "image/png" });
+        await navigator.clipboard.write([
+          new ClipboardItem({ 
+            "image/png": pngBlob,
+            "text/plain": new Blob(["My Meme"], { type: "text/plain" })
+          })
+        ]);
+        return "Copied to clipboard";
+      }
     };
 
     toast.promise(handleImageShare(), {
-      loading: "Preparing image...",
-      success: (msg) => msg === "Copied to clipboard" ? "Image copied! Paste to share." : "Shared successfully!",
-      error: (err) => err.message,
+      loading: "Preparing image share...",
+      success: (msg) => "Image copied! Paste to share.",
+      error: "Sharing failed - use Download",
     });
   }
 

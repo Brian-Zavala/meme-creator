@@ -114,7 +114,10 @@ export async function exportGif(meme, texts, stickers) {
         const info = reader.frameInfo(i);
         // Delay is in centiseconds, convert to ms. Min 20ms for safety.
         const delay = Math.max(20, (info.delay || 10) * 10);
-        gif.addFrame(canvas, { delay, copy: true });
+        
+        // Capture the pixels ourselves using the optimized context
+        const finalImageData = ctx.getImageData(0, 0, width, height);
+        gif.addFrame(finalImageData, { delay, copy: true });
       }
 
       // 6. Finalize

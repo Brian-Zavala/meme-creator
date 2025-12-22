@@ -16,15 +16,48 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
         className="relative inline-block max-w-full overflow-hidden"
         style={{ backgroundColor: "#000000", color: "#ffffff" }}
       >
-        <img
-          src={meme.imageUrl}
-          className="max-w-full max-h-[70vh] object-contain block"
-          alt={`Template: ${meme.name}`}
-          crossOrigin="anonymous"
-          style={{
-            filter: `contrast(${meme.filters?.contrast ?? 100}%) brightness(${meme.filters?.brightness ?? 100}%) blur(${meme.filters?.blur ?? 0}px)`
-          }}
-        />
+        {meme.isVideo ? (
+            <video
+                key={meme.imageUrl}
+                src={meme.imageUrl}
+                className="max-w-full max-h-[70vh] min-w-[300px] object-contain block"
+                loop
+                autoPlay
+                playsInline
+                crossOrigin="anonymous"
+                style={{
+                    filter: `
+                      contrast(${meme.filters?.contrast ?? 100}%) 
+                      brightness(${meme.filters?.brightness ?? 100}%) 
+                      blur(${meme.filters?.blur ?? 0}px)
+                      grayscale(${meme.filters?.grayscale ?? 0}%)
+                      sepia(${meme.filters?.sepia ?? 0}%)
+                      hue-rotate(${meme.filters?.hueRotate ?? 0}deg)
+                      saturate(${meme.filters?.saturate ?? 100}%)
+                      invert(${meme.filters?.invert ?? 0}%)
+                    `
+                }}
+            />
+        ) : (
+            <img
+            src={meme.imageUrl}
+            className="max-w-full max-h-[70vh] min-w-[300px] object-contain block"
+            alt={`Template: ${meme.name}`}
+            crossOrigin="anonymous"
+            style={{
+                filter: `
+                  contrast(${meme.filters?.contrast ?? 100}%) 
+                  brightness(${meme.filters?.brightness ?? 100}%) 
+                  blur(${meme.filters?.blur ?? 0}px)
+                  grayscale(${meme.filters?.grayscale ?? 0}%)
+                  sepia(${meme.filters?.sepia ?? 0}%)
+                  hue-rotate(${meme.filters?.hueRotate ?? 0}deg)
+                  saturate(${meme.filters?.saturate ?? 100}%)
+                  invert(${meme.filters?.invert ?? 0}%)
+                `
+            }}
+            />
+        )}
 
         {/* Render Stickers */}
         {meme.stickers?.map((sticker) => (

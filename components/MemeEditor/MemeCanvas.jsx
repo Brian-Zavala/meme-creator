@@ -38,7 +38,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
             style={{
               left: `${sticker.x}%`,
               top: `${sticker.y}%`,
-              fontSize: `${meme.fontSize * 1.5}px`, // Size stickers relative to font size
+              fontSize: `${meme.stickerSize || 60}px`, // Independent sticker size
               transform: "translate(-50%, -50%)",
             }}
             role="img"

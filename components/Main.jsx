@@ -832,24 +832,25 @@ export default function Main() {
         <div className="relative">
           <select
             value={mediaType}
-            onChange={(e) => {
-              const newMode = e.target.value;
-              setMediaType(newMode);
-
-              startTransition(() => {
-                setMode(newMode); // Sync UI state
-
-                if (newMode === "image") {
-                  // If switching back to images, restore Imgflip
-                  clearSearch();
-                } else {
-                  // If switching to video, we prepare for GIFs
-                  setStatusMessage("Switched to Video/GIF mode");
-                  toast("GIF Mode Active: Search or click Randomize!");
-                }
-              });
-            }}
-            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold"
+                      onChange={(e) => {
+                        const newMode = e.target.value;
+                        setMediaType(newMode);
+            
+                        startTransition(() => {
+                          setMode(newMode); // Sync UI state
+            
+                          if (newMode === "image") {
+                            // If switching back to images, restore Imgflip
+                            clearSearch();
+                          } else {
+                            // If switching to video, we prepare for GIFs
+                            setStatusMessage("Switched to Video/GIF mode");
+                            toast("GIF Mode Active");
+                          }
+                          // Immediately pull a fresh template for the new mode
+                          getMemeImage();
+                        });
+                      }}            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold"
           >
             <option value="image">🖼️ Static Images (ImgFlip)</option>
             <option value="video">🎥 Animated GIFs (Tenor)</option>
@@ -918,7 +919,7 @@ export default function Main() {
             )}
 
             <span className="text-xl tracking-tight">
-              {generating ? "Cooking..." : mode === "video" ? "Get Random GIF" : "Get Random Meme"}
+              {generating ? "Cooking..." : mode === "video" ? "Get Random GIF" : "Get Random Image"}
             </span>
           </button>{" "}
           <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-900/50">

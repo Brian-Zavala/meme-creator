@@ -154,6 +154,49 @@ export default function Main() {
     return items[index];
   };
 
+  const calculateSmartFontSize = (width, height, currentTexts = []) => {
+    // 500px is our "standard" reference width for calculation
+    const refWidth = 500;
+    const ar = (width && height) ? (width / height) : 1;
+    
+    // Scale horizontal baseline based on aspect ratio
+    // If image is narrow (ar < 1), we have less horizontal room
+    const effectiveWidth = ar < 1 ? refWidth * ar : refWidth;
+    const effectiveHeight = ar > 1 ? refWidth / ar : refWidth;
+
+    // Baseline: 10% of effective width
+    let size = effectiveWidth * 0.10;
+    
+    currentTexts.forEach(t => {
+      const content = t.content.trim();
+      if (!content) return;
+
+      const lines = content.split('\n');
+      const longestLine = lines.reduce((max, l) => Math.max(max, l.length), 0);
+      const lineCount = lines.length;
+
+      // 1. Horizontal Safety: Longest word/line must fit in width
+      // Factor in the meme's maxWidth setting (defaulting to 90% for safety buffer)
+      const allowedWidth = effectiveWidth * (meme.maxWidth / 100) * 0.9;
+      const estimatedTextWidth = longestLine * (size * 0.6); // Impact char width is ~0.6 of height
+      
+      if (estimatedTextWidth > allowedWidth) {
+        size *= (allowedWidth / estimatedTextWidth);
+      }
+
+      // 2. Vertical Safety: Total lines shouldn't exceed ~40% of height
+      const allowedHeight = effectiveHeight * 0.4;
+      const estimatedTextHeight = lineCount * (size * 1.2); // Line height is ~1.2
+      
+      if (estimatedTextHeight > allowedHeight) {
+        size *= (allowedHeight / estimatedTextHeight);
+      }
+    });
+    
+    // Clamp to professional range
+    return Math.max(14, Math.min(75, Math.round(size)));
+  };
+
   // --- Effects ---
 
   useEffect(() => {
@@ -263,61 +306,52 @@ export default function Main() {
     setGenerating(true);
 
     // GIF / Tenor Mode
-    if (mode === "video") {
-      let currentMemes = allMemes;
-
-      // If we haven't searched anything yet or the list is from Imgflip, fetch trending Tenor GIFs
-      const isTenorData = allMemes.length > 0 && allMemes[0].url.includes("tenor.com");
-
-      if (!isTenorData) {
-        setStatusMessage("Fetching trending GIFs...");
-        const results = await searchTenor(""); // featured
-        if (results.length > 0) {
-          currentMemes = results;
-          setAllMemes(results);
-          // We need to pick from the new results immediately
-        } else {
-          toast.error("Failed to load trending GIFs");
+        if (mode === "video") {
+          let currentMemes = allMemes;
+          
+          // If we haven't searched anything yet or the list is from Imgflip, fetch trending Tenor GIFs
+          const isTenorData = allMemes.length > 0 && allMemes[0].url.includes("tenor.com");
+          
+          if (!isTenorData) {
+            setStatusMessage("Fetching trending GIFs...");
+            const results = await searchTenor(""); // featured
+            if (results.length > 0) {
+              currentMemes = results;
+              setAllMemes(results);
+              // We need to pick from the new results immediately
+            } else {
+              toast.error("Failed to load trending GIFs");
+              setGenerating(false);
+              return;
+            }
+          }
+    
+          const newMeme = getNextItem(currentMemes, videoDeck, setVideoDeck);
+          const cleanName = newMeme.name.replace(/\s+/g, "-");
+    
+          const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
+    
+          updateState({
+            ...meme,
+            imageUrl: newMeme.url,
+            name: cleanName,
+            isVideo: false, // GIFs are images technically, but they animate
+            fontSize: optimizedFontSize,
+          });
+          setStatusMessage(`New GIF loaded: ${cleanName}`);
           setGenerating(false);
           return;
         }
-      }
-
-      const newMeme = getNextItem(currentMemes, videoDeck, setVideoDeck);
-      const cleanName = newMeme.name.replace(/\s+/g, "-");
-
-      // GIF Font Sizing (square-ish default)
-      const maxDim = 600;
-      const ar = newMeme.width && newMeme.height ? newMeme.width / newMeme.height : 1;
-      const estimatedWidth = ar >= 1 ? maxDim : maxDim * ar;
-      const optimizedFontSize = Math.max(20, Math.min(80, Math.round(estimatedWidth * 0.07)));
-
-      updateState({
-        ...meme,
-        imageUrl: newMeme.url,
-        name: cleanName,
-        isVideo: false, // GIFs are images technically, but they animate
-        fontSize: optimizedFontSize,
-      });
-      setStatusMessage(`New GIF loaded: ${cleanName}`);
-      setGenerating(false);
-      return;
-    }
-
-    // Static Image / ImgFlip Mode
-    if (allMemes.length === 0) return;
-
-    const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
-    const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
-
-    // Calculate smart font size based on aspect ratio
-    const maxDim = 600; // Approximate max container dimension
-    const ar = newMeme.width && newMeme.height ? newMeme.width / newMeme.height : 1;
-    const estimatedWidth = ar >= 1 ? maxDim : maxDim * ar;
-    const optimizedFontSize = Math.max(20, Math.min(80, Math.round(estimatedWidth * 0.07)));
-
-    try {
-      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
+    
+        // Static Image / ImgFlip Mode
+        if (allMemes.length === 0) return;
+    
+        const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
+        const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
+    
+        const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, meme.texts);
+    
+        try {      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
       if (!response.ok) throw new Error();
       const blob = await response.blob();
       const dataUrl = await new Promise((resolve) => {

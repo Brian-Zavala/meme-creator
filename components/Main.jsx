@@ -530,6 +530,35 @@ export default function Main() {
 
   async function handleShare() {
     if (!memeRef.current) return;
+
+    if (mode === "video") {
+      const promise = (async () => {
+        const blob = await exportGif(meme, meme.texts, meme.stickers);
+        const file = new File([blob], `meme-${Date.now()}.gif`, { type: "image/gif" });
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: "My Animated Meme" });
+          triggerFireworks();
+          setStatusMessage("Share dialog opened for GIF.");
+        } else {
+          // Fallback: Copy blob to clipboard if possible, or just notify
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+            toast.success("GIF copied to clipboard!");
+          } catch {
+            toast.error("Sharing not supported on this browser");
+          }
+        }
+      })();
+
+      toast.promise(promise, {
+        loading: "Preparing GIF for sharing...",
+        success: "Ready to share!",
+        error: "Error preparing GIF",
+      });
+      return;
+    }
+
     const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
     canvas.toBlob(async (blob) => {
       const file = new File([blob], `meme-${Date.now()}.png`, { type: "image/png" });

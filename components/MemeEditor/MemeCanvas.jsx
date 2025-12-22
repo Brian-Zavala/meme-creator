@@ -1,0 +1,101 @@
+import { forwardRef } from "react";
+import { Loader2 } from "lucide-react";
+
+const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
+  const description = `Meme preview of ${meme.name || "Custom Image"} with ${meme.texts.length} text captions and ${meme.stickers?.length || 0} stickers`;
+
+  return (
+    <div 
+      onPointerDown={onCanvasPointerDown}
+      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950"
+      role="img"
+      aria-label={description}
+    >
+      <div
+        ref={ref}
+        className="relative inline-block max-w-full overflow-hidden"
+        style={{ backgroundColor: "#000000", color: "#ffffff" }}
+      >
+        <img
+          src={meme.imageUrl}
+          className="max-w-full max-h-[70vh] object-contain block"
+          alt={`Template: ${meme.name}`}
+          crossOrigin="anonymous"
+          style={{
+            filter: `contrast(${meme.filters?.contrast ?? 100}%) brightness(${meme.filters?.brightness ?? 100}%) blur(${meme.filters?.blur ?? 0}px)`
+          }}
+        />
+
+        {/* Render Stickers */}
+        {meme.stickers?.map((sticker) => (
+          <div
+            key={sticker.id}
+            onPointerDown={(e) => onPointerDown(e, sticker.id)}
+            onDoubleClick={() => onRemoveSticker(sticker.id)}
+            className={`absolute select-none touch-none z-30 flex items-center justify-center transition-transform ${
+              draggedId === sticker.id ? "scale-125 cursor-grabbing" : "cursor-grab"
+            }`}
+            style={{
+              left: `${sticker.x}%`,
+              top: `${sticker.y}%`,
+              fontSize: `${meme.fontSize * 1.5}px`, // Size stickers relative to font size
+              transform: "translate(-50%, -50%)",
+            }}
+            role="img"
+            aria-label={`Sticker: ${sticker.url}`}
+            tabIndex={0} // Make focusable
+            onKeyDown={(e) => {
+                if(e.key === 'Delete' || e.key === 'Backspace') onRemoveSticker(sticker.id);
+            }}
+          >
+            {sticker.url}
+          </div>
+        ))}
+        
+        {meme.texts.map((textItem) => (
+          <h2
+            key={textItem.id}
+            onPointerDown={(e) => onPointerDown(e, textItem.id)}
+            className={`absolute w-full text-center uppercase tracking-tighter leading-tight whitespace-pre-wrap break-words px-4 select-none touch-none z-40 ${
+              draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
+            }`}
+            style={{
+              left: `${textItem.x}%`,
+              top: `${textItem.y}%`,
+              transform: "translate(-50%, -50%)",
+              color: meme.textColor,
+              fontSize: `${meme.fontSize}px`,
+              maxWidth: `${meme.maxWidth}%`,
+              fontFamily: "Impact, sans-serif",
+              textShadow: `
+                2px 2px 0 ${meme.textShadow},
+                -2px -2px 0 ${meme.textShadow},
+                2px -2px 0 ${meme.textShadow},
+                -2px 2px 0 ${meme.textShadow},
+                0 2px 0 ${meme.textShadow},
+                2px 0 0 ${meme.textShadow},
+                0 -2px 0 ${meme.textShadow},
+                -2px 0 0 ${meme.textShadow},
+                2px 2px 5px #000
+              `,
+              border: draggedId === textItem.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
+              borderRadius: "8px",
+            }}
+          >
+            {textItem.content}
+          </h2>
+        ))}
+      </div>
+
+      {loading && (
+        <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center z-50 backdrop-blur-sm gap-4">
+          <Loader2 className="w-10 h-10 text-[oklch(53%_0.187_39)] animate-spin" />
+          <p className="text-slate-400 font-medium animate-pulse">Fetching templates...</p>
+        </div>
+      )}
+    </div>
+  );
+});
+
+MemeCanvas.displayName = "MemeCanvas";
+export default MemeCanvas;

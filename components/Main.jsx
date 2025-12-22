@@ -807,36 +807,36 @@ export default function Main() {
         </div>
       </div>
 
-      {/* MEDIA TYPE SELECTOR */}
-      <div className="relative mb-3">
-        <select
-          value={mediaType}
-          onChange={(e) => {
-            const newMode = e.target.value;
-            setMediaType(newMode);
-
-            startTransition(() => {
-              setMode(newMode); // Sync UI state
-
-              if (newMode === "image") {
-                // If switching back to images, restore Imgflip
-                clearSearch();
-              } else {
-                // If switching to video, we prepare for GIFs
-                setStatusMessage("Switched to Video/GIF mode");
-                toast("GIF Mode Active: Search or click Randomize!");
-              }
-            });
-          }}
-          className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold"
-        >
-          <option value="image">🖼️ Static Images (ImgFlip)</option>
-          <option value="video">🎥 Animated GIFs (Tenor)</option>
-        </select>
-        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-      </div>
-
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
+        {/* MEDIA TYPE SELECTOR - Moved inside the column to fix desktop layout */}
+        <div className="relative">
+          <select
+            value={mediaType}
+            onChange={(e) => {
+              const newMode = e.target.value;
+              setMediaType(newMode);
+
+              startTransition(() => {
+                setMode(newMode); // Sync UI state
+
+                if (newMode === "image") {
+                  // If switching back to images, restore Imgflip
+                  clearSearch();
+                } else {
+                  // If switching to video, we prepare for GIFs
+                  setStatusMessage("Switched to Video/GIF mode");
+                  toast("GIF Mode Active: Search or click Randomize!");
+                }
+              });
+            }}
+            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold"
+          >
+            <option value="image">🖼️ Static Images (ImgFlip)</option>
+            <option value="video">🎥 Animated GIFs (Tenor)</option>
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        </div>
+
         <Suspense
           fallback={
             <div className="flex flex-col items-center justify-center min-h-[400px] bg-slate-900/50 rounded-2xl border-2 border-slate-800 animate-pulse">

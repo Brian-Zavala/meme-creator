@@ -200,6 +200,12 @@ export default function Main() {
     const newMeme = allMemes[randomNumber];
     const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
 
+    // Calculate smart font size based on aspect ratio
+    const maxDim = 600; // Approximate max container dimension
+    const ar = (newMeme.width && newMeme.height) ? (newMeme.width / newMeme.height) : 1;
+    const estimatedWidth = ar >= 1 ? maxDim : maxDim * ar;
+    const optimizedFontSize = Math.max(20, Math.min(80, Math.round(estimatedWidth * 0.07)));
+
     try {
       const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
       if (!response.ok) throw new Error();
@@ -210,10 +216,10 @@ export default function Main() {
         reader.readAsDataURL(blob);
       });
 
-      updateState({ ...meme, imageUrl: dataUrl, name: cleanName });
+      updateState({ ...meme, imageUrl: dataUrl, name: cleanName, fontSize: optimizedFontSize });
       setStatusMessage(`New meme template loaded: ${cleanName}`);
     } catch {
-      updateState({ ...meme, imageUrl: newMeme.url, name: cleanName });
+      updateState({ ...meme, imageUrl: newMeme.url, name: cleanName, fontSize: optimizedFontSize });
       toast.error("CORS limit: download might fail");
       setStatusMessage(`New meme template loaded (CORS fallback): ${cleanName}`);
     } finally {

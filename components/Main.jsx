@@ -19,6 +19,7 @@ import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
 import { searchTenor } from "../services/tenor";
+import { exportGif } from "../services/gifExporter";
 import { MEME_QUOTES } from "../constants/memeQuotes";
 
 // Sub-components
@@ -485,6 +486,29 @@ export default function Main() {
 
   async function handleDownload() {
     if (!memeRef.current) return;
+
+    if (mode === "video") {
+      const promise = (async () => {
+        const blob = await exportGif(meme, meme.texts, meme.stickers);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const fileName = (meme.name || "meme").replace(/\s+/g, "-");
+        link.download = `${fileName}-${Date.now()}.gif`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        triggerFireworks();
+        setStatusMessage("Animated GIF downloaded successfully.");
+      })();
+
+      toast.promise(promise, {
+        loading: "Encoding GIF (this may take a few seconds)...",
+        success: "GIF Downloaded!",
+        error: "Error encoding GIF",
+      });
+      return;
+    }
+
     const promise = new Promise(async (resolve, reject) => {
       try {
         await new Promise((r) => setTimeout(r, 100));
@@ -501,7 +525,7 @@ export default function Main() {
         reject(e);
       }
     });
-    toast.promise(promise, { loading: "Generating...", success: "Downloaded!", error: "Error" });
+    toast.promise(promise, { loading: "Generating Image...", success: "Downloaded!", error: "Error" });
   }
 
   async function handleShare() {

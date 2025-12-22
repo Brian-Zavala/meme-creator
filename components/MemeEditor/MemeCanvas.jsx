@@ -52,7 +52,9 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
           </div>
         ))}
         
-        {meme.texts.map((textItem) => (
+        {meme.texts.map((textItem) => {
+          const stroke = Math.max(1, meme.fontSize / 25);
+          return (
           <h2
             key={textItem.id}
             onPointerDown={(e) => onPointerDown(e, textItem.id)}
@@ -68,15 +70,15 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: "Impact, sans-serif",
               textShadow: `
-                2px 2px 0 ${meme.textShadow},
-                -2px -2px 0 ${meme.textShadow},
-                2px -2px 0 ${meme.textShadow},
-                -2px 2px 0 ${meme.textShadow},
-                0 2px 0 ${meme.textShadow},
-                2px 0 0 ${meme.textShadow},
-                0 -2px 0 ${meme.textShadow},
-                -2px 0 0 ${meme.textShadow},
-                2px 2px 5px #000
+                ${stroke}px ${stroke}px 0 ${meme.textShadow},
+                -${stroke}px -${stroke}px 0 ${meme.textShadow},
+                ${stroke}px -${stroke}px 0 ${meme.textShadow},
+                -${stroke}px ${stroke}px 0 ${meme.textShadow},
+                0 ${stroke}px 0 ${meme.textShadow},
+                ${stroke}px 0 0 ${meme.textShadow},
+                0 -${stroke}px 0 ${meme.textShadow},
+                -${stroke}px 0 0 ${meme.textShadow},
+                ${stroke}px ${stroke}px 5px #000
               `,
               border: draggedId === textItem.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
               borderRadius: "8px",
@@ -84,7 +86,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
           >
             {textItem.content}
           </h2>
-        ))}
+        )})}
       </div>
 
       {loading && (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Type, Palette, MoveHorizontal, Image as ImageIcon, Sun, Contrast, Droplets, Smile, Github as Grayscale, Wind as Sepia, RotateCcw as HueRotate, Zap as Saturate, ShieldAlert as Invert } from "lucide-react";
+import { Type, Palette, MoveHorizontal, Image as ImageIcon, Sun, Contrast, CloudFog as Blur, Smile, SunDim as Grayscale, Timer as Sepia, Aperture as HueRotate, Droplet as Saturate, FlipVertical as Invert } from "lucide-react";
 
 export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit }) {
   const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
@@ -161,7 +161,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3 min-w-[140px]">
-                <Droplets className="w-4 h-4 text-slate-400" aria-hidden="true" />
+                <Blur className="w-4 h-4 text-slate-400" aria-hidden="true" />
                 <input
                   type="range" min="0" max="10" step="0.5" name="blur"
                   value={meme.filters?.blur ?? 0}

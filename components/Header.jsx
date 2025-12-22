@@ -7,9 +7,6 @@ export default function Header() {
           <p className="text-[10px] font-bold text-white/80 tracking-[0.2em] uppercase">Free • No Watermark</p>
         </div>
       </div>
-      <h4 className="header--project text-xs font-bold text-white/90 bg-black/20 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
-        v2.0
-      </h4>
     </header>
   );
 }

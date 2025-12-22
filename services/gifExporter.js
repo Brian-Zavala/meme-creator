@@ -29,7 +29,8 @@ export async function exportGif(meme, texts, stickers) {
         quality: 10,
         width: width,
         height: height,
-        workerScript: '/gif.worker.js'
+        workerScript: '/gif.worker.js',
+        repeat: 0 // 0 = loop forever, -1 = play once
       });
 
       // 4. Create a temporary canvas for drawing
@@ -37,6 +38,8 @@ export async function exportGif(meme, texts, stickers) {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      console.log(`Processing ${numFrames} frames for GIF export...`);
 
       // 5. Process each frame
       for (let i = 0; i < numFrames; i++) {
@@ -62,12 +65,11 @@ export async function exportGif(meme, texts, stickers) {
           ctx.filter = filterStr;
         }
 
-        // We need to draw the frameData back to canvas
-        // PutImageData doesn't support ctx.filter, so we use an intermediate canvas
         const frameCanvas = document.createElement('canvas');
         frameCanvas.width = width;
         frameCanvas.height = height;
-        frameCanvas.getContext('2d').putImageData(frameData, 0, 0);
+        const fCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
+        fCtx.putImageData(frameData, 0, 0);
         
         ctx.drawImage(frameCanvas, 0, 0);
         
@@ -96,24 +98,23 @@ export async function exportGif(meme, texts, stickers) {
           ctx.font = `bold ${fontSize}px Impact, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.textTransform = 'uppercase';
           
           const content = textItem.content.toUpperCase();
           
-          // Draw Shadow/Outline (Simulating the complex CSS shadow)
           ctx.strokeStyle = meme.textShadow || '#000000';
           ctx.lineWidth = stroke * 2;
           ctx.lineJoin = 'round';
           ctx.strokeText(content, x, y);
           
-          // Draw Main Text
           ctx.fillStyle = meme.textColor || '#ffffff';
           ctx.fillText(content, x, y);
         }
 
         // Add to GIF
         const info = reader.frameInfo(i);
-        gif.addFrame(ctx, { delay: info.delay * 10, copy: true });
+        // Delay is in centiseconds, convert to ms. Min 20ms for safety.
+        const delay = Math.max(20, (info.delay || 10) * 10);
+        gif.addFrame(canvas, { delay, copy: true });
       }
 
       // 6. Finalize

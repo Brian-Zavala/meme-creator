@@ -29,6 +29,15 @@ import MemeInputs from "./MemeEditor/MemeInputs";
 
 export default function Main() {
   const [isPending, startTransition] = useTransition();
+  const [showWelcome, setShowWelcome] = useState(() => {
+    return !localStorage.getItem("meme-creator-welcome-seen");
+  });
+
+  function closeWelcome() {
+    localStorage.setItem("meme-creator-welcome-seen", "true");
+    setShowWelcome(false);
+  }
+
   // --- State with History ---
   const {
     state: meme,
@@ -904,6 +913,45 @@ export default function Main() {
           <p className="text-xs text-slate-600 italic">Pro Tip: Click/Hold to move text 🔓</p>
         </div>
       </div>
+
+      {/* WELCOME MODAL */}
+      {showWelcome && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500">
+          <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-3xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="bg-[oklch(53%_0.187_39)] px-8 py-6 text-center">
+              <h2 className="text-2xl font-black tracking-tight text-white uppercase">Meme Creator</h2>
+              <p className="text-white/70 text-xs font-bold tracking-widest uppercase mt-1">Creation Guide</p>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              <section className="space-y-3">
+                <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider">How to use</h3>
+                <ul className="text-slate-300 text-sm space-y-2 list-disc list-outside pl-5 marker:text-slate-600">
+                  <li>Choose between <span className="text-white font-medium">Static Images</span> or <span className="text-white font-medium">Animated GIFs</span>.</li>
+                  <li>Add captions, move them with your mouse/touch, and style them using the toolbar.</li>
+                  <li>Apply filters and stickers to make your meme unique.</li>
+                </ul>
+              </section>
+
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
+                <h3 className="text-red-400 font-bold uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
+                  <Video className="w-3 h-3" /> Important Note
+                </h3>
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  When sharing animated memes, some apps may display them as static images. If this happens, use the <span className="text-white font-medium italic underline decoration-red-500/50">Download</span> button to save the high-quality animation directly to your device.
+                </p>
+              </div>
+
+              <button 
+                onClick={closeWelcome}
+                className="w-full bg-slate-100 hover:bg-white text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 shadow-lg uppercase tracking-widest text-sm"
+              >
+                Start Creating
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

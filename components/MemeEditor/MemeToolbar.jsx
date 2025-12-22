@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Type, Palette, MoveHorizontal, Image as ImageIcon, Sun, Contrast, Droplets } from "lucide-react";
+import { Type, Palette, MoveHorizontal, Image as ImageIcon, Sun, Contrast, Droplets, Smile } from "lucide-react";
 
 export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit }) {
   const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
+  const hasStickers = meme.stickers && meme.stickers.length > 0;
 
   return (
     <div 
@@ -47,24 +48,48 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
         {/* TEXT CONTROLS */}
         {activeTab === "text" && (
           <div id="text-tools-panel" role="tabpanel" className="flex items-center gap-6 w-full">
-            <div className="flex items-center gap-3 flex-1">
-              <Type className="w-4 h-4 text-slate-400" aria-hidden="true" />
-              <label htmlFor="font-size-slider" className="sr-only">Font Size</label>
-              <input
-                id="font-size-slider"
-                type="range"
-                min="10"
-                max="80"
-                name="fontSize"
-                value={meme.fontSize}
-                onChange={handleStyleChange}
-                onMouseUp={handleStyleCommit}
-                className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full"
-                title="Font Size"
-                aria-valuemin="10"
-                aria-valuemax="80"
-                aria-valuenow={meme.fontSize}
-              />
+            <div className={`flex ${hasStickers ? 'flex-col items-start gap-2' : 'items-center gap-3'} flex-1`}>
+                <div className="flex items-center gap-3 w-full">
+                  <Type className="w-4 h-4 text-slate-400" aria-hidden="true" />
+                  <label htmlFor="font-size-slider" className="sr-only">Font Size</label>
+                  <input
+                    id="font-size-slider"
+                    type="range"
+                    min="10"
+                    max="80"
+                    name="fontSize"
+                    value={meme.fontSize}
+                    onChange={handleStyleChange}
+                    onMouseUp={handleStyleCommit}
+                    className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full"
+                    title="Font Size"
+                    aria-valuemin="10"
+                    aria-valuemax="80"
+                    aria-valuenow={meme.fontSize}
+                  />
+                </div>
+
+                {hasStickers && (
+                    <div className="flex items-center gap-3 w-full animate-in slide-in-from-top-1 fade-in duration-300">
+                      <Smile className="w-4 h-4 text-slate-400" aria-hidden="true" />
+                      <label htmlFor="sticker-size-slider" className="sr-only">Sticker Size</label>
+                      <input
+                        id="sticker-size-slider"
+                        type="range"
+                        min="20"
+                        max="150"
+                        name="stickerSize"
+                        value={meme.stickerSize || 60}
+                        onChange={handleStyleChange}
+                        onMouseUp={handleStyleCommit}
+                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full opacity-90"
+                        title="Sticker Size"
+                        aria-valuemin="20"
+                        aria-valuemax="150"
+                        aria-valuenow={meme.stickerSize || 60}
+                      />
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center gap-3 flex-1 border-l border-slate-700 pl-6">

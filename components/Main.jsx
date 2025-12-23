@@ -1,27 +1,14 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback } from "react";
 import html2canvas from "html2canvas";
 import {
-  Download,
   RefreshCcw,
-  ImagePlus,
-  Eraser,
-  Share2,
   Loader2,
-  Undo2,
-  Redo2,
-  HelpCircle,
-  Search,
-  X,
-  Video,
-  ChevronDown,
-  TrendingUp,
-  Sparkles,
-  Tag
+  Video
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
-import { searchTenor, registerShare, getAutocomplete, getSearchSuggestions, getCategories } from "../services/tenor";
+import { searchTenor, registerShare, getAutocomplete, getCategories } from "../services/tenor";
 import { exportGif } from "../services/gifExporter";
 import { MEME_QUOTES } from "../constants/memeQuotes";
 
@@ -29,6 +16,10 @@ import { MEME_QUOTES } from "../constants/memeQuotes";
 import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
+import { WelcomeModal } from "./WelcomeModal";
+import { MemeActions } from "./MemeEditor/MemeActions";
+import { GifSearch } from "./MemeEditor/GifSearch";
+import { ModeSelector } from "./MemeEditor/ModeSelector";
 
 export default function Main() {
   const [isPending, startTransition] = useTransition();
@@ -590,80 +581,41 @@ export default function Main() {
           onAddSticker={addSticker} 
           onMagicCaption={generateMagicCaption} 
         />
-        <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
-          <button onClick={undo} disabled={!canUndo} className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95">
-            <Undo2 className="w-4 h-4" /> Undo
-          </button>
-          <button onClick={redo} disabled={!canRedo} className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95">
-            <Redo2 className="w-4 h-4" /> Redo
-          </button>
-          <button onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })} className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400">
-            <HelpCircle className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-700 col-span-2">
-            <ImagePlus className="w-4 h-4" /> <span>Upload Custom</span>
-            <input type="file" className="hidden" accept="image/*,video/*" onChange={handleFileUpload} />
-          </label>
-          <button 
-            onClick={handleReset} 
-            className="bg-slate-800 hover:bg-red-900/30 hover:text-red-400 text-slate-400 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-700 col-span-2"
-          >
-            <Eraser className="w-4 h-4" /> <span>Reset Canvas</span>
-          </button>
-          <button onClick={handleDownload} className="bg-slate-100 hover:bg-white text-slate-900 font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
-            <Download className="w-5 h-5" /> Download
-          </button>
-          <button onClick={handleShare} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95">
-            <Share2 className="w-5 h-5" /> Share
-          </button>
-        </div>
+        <MemeActions
+          undo={undo}
+          redo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onFileUpload={handleFileUpload}
+          onReset={handleReset}
+          onDownload={handleDownload}
+          onShare={handleShare}
+        />
       </div>
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
-        <div className="relative">
-          <select value={mode} onChange={(e) => {
+        <ModeSelector 
+          mode={mode} 
+          onModeChange={(e) => {
               const m = e.target.value; setMode(m);
               startTransition(() => { if (m === "image") clearSearch(); getMemeImage(m); });
-            }} className="w-full bg-slate-900/50 hover:bg-white/5 transition-colors border border-slate-700 text-white rounded-xl py-3 px-4 outline-none font-bold text-center appearance-none cursor-pointer">
-            <option value="image" className="bg-slate-800 text-white hover:bg-[#7a1a1a]">🖼️ Static Images</option>
-            <option value="video" className="bg-slate-800 text-white hover:bg-[#7a1a1a]">🎥 Animated GIFs</option>
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-        </div>
+            }} 
+        />
 
         <Suspense fallback={<div className="min-h-[400px] flex items-center justify-center bg-slate-900/50 rounded-2xl animate-pulse"><Loader2 className="animate-spin" /></div>}>
           {mode === "video" && (
-            <div className="relative z-50 mb-2" ref={searchContainerRef}>
-              <div className="relative">
-                <input type="text" value={searchQuery} onFocus={() => setShowSuggestions(true)} onChange={handleSearchInput}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { setShowSuggestions(false); performSearch(searchQuery); }}} 
-                  placeholder="Search GIFs..." className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:ring-2 focus:ring-yellow-500 outline-none" />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                {searchQuery && <button onClick={clearSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"><X className="w-4 h-4" /></button>}
-              </div>
-              {showSuggestions && (
-                <div className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95">
-                    {suggestions.length > 0 ? (
-                        <div className="p-2">{suggestions.map((t, i) => (
-                            <button key={i} onClick={() => selectSuggestion(t)} className="w-full text-left px-3 py-2 hover:bg-slate-800 rounded-lg text-slate-300 flex items-center gap-2">
-                                <TrendingUp className="w-3 h-3" /> {t}
-                            </button>
-                        ))}
-                        </div>
-                    ) : categories.length > 0 && !searchQuery ? (
-                        <div className="p-2 grid grid-cols-2 gap-2">{categories.map((c, i) => (
-                            <button key={i} onClick={() => selectSuggestion(c.searchterm)} className="relative h-16 rounded-lg overflow-hidden group">
-                                <img src={c.image} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100" />
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="text-white font-bold text-xs">{c.name}</span></div>
-                            </button>
-                        ))}
-                        </div>
-                    ) : null}
-                </div>
-              )}
-            </div>
+            <GifSearch 
+              searchQuery={searchQuery}
+              onSearchInput={handleSearchInput}
+              onFocus={() => setShowSuggestions(true)}
+              onClear={clearSearch}
+              suggestions={suggestions}
+              showSuggestions={showSuggestions}
+              categories={categories}
+              onSelectSuggestion={selectSuggestion}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setShowSuggestions(false); performSearch(searchQuery); }}}
+              containerRef={searchContainerRef}
+            />
           )}
           <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-900/50">
             <MemeToolbar meme={meme} handleStyleChange={handleStyleChange} handleFilterChange={handleFilterChange} handleStyleCommit={handleStyleCommit} />
@@ -683,42 +635,7 @@ export default function Main() {
           </div>
         </Suspense>
       </div>
-      {showWelcome && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="bg-[oklch(53%_0.187_39)] px-8 py-6 text-center">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Meme Creator</h2>
-              <p className="text-white/70 text-xs font-bold tracking-widest uppercase mt-1">Creation Guide</p>
-            </div>
-            <div className="p-8 space-y-6">
-              <section className="space-y-3">
-                <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider">Sharing GIFs</h3>
-                <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
-                  <li><span className="text-white font-medium">Unedited GIFs</span> can be shared directly to your favorite apps.</li>
-                  <li>If you add <span className="text-white font-medium">Text or Stickers</span>, we will automatically generate and download a high-quality file for you to share manually.</li>
-                  <li>This ensures your captions and animations are perfectly preserved for your friends!</li>
-                </ul>
-              </section>
-
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
-                <h3 className="text-blue-400 font-bold uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
-                  <Sparkles className="w-3 h-3" /> Pro Tip
-                </h3>
-                <p className="text-slate-400 text-xs leading-relaxed">
-                  Use the <b>Magic AI</b> button to instantly generate hilarious captions based on your selected template!
-                </p>
-              </div>
-
-              <button 
-                onClick={closeWelcome} 
-                className="w-full bg-slate-100 hover:bg-white transition-all active:scale-95 py-4 rounded-2xl text-slate-900 font-black uppercase tracking-widest text-sm shadow-lg"
-              >
-                Start Creating
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />
     </main>
   );
 }

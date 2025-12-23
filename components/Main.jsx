@@ -540,8 +540,20 @@ export default function Main() {
           await navigator.share({ url: shareUrl });
         }
       } catch {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success("Link copied!");
+        try {
+          const htmlBlob = new Blob([`<img src="${shareUrl}" alt="GIF" />`], { type: "text/html" });
+          const textBlob = new Blob([shareUrl], { type: "text/plain" });
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              "text/html": htmlBlob,
+              "text/plain": textBlob,
+            }),
+          ]);
+          toast.success("GIF copied to clipboard!");
+        } catch (e) {
+          await navigator.clipboard.writeText(shareUrl);
+          toast.success("Link copied!");
+        }
       }
     } else {
       const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });

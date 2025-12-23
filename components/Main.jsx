@@ -114,6 +114,8 @@ export default function Main() {
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
 
+  const [pingKey, setPingKey] = useState(null);
+
   const triggerFlash = (color) => {
     setFlashColor(color);
     setTimeout(() => setFlashColor(null), 200);
@@ -638,9 +640,21 @@ export default function Main() {
           )}
           <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-900/50">
             <MemeToolbar meme={meme} handleStyleChange={handleStyleChange} handleFilterChange={handleFilterChange} handleStyleCommit={handleStyleCommit} />
-            <button onClick={getMemeImage} disabled={loading || generating} className={`w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}>
-              {generating ? <Loader2 className="animate-spin w-5 h-5" /> : meme.mode === "video" ? <Video className="w-5 h-5" /> : <RefreshCcw className="w-5 h-5" />}
-              <span className="text-lg">{generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}</span>
+            <button 
+              onClick={() => { setPingKey(Date.now()); getMemeImage(); }} 
+              disabled={loading || generating} 
+              className={`relative overflow-hidden w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}
+            >
+              {pingKey && (
+                <span 
+                  key={pingKey} 
+                  className="absolute inset-0 bg-white/25 animate-ping-once pointer-events-none" 
+                />
+              )}
+              <div className="relative z-10 flex items-center justify-center gap-2">
+                {generating ? <Loader2 className="animate-spin w-5 h-5" /> : meme.mode === "video" ? <Video className="w-5 h-5" /> : <RefreshCcw className="w-5 h-5" />}
+                <span className="text-lg">{generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}</span>
+              </div>
             </button>
             <MemeCanvas 
               ref={memeRef} 

@@ -88,24 +88,26 @@ body {
 @keyframes shimmer-rtl {
   0% {
     background-position: 100% 0;
+    color: transparent;
   }
   100% {
-    background-position: -100% 0;
+    background-position: 0% 0;
+    color: #ffffff;
   }
 }
 
 .animate-text-shimmer {
   background: linear-gradient(
     to left,
-    #ffffff 35%,
+    #ffffff 45%,
     oklch(53% 0.187 39) 50%,
-    #ffffff 65%
+    #ffffff 55%
   );
-  background-size: 200% auto;
+  background-size: 300% auto;
   color: transparent;
   background-clip: text;
   -webkit-background-clip: text;
-  animation: shimmer-rtl 0.8s ease-out forwards;
+  animation: shimmer-rtl 1s ease-out forwards;
 }
 
 /* Glass Inputs */

@@ -8,8 +8,8 @@ export function ModeSelector({ mode, onModeChange }) {
         onChange={onModeChange} 
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
       >
-        <option value="image">Static Images</option>
-        <option value="video">Animated GIFs</option>
+        <option value="image" className="bg-slate-800 text-white">Static Images</option>
+        <option value="video" className="bg-slate-800 text-white">Animated GIFs</option>
       </select>
       
       <div className="flex items-center justify-center py-3 px-4 h-full relative z-10 pointer-events-none">

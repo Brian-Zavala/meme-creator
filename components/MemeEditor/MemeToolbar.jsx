@@ -131,7 +131,15 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
             {/* Group 3: Color Controls */}
             <div className="w-full md:w-auto flex items-center justify-center md:justify-end gap-6">
-              <div className="flex items-center gap-3" title="Text Color">
+              <div className="relative flex items-center gap-3" title="Text Color">
+                {meme.textColor !== '#ffffff' && (
+                    <button 
+                      onClick={() => handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true)}
+                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                    >
+                      Reset
+                    </button>
+                )}
                 <Palette className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                   <input
@@ -144,7 +152,15 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Outline Color">
+              <div className="relative flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Outline Color">
+                {meme.textShadow !== '#000000' && (
+                    <button 
+                      onClick={() => handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true)}
+                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                    >
+                      Reset
+                    </button>
+                )}
                 <div className="w-5 h-5 text-slate-400 shrink-0 flex items-center justify-center font-black text-xs border border-slate-400 rounded-sm">T</div>
                 <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                   <input
@@ -158,7 +174,15 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               </div>
 
               {hasText && (
-                <div className="flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Background Color">
+                <div className="relative flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Background Color">
+                  {meme.textBgColor !== 'transparent' && (
+                    <button 
+                      onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
+                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                    >
+                      Clear
+                    </button>
+                  )}
                   <Brush className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                   <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                     <input
@@ -169,14 +193,6 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
                     />
                   </div>
-                  {meme.textBgColor !== 'transparent' && (
-                    <button 
-                      onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
-                      className="text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/50 px-2 py-1.5 rounded ml-1"
-                    >
-                      Clear
-                    </button>
-                  )}
                 </div>
               )}
             </div>

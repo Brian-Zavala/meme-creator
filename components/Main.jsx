@@ -460,19 +460,23 @@ export default function Main() {
     if (shouldCommit) {
       updateState((prev) => ({ ...prev, [name]: value }));
     } else {
-      updateTransient((prev) => ({ ...prev, [name]: value }));
+      startTransition(() => {
+        updateTransient((prev) => ({ ...prev, [name]: value }));
+      });
     }
   }
 
   function handleFilterChange(event) {
     const { value, name } = event.currentTarget;
-    updateTransient((prev) => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        [name]: value,
-      },
-    }));
+    startTransition(() => {
+        updateTransient((prev) => ({
+        ...prev,
+        filters: {
+            ...prev.filters,
+            [name]: value,
+        },
+        }));
+    });
   }
 
   function handleStyleCommit() {

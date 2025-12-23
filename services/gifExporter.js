@@ -50,10 +50,23 @@ export async function exportGif(meme, texts, stickers) {
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, width, height);
 
-        // Draw original GIF frame
+        // Decode raw frame data
         const frameData = ctx.createImageData(width, height);
         reader.decodeAndBlitFrameRGBA(i, frameData.data);
         
+        // Create a temporary canvas to hold the raw frame (with transparency)
+        // We do this because putImageData overwrites pixels (ignoring alpha blending).
+        // By putting it on a temp canvas first, we can then drawImage it onto the main canvas,
+        // which RESPECTS alpha blending and composites it over our black background.
+        const rawFrameCanvas = document.createElement('canvas');
+        rawFrameCanvas.width = width;
+        rawFrameCanvas.height = height;
+        const rawCtx = rawFrameCanvas.getContext('2d');
+        rawCtx.putImageData(frameData, 0, 0);
+
+        // Draw the raw frame onto the main canvas (compositing over black)
+        ctx.drawImage(rawFrameCanvas, 0, 0);
+
         // Apply filters if any
         if (meme.filters) {
           const filterStr = `
@@ -66,19 +79,21 @@ export async function exportGif(meme, texts, stickers) {
             saturate(${meme.filters.saturate ?? 100}%)
             invert(${meme.filters.invert ?? 0}%)
           `.replace(/\s+/g, ' ').trim();
-          ctx.filter = filterStr;
+          
+          // Apply filters using a second temp canvas to avoid self-referential drawing issues
+          const filteredCanvas = document.createElement('canvas');
+          filteredCanvas.width = width;
+          filteredCanvas.height = height;
+          const fCtx = filteredCanvas.getContext('2d');
+          fCtx.filter = filterStr;
+          fCtx.drawImage(canvas, 0, 0);
+          
+          // Draw filtered result back to main canvas
+          ctx.drawImage(filteredCanvas, 0, 0);
+          
+          // Reset filter
+          ctx.filter = 'none';
         }
-
-        const frameCanvas = document.createElement('canvas');
-        frameCanvas.width = width;
-        frameCanvas.height = height;
-        const fCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
-        fCtx.putImageData(frameData, 0, 0);
-        
-        ctx.drawImage(frameCanvas, 0, 0);
-        
-        // Reset filter for overlays
-        ctx.filter = 'none';
 
         // Draw Stickers
         for (const sticker of (stickers || [])) {

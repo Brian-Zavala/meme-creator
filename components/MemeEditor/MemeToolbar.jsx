@@ -185,8 +185,9 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
         {/* IMAGE CONTROLS */}
         {activeTab === "image" && (
-          <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full items-start">
-            <div className="flex flex-col gap-5">
+          <div id="image-tools-panel" role="tabpanel" className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row gap-6 md:gap-8 lg:gap-10 w-full items-center">
+            
+            <div className="flex-1 w-full flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <Contrast className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
@@ -209,9 +210,9 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               </div>
             </div>
 
-            <div className="hidden lg:block w-px h-20 bg-slate-800 mx-auto" />
+            <div className="hidden lg:block w-px h-10 bg-slate-800 shrink-0" aria-hidden="true" />
 
-            <div className="flex flex-col gap-5">
+            <div className="flex-1 w-full flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <Blur className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
@@ -234,9 +235,9 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               </div>
             </div>
 
-            <div className="hidden lg:block w-px h-20 bg-slate-800 mx-auto" />
+            <div className="hidden lg:block w-px h-10 bg-slate-800 shrink-0" aria-hidden="true" />
 
-            <div className="flex flex-col gap-5">
+            <div className="flex-1 w-full flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <Sepia className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
@@ -259,9 +260,9 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               </div>
             </div>
 
-            <div className="hidden lg:block w-px h-20 bg-slate-800 mx-auto" />
+            <div className="hidden lg:block w-px h-10 bg-slate-800 shrink-0" aria-hidden="true" />
 
-            <div className="flex flex-col gap-5">
+            <div className="flex-1 w-full flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <HueRotate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <input

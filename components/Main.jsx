@@ -643,12 +643,12 @@ export default function Main() {
             <button 
               onClick={() => { setPingKey(Date.now()); getMemeImage(); }} 
               disabled={loading || generating} 
-              className={`relative overflow-hidden w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}
+              className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}
             >
               {pingKey && (
                 <span 
                   key={pingKey} 
-                  className="absolute inset-0 bg-white/25 animate-ping-once pointer-events-none" 
+                  className="absolute inset-0 animate-radar pointer-events-none" 
                 />
               )}
               <div className="relative z-10 flex items-center justify-center gap-2">

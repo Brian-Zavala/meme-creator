@@ -185,7 +185,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
         {/* IMAGE CONTROLS */}
         {activeTab === "image" && (
-          <div id="image-tools-panel" role="tabpanel" className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row gap-6 md:gap-8 lg:gap-10 w-full items-center">
+          <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-2 lg:flex lg:flex-row gap-x-4 gap-y-6 md:gap-8 lg:gap-10 w-full items-center">
             
             <div className="flex-1 w-full flex flex-col gap-5">
               <div className="flex items-center gap-3">

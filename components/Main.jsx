@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useTransition, Suspense } from "react";
+import { useState, useEffect, useRef, useTransition, Suspense, useCallback } from "react";
 import html2canvas from "html2canvas";
 import {
   Download,
@@ -14,11 +14,14 @@ import {
   X,
   Video,
   ChevronDown,
+  TrendingUp,
+  Sparkles,
+  Tag
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
-import { searchTenor } from "../services/tenor";
+import { searchTenor, registerShare, getAutocomplete, getSearchSuggestions, getCategories } from "../services/tenor";
 import { exportGif } from "../services/gifExporter";
 import { MEME_QUOTES } from "../constants/memeQuotes";
 
@@ -39,7 +42,7 @@ export default function Main() {
   }
 
   // --- State with History ---
-  const {
+  const { 
     state: meme,
     updateState,
     updateTransient,
@@ -50,7 +53,9 @@ export default function Main() {
   } = useHistory(() => {
     const saved = localStorage.getItem("meme-generator-state");
     const defaultState = {
+      id: null,
       imageUrl: "http://i.imgflip.com/1bij.jpg",
+      sourceUrl: null,
       name: "Meme Name",
       textColor: "#ffffff",
       textBgColor: "transparent",
@@ -78,47 +83,12 @@ export default function Main() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Clean up session-specific blob URLs that won't work on reload
         if (parsed.imageUrl && parsed.imageUrl.startsWith("blob:")) {
           parsed.imageUrl = defaultState.imageUrl;
           parsed.name = defaultState.name;
           parsed.isVideo = defaultState.isVideo;
         }
-        
-        // Handle migration from very old format
-        if (parsed && "topText" in parsed) {
-          return {
-            ...defaultState,
-            imageUrl: parsed.imageUrl || defaultState.imageUrl,
-            textColor: parsed.textColor || defaultState.textColor,
-            fontSize: parsed.fontSize || defaultState.fontSize,
-            texts: [
-              { id: "top", content: parsed.topText || "", x: parsed.topTextPos?.x ?? 50, y: parsed.topTextPos?.y ?? 5 },
-              { id: "bottom", content: parsed.bottomText || "", x: parsed.bottomTextPos?.x ?? 50, y: parsed.bottomTextPos?.y ?? 95 },
-            ],
-          };
-        }
-        // General migration and validation
-        if (parsed && Array.isArray(parsed.texts)) {
-          return {
-            ...defaultState,
-            ...parsed,
-            // Ensure stickers and texts are valid arrays even if corrupted in storage
-            texts: parsed.texts.map(t => ({
-                id: t.id || crypto.randomUUID(),
-                content: typeof t.content === 'string' ? t.content : "",
-                x: typeof t.x === 'number' ? t.x : 50,
-                y: typeof t.y === 'number' ? t.y : 50
-            })),
-            stickers: Array.isArray(parsed.stickers) ? parsed.stickers.map(s => ({
-                id: s.id || crypto.randomUUID(),
-                url: s.url || "😀",
-                x: typeof s.x === 'number' ? s.x : 50,
-                y: typeof s.y === 'number' ? s.y : 50
-            })) : [],
-            filters: { ...defaultState.filters, ...(parsed.filters || {}) }
-          };
-        }
+        return { ...defaultState, ...parsed };
       } catch (e) {
         console.error("State hydration failed", e);
       }
@@ -126,12 +96,12 @@ export default function Main() {
     return defaultState;
   });
 
-  const [allMemes, setAllMemes] = useState([]); // Imgflip images
-  const [allGifs, setAllGifs] = useState([]);   // Tenor GIFs
+  const [allMemes, setAllMemes] = useState([]); 
+  const [allGifs, setAllGifs] = useState([]);   
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
-  const [flashColor, setFlashColor] = useState(null); // 'red' | 'green' | null
+  const [flashColor, setFlashColor] = useState(null); 
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
   const globalLastTapRef = useRef(0);
@@ -140,14 +110,18 @@ export default function Main() {
   const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
 
-  // Shuffle bag state to prevent repeats
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [mode, setMode] = useState("image"); // 'image' or 'video'
-  // --- Helpers ---
+  const [mode, setMode] = useState("image"); 
+  const searchTimeoutRef = useRef(null);
+  const searchContainerRef = useRef(null);
+
   const triggerFlash = (color) => {
     setFlashColor(color);
     setTimeout(() => setFlashColor(null), 200);
@@ -156,83 +130,49 @@ export default function Main() {
   const getNextItem = (items, deck, setDeck) => {
     let currentDeck = [...deck];
     if (currentDeck.length === 0) {
-      // Create and shuffle new deck
       currentDeck = items.map((_, i) => i);
       for (let i = currentDeck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
       }
     }
-
     const index = currentDeck.pop();
     setDeck(currentDeck);
     return items[index];
   };
 
-  const calculateSmartFontSize = (width, height, currentTexts = []) => {
-    // 500px is our "standard" reference width for calculation
+  const calculateSmartFontSize = useCallback((width, height, currentTexts = []) => {
     const refWidth = 500;
     const ar = (width && height) ? (width / height) : 1;
-    
-    // Scale horizontal baseline based on aspect ratio
-    // If image is narrow (ar < 1), we have less horizontal room
     const effectiveWidth = ar < 1 ? refWidth * ar : refWidth;
     const effectiveHeight = ar > 1 ? refWidth / ar : refWidth;
-
-    // Baseline: 10% of effective width
     let size = effectiveWidth * 0.10;
-    
     currentTexts.forEach(t => {
-      const content = t.content.trim();
+      const content = (t.content || "").trim();
       if (!content) return;
-
       const lines = content.split('\n');
       const longestLine = lines.reduce((max, l) => Math.max(max, l.length), 0);
-      const lineCount = lines.length;
-
-      // 1. Horizontal Safety: Longest word/line must fit in width
-      // Factor in the meme's maxWidth setting (defaulting to 90% for safety buffer)
       const allowedWidth = effectiveWidth * (meme.maxWidth / 100) * 0.9;
-      const estimatedTextWidth = longestLine * (size * 0.6); // Impact char width is ~0.6 of height
-      
-      if (estimatedTextWidth > allowedWidth) {
-        size *= (allowedWidth / estimatedTextWidth);
-      }
-
-      // 2. Vertical Safety: Total lines shouldn't exceed ~40% of height
+      const estimatedTextWidth = longestLine * (size * 0.6);
+      if (estimatedTextWidth > allowedWidth) size *= (allowedWidth / estimatedTextWidth);
       const allowedHeight = effectiveHeight * 0.4;
-      const estimatedTextHeight = lineCount * (size * 1.2); // Line height is ~1.2
-      
-      if (estimatedTextHeight > allowedHeight) {
-        size *= (allowedHeight / estimatedTextHeight);
-      }
+      const estimatedTextHeight = lines.length * (size * 1.2);
+      if (estimatedTextHeight > allowedHeight) size *= (allowedHeight / estimatedTextHeight);
     });
-    
-    // Clamp to professional range
     return Math.max(2, Math.min(120, Math.round(size)));
-  };
-
-  // --- Effects ---
+  }, [meme.maxWidth]);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-        e.preventDefault();
-        undo();
-        triggerFlash("red");
-        toast("Undo", { icon: "↩️", duration: 1000 });
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
-        e.preventDefault();
-        redo();
-        triggerFlash("green");
-        toast("Redo", { icon: "↪️", duration: 1000 });
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSuggestions(false);
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
+  // Restore Global Dragging Logic
   useEffect(() => {
     if (draggedId) {
       const handleGlobalMove = (e) => {
@@ -287,14 +227,10 @@ export default function Main() {
   }, [draggedId, updateTransient]);
 
   useEffect(() => {
-    const allFilled = meme.texts.every((t) => (t.content || "").trim().length > 0);
-    if (allFilled && meme.texts.length < 10) {
-      updateState((prev) => ({
-        ...prev,
-        texts: [...prev.texts, { id: crypto.randomUUID(), content: "", x: 50, y: 50 }],
-      }));
+    if (mode === 'video') {
+      getCategories().then(cats => setCategories(cats.slice(0, 8)));
     }
-  }, [meme.texts, updateState]);
+  }, [mode]);
 
   useEffect(() => {
     setLoading(true);
@@ -314,115 +250,118 @@ export default function Main() {
     try {
       localStorage.setItem("meme-generator-state", JSON.stringify(meme));
     } catch (e) {
-      console.warn("Storage quota exceeded, state not saved locally.");
+      console.warn("Storage quota exceeded");
     }
   }, [meme]);
 
-  // --- Handlers ---
+  const handleSearchInput = (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (val.length >= 2) {
+      searchTimeoutRef.current = setTimeout(async () => {
+        const autoResults = await getAutocomplete(val);
+        startTransition(() => {
+            setSuggestions(autoResults);
+            setShowSuggestions(true);
+        });
+      }, 300);
+    } else {
+      startTransition(() => setSuggestions([]));
+    }
+  };
+
+  const selectSuggestion = (term) => {
+    setSearchQuery(term);
+    setShowSuggestions(false);
+    performSearch(term);
+  };
+
+  async function performSearch(term) {
+    if (!term.trim()) return;
+    setIsSearching(true);
+    const results = await searchTenor(term);
+    if (results.length > 0) {
+      setAllGifs(results);
+      setVideoDeck([]);
+      setMode("video");
+      const first = results[0];
+      updateState((prev) => ({
+        ...prev,
+        imageUrl: first.url,
+        sourceUrl: first.url,
+        name: first.name.replace(/\s+/g, "-"),
+        isVideo: false,
+        id: first.id,
+        fontSize: calculateSmartFontSize(first.width, first.height, prev.texts)
+      }));
+    } else {
+      toast.error("No GIFs found");
+    }
+    setIsSearching(false);
+  }
 
   async function getMemeImage(forcedMode) {
     const requestId = ++requestCounterRef.current;
-    // Use the forced mode if provided (for the selectbox change), otherwise use the current mode state
     const activeMode = typeof forcedMode === 'string' ? forcedMode : mode;
-    
-    setStatusMessage(`Fetching new ${activeMode === 'video' ? 'GIF' : 'image'} template...`);
     setGenerating(true);
-
     try {
-      // GIF / Tenor Mode
       if (activeMode === "video") {
         let currentGifs = allGifs;
-        
-        // If we haven't searched anything yet or have no GIFs, fetch trending
         if (currentGifs.length === 0) {
-          setStatusMessage("Fetching trending GIFs...");
-          const results = await searchTenor(""); // featured
+          const results = await searchTenor("");
           if (requestId !== requestCounterRef.current) return;
-          
           if (results.length > 0) {
             currentGifs = results;
             setAllGifs(results);
           } else {
-            toast.error("Failed to load trending GIFs");
+            toast.error("Failed to load GIFs");
             setGenerating(false);
             return;
           }
         }
-
         const newMeme = getNextItem(currentGifs, videoDeck, setVideoDeck);
-        const cleanName = newMeme.name.replace(/\s+/g, "-");
-
         if (requestId !== requestCounterRef.current) return;
-
-        updateState((prev) => {
-          const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts);
-          return {
+        updateState((prev) => ({
+          ...prev,
+          imageUrl: newMeme.url,
+          sourceUrl: newMeme.url,
+          name: newMeme.name.replace(/\s+/g, "-"),
+          isVideo: false,
+          id: newMeme.id,
+          fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+        }));
+      } else {
+        if (allMemes.length === 0) return;
+        const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
+        try {
+          const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
+          if (!response.ok) throw new Error();
+          const blob = await response.blob();
+          const dataUrl = await new Promise(r => {
+            const reader = new FileReader();
+            reader.onload = () => r(reader.result);
+            reader.readAsDataURL(blob);
+          });
+          if (requestId !== requestCounterRef.current) return;
+          updateState((prev) => ({
+            ...prev,
+            imageUrl: dataUrl,
+            name: newMeme.name.replace(/\s+/g, "-"),
+            fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+            isVideo: false
+          }));
+        } catch {
+          if (requestId !== requestCounterRef.current) return;
+          updateState((prev) => ({
             ...prev,
             imageUrl: newMeme.url,
-            name: cleanName,
-            isVideo: false, // GIFs are images technically, but they animate
-            fontSize: optimizedFontSize,
-          };
-        });
-        
-        setStatusMessage(`New GIF loaded: ${cleanName}`);
-        setGenerating(false);
-        return;
+            name: newMeme.name.replace(/\s+/g, "-"),
+            fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+            isVideo: false
+          }));
+        }
       }
-
-      // Static Image / ImgFlip Mode
-      const currentMemes = allMemes;
-
-      if (currentMemes.length === 0) {
-        setGenerating(false);
-        return;
-      }
-
-      const newMeme = getNextItem(currentMemes, imageDeck, setImageDeck);
-      const cleanName = newMeme.name ? newMeme.name.replace(/\s+/g, "-") : "meme";
-
-      // Attempt CORS-safe fetch
-      try {
-        const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
-        if (!response.ok) throw new Error();
-        const blob = await response.blob();
-        const dataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-
-        if (requestId !== requestCounterRef.current) return;
-
-        updateState((prev) => {
-          const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts);
-          return { 
-            ...prev, 
-            imageUrl: dataUrl, 
-            name: cleanName, 
-            fontSize: optimizedFontSize, 
-            isVideo: false 
-          };
-        });
-        setStatusMessage(`New meme template loaded: ${cleanName}`);
-      } catch {
-        if (requestId !== requestCounterRef.current) return;
-        updateState((prev) => {
-           const optimizedFontSize = calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts);
-           return { 
-             ...prev, 
-             imageUrl: newMeme.url, 
-             name: cleanName, 
-             fontSize: optimizedFontSize, 
-             isVideo: false 
-           };
-        });
-        toast.error("CORS limit: download might fail");
-        setStatusMessage(`New meme template loaded (CORS fallback): ${cleanName}`);
-      }
-    } catch (err) {
-      console.error("Error fetching meme:", err);
-      toast.error("Failed to load new template");
     } finally {
       if (requestId === requestCounterRef.current) setGenerating(false);
     }
@@ -433,26 +372,6 @@ export default function Main() {
       ...prev,
       texts: prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t)),
     }));
-  }
-
-  function generateMagicCaption() {
-    const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
-    const randomIndex = Math.floor(Math.random() * category.length);
-    const captions = category[randomIndex];
-
-    updateState((prev) => ({
-      ...prev,
-      texts: prev.texts.map((t, i) => ({
-        ...t,
-        content: captions[i] || "",
-      })),
-    }));
-
-    toast("Magic logic applied! ✨", {
-      icon: "🪄",
-      duration: 2000,
-    });
-    setStatusMessage("Magic captions generated.");
   }
 
   function handleStyleChange(event, shouldCommit = false) {
@@ -471,33 +390,23 @@ export default function Main() {
     startTransition(() => {
         updateTransient((prev) => ({
         ...prev,
-        filters: {
-            ...prev.filters,
-            [name]: value,
-        },
+        filters: { ...prev.filters, [name]: value },
         }));
     });
   }
 
-  function handleStyleCommit() {
-    updateState((prev) => prev); // This triggers a history push of the current state
-  }
+  function handleStyleCommit() { updateState((prev) => prev); }
 
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
       const localUrl = URL.createObjectURL(file);
-      const isVid = file.type.startsWith("video/");
-      
       updateState((prev) => ({
         ...prev,
         imageUrl: localUrl,
         name: file.name.split(".")[0],
-        isVideo: isVid,
+        isVideo: file.type.startsWith("video/"),
       }));
-      
-      toast.success(`Custom ${isVid ? "video" : "image"} uploaded!`);
-      setStatusMessage(`Custom upload: ${file.name}`);
     }
   }
 
@@ -505,43 +414,20 @@ export default function Main() {
     triggerFlash("red");
     updateState((prev) => ({
       ...prev,
-      texts: [
-        { id: "top", content: "", x: 50, y: 5 },
-        { id: "bottom", content: "", x: 50, y: 95 },
-      ],
+      texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
       stickers: [],
       fontSize: 40,
-      stickerSize: 60,
       textColor: "#ffffff",
       textBgColor: "transparent",
-      filters: {
-        contrast: 100,
-        brightness: 100,
-        blur: 0,
-        grayscale: 0,
-        sepia: 0,
-        hueRotate: 0,
-        saturate: 100,
-        invert: 0
-      },
+      filters: { contrast: 100, brightness: 100, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0, saturate: 100, invert: 0 },
     }));
-    toast("Canvas cleared", { icon: "🧹" });
-    setStatusMessage("Canvas reset to default.");
   }
 
   function addSticker(emoji) {
-    const newSticker = {
-      id: crypto.randomUUID(),
-      url: emoji,
-      x: 50,
-      y: 50,
-    };
     updateState((prev) => ({
       ...prev,
-      stickers: [...prev.stickers, newSticker],
+      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: emoji, x: 50, y: 50 }],
     }));
-    toast.success("Sticker added!");
-    setStatusMessage(`Sticker added: ${emoji}`);
   }
 
   function removeSticker(id) {
@@ -566,8 +452,27 @@ export default function Main() {
     globalLastTapRef.current = now;
   }
 
-  function handlePointerDown(e, id) {
-    e.preventDefault();
+  function generateMagicCaption() {
+    const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
+    const randomIndex = Math.floor(Math.random() * category.length);
+    const captions = category[randomIndex];
+
+    updateState((prev) => ({
+      ...prev,
+      texts: prev.texts.map((t, i) => ({
+        ...t,
+        content: captions[i] || "",
+      })),
+    }));
+
+    toast("Magic logic applied! ✨", {
+      icon: "🪄",
+      duration: 2000,
+    });
+    setStatusMessage("Magic captions generated.");
+  }
+
+  const handlePointerDown = useCallback((e, id) => {
     e.stopPropagation();
 
     updateState((prev) => prev);
@@ -592,438 +497,221 @@ export default function Main() {
 
     setDraggedId(id);
     if (navigator.vibrate) navigator.vibrate(20);
-  }
+  }, [meme.stickers, updateState]);
 
   async function handleDownload() {
     if (!memeRef.current) return;
-
     if (mode === "video") {
       const promise = (async () => {
         const blob = await exportGif(meme, meme.texts, meme.stickers);
+        if (meme.id) registerShare(meme.id, searchQuery);
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        const fileName = (meme.name || "meme").replace(/\s+/g, "-");
-        link.download = `${fileName}-${Date.now()}.gif`;
+        link.download = `${meme.name}-${Date.now()}.gif`;
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
         triggerFireworks();
-        setStatusMessage("Animated GIF downloaded successfully.");
       })();
-
-      toast.promise(promise, {
-        loading: "Encoding GIF (this may take a few seconds)...",
-        success: "GIF Downloaded!",
-        error: "Error encoding GIF",
-      });
-      return;
-    }
-
-    const promise = new Promise(async (resolve, reject) => {
-      try {
-        await new Promise((r) => setTimeout(r, 100));
+      toast.promise(promise, { loading: "Encoding GIF...", success: "Downloaded!", error: "Error" });
+    } else {
+      const promise = (async () => {
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
         const link = document.createElement("a");
-        const fileName = (meme.name || "meme").replace(/\s+/g, "-");
-        link.download = `${fileName}-${Date.now()}.png`;
+        link.download = `${meme.name}-${Date.now()}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
         triggerFireworks();
-        setStatusMessage("Meme downloaded successfully.");
-        resolve();
-      } catch (e) {
-        reject(e);
-      }
-    });
-    toast.promise(promise, { loading: "Generating Image...", success: "Downloaded!", error: "Error" });
+      })();
+      toast.promise(promise, { loading: "Generating...", success: "Downloaded!", error: "Error" });
+    }
   }
 
   async function handleShare() {
     if (!memeRef.current) return;
-
     if (mode === "video") {
-      const generateAndShare = async () => {
-        // Generate both for maximum compatibility
-        const [gifBlob, canvas] = await Promise.all([
-          exportGif(meme, meme.texts, meme.stickers),
-          html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000" })
-        ]);
-        
-        const pngBlob = await new Promise(r => canvas.toBlob(r, "image/png"));
-        const gifFile = new File([gifBlob], `meme-${Date.now()}.gif`, { type: "image/gif" });
-        
-        try {
-          // 1. Primary: Native Share (Mobile)
-          if (navigator.canShare && navigator.canShare({ files: [gifFile] })) {
-            await navigator.share({ files: [gifFile], title: "My Animated Meme" });
-            triggerFireworks();
-            return "Shared via system";
-          }
-          throw new Error();
-        } catch {
-          // 2. The Ultra Clipboard Loophole
-          try {
-            const reader = new FileReader();
-            const base64Gif = await new Promise((resolve) => {
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(gifBlob);
-            });
-
-            // We provide PNG, HTML (with GIF), and Plain Text
-            // Chat apps will pick the best one they support
-            const clipboardItems = {
-              "image/png": pngBlob,
-              "text/plain": new Blob(["Check out my animated meme!"], { type: "text/plain" }),
-              "text/html": new Blob([`<html><body><img src="${base64Gif}" width="100%"></body></html>`], { type: "text/html" })
-            };
-
-            await navigator.clipboard.write([new ClipboardItem(clipboardItems)]);
-            return "Copied to clipboard";
-          } catch (err) {
-            console.error("Clipboard failed", err);
-            throw new Error("Sharing limited - please use Download");
-          }
+      const hasContent = meme.texts.some(t => t.content?.trim()) || meme.stickers.length > 0;
+      if (hasContent) {
+        toast("Generating high-quality file for manual sharing...", { duration: 4000 });
+        handleDownload();
+        return;
+      }
+      const shareUrl = meme.sourceUrl || meme.imageUrl;
+      try {
+        const response = await fetch(shareUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `meme-${Date.now()}.gif`, { type: "image/gif" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          if (meme.id) registerShare(meme.id, searchQuery);
+          triggerFireworks();
+        } else {
+          await navigator.share({ url: shareUrl });
         }
-      };
-
-      toast.promise(generateAndShare(), {
-        loading: "Preparing GIF share...",
-        success: (msg) => msg === "Copied to clipboard" ? "GIF copied! Paste (Ctrl+V) into chat." : "Shared successfully!",
-        error: (err) => err.message,
-      }, { success: { duration: 5000 } });
-      return;
-    }
-
-    // Static Image Logic
-    const handleImageShare = async () => {
+      } catch {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success("Link copied!");
+      }
+    } else {
       const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
       const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
-      const file = new File([blob], `meme-${Date.now()}.png`, { type: "image/png" });
-
-      try {
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "My Meme" });
-          triggerFireworks();
-          return "Shared via system";
-        }
-        throw new Error();
-      } catch {
-        const pngBlob = new Blob([blob], { type: "image/png" });
-        await navigator.clipboard.write([
-          new ClipboardItem({ 
-            "image/png": pngBlob,
-            "text/plain": new Blob(["My Meme"], { type: "text/plain" })
-          })
-        ]);
-        return "Copied to clipboard";
+      const file = new File([blob], `meme.png`, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast.success("Copied!");
       }
-    };
-
-    toast.promise(handleImageShare(), {
-      loading: "Preparing image share...",
-      success: (msg) => "Image copied! Paste to share.",
-      error: "Sharing failed - use Download",
-    });
-  }
-
-  async function handleTenorSearch(e) {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    setIsSearching(true);
-    setStatusMessage(`Searching Tenor for: ${searchQuery}...`);
-
-    const results = await searchTenor(searchQuery);
-
-    if (results.length > 0) {
-      setAllGifs(results); // Update GIF deck
-      setVideoDeck([]);    // Reset shuffle bag for GIFs
-      setMode("video");
-      triggerFlash("green");
-      toast.success(`Found ${results.length} GIFs! Randomize to see more.`);
-
-      // Load the first one immediately
-      const firstMeme = results[0];
-      updateState((prev) => ({
-        ...prev,
-        imageUrl: firstMeme.url,
-        name: firstMeme.name.replace(/\s+/g, "-"),
-        isVideo: false,
-        fontSize: calculateSmartFontSize(firstMeme.width, firstMeme.height, prev.texts)
-      }));
-    } else {
-      toast.error("No GIFs found");
     }
-    setIsSearching(false);
   }
 
   function clearSearch() {
     setSearchQuery("");
+    setSuggestions([]);
     setMode("image");
-    
-    // We don't need to re-fetch allMemes if we already have them
     if (allMemes.length === 0) {
         setLoading(true);
-        fetch("https://api.imgflip.com/get_memes")
-            .then((res) => res.json())
-            .then((data) => {
-                setAllMemes(data.data.memes);
-                setLoading(false);
-            });
+        fetch("https://api.imgflip.com/get_memes").then(r => r.json()).then(d => {
+            setAllMemes(d.data.memes);
+            setLoading(false);
+        });
     }
-    
-    toast("Back to standard images");
-    setStatusMessage("Restored default image templates.");
   }
 
   return (
-    <main
-      className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-in fade-in duration-500 relative transition-all duration-300 ${isPending ? "opacity-50 grayscale scale-[0.99]" : ""}`}
-    >
-      <div className="sr-only" role="status" aria-live="polite">
-        {statusMessage}
-      </div>
-
-      <div
-        className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ease-out ${flashColor ? "opacity-100" : "opacity-0"}`}
-        style={{
-          backgroundColor:
-            flashColor === "red"
-              ? "rgba(239, 68, 68, 0.15)"
-              : flashColor === "green"
-                ? "rgba(34, 197, 94, 0.08)"
-                : "transparent",
-        }}
-        aria-hidden="true"
-      />
+    <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-in fade-in duration-500 relative">
+      <div className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
+        style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }} />
 
       <div className="lg:col-span-5 space-y-8 order-2 lg:order-1">
-        <MemeInputs
-          texts={meme.texts}
-          handleTextChange={handleTextChange}
-          onAddSticker={addSticker}
-          onMagicCaption={generateMagicCaption}
+        <MemeInputs 
+          texts={meme.texts} 
+          handleTextChange={handleTextChange} 
+          onAddSticker={addSticker} 
+          onMagicCaption={generateMagicCaption} 
         />
-
         <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
-          <button
-            onClick={() => {
-              undo();
-              triggerFlash("red");
-            }}
-            disabled={!canUndo}
-            aria-label="Undo last action"
-            className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
-          >
+          <button onClick={undo} disabled={!canUndo} className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95">
             <Undo2 className="w-4 h-4" /> Undo
           </button>
-          <button
-            onClick={() => {
-              redo();
-              triggerFlash("green");
-            }}
-            disabled={!canRedo}
-            aria-label="Redo reversed action"
-            className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
-          >
+          <button onClick={redo} disabled={!canRedo} className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95">
             <Redo2 className="w-4 h-4" /> Redo
           </button>
-          <button
-            onClick={() =>
-              toast("Tip: Double-tap image to Undo. Ctrl+Z/Y also work!", {
-                icon: "💡",
-                style: { borderRadius: "10px", background: "#333", color: "#fff" },
-                duration: 3000,
-              })
-            }
-            className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-xl text-slate-400 hover:text-white transition-all active:scale-95"
-            title="History Help"
-            aria-label="History Help"
-          >
+          <button onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })} className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400">
             <HelpCircle className="w-5 h-5" />
           </button>
         </div>
-
         <div className="grid grid-cols-2 gap-3">
           <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-700 col-span-2">
-            <ImagePlus className="w-4 h-4" />
-            <span>Upload Custom Image / Video</span>
+            <ImagePlus className="w-4 h-4" /> <span>Upload Custom</span>
             <input type="file" className="hidden" accept="image/*,video/*" onChange={handleFileUpload} />
           </label>
-          <button
-            onClick={handleReset}
+          <button 
+            onClick={handleReset} 
             className="bg-slate-800 hover:bg-red-900/30 hover:text-red-400 text-slate-400 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-700 col-span-2"
           >
-            <Eraser className="w-4 h-4" />
-            <span>Reset Canvas</span>
+            <Eraser className="w-4 h-4" /> <span>Reset Canvas</span>
           </button>
-          <button
-            onClick={handleDownload}
-            className="bg-slate-100 hover:bg-white/90 text-slate-900 font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 mt-2"
-          >
-            <Download className="w-5 h-5" />
-            Download
+          <button onClick={handleDownload} className="bg-slate-100 hover:bg-white text-slate-900 font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
+            <Download className="w-5 h-5" /> Download
           </button>
-          <button
-            onClick={handleShare}
-            className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 border border-slate-700"
-          >
-            <Share2 className="w-5 h-5" />
-            Share
+          <button onClick={handleShare} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95">
+            <Share2 className="w-5 h-5" /> Share
           </button>
         </div>
       </div>
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
-        {/* MEDIA TYPE SELECTOR - Moved inside the column to fix desktop layout */}
         <div className="relative">
-          <select
-            value={mode}
-            onChange={(e) => {
-              const newMode = e.target.value;
-              setMode(newMode);
-
-              startTransition(() => {
-                if (newMode === "image") {
-                  clearSearch();
-                } else {
-                  setStatusMessage("Switched to Video/GIF mode");
-                  toast("GIF Mode Active");
-                }
-                getMemeImage(newMode);
-              });
-            }}
-            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold text-center"
-          >
-            <option value="image">🖼️ Static Images (ImgFlip)</option>
-            <option value="video">🎥 Animated GIFs (Tenor)</option>
+          <select value={mode} onChange={(e) => {
+              const m = e.target.value; setMode(m);
+              startTransition(() => { if (m === "image") clearSearch(); getMemeImage(m); });
+            }} className="w-full bg-slate-900/50 hover:bg-white/5 transition-colors border border-slate-700 text-white rounded-xl py-3 px-4 outline-none font-bold text-center appearance-none cursor-pointer">
+            <option value="image" className="bg-slate-800 text-white hover:bg-[#7a1a1a]">🖼️ Static Images</option>
+            <option value="video" className="bg-slate-800 text-white hover:bg-[#7a1a1a]">🎥 Animated GIFs</option>
           </select>
           <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
-        <Suspense
-          fallback={
-            <div className="flex flex-col items-center justify-center min-h-[400px] bg-slate-900/50 rounded-2xl border-2 border-slate-800 animate-pulse">
-              <Loader2 className="w-10 h-10 text-slate-700 animate-spin mb-4" />
-              <p className="text-slate-600 font-bold uppercase tracking-widest">Initialising Workspace...</p>
-            </div>
-          }
-        >
-          {/* Search Bar for Tenor - Only shown in Video mode */}
+        <Suspense fallback={<div className="min-h-[400px] flex items-center justify-center bg-slate-900/50 rounded-2xl animate-pulse"><Loader2 className="animate-spin" /></div>}>
           {mode === "video" && (
-            <form
-              onSubmit={handleTenorSearch}
-              className="relative flex gap-2 mb-2 animate-in fade-in slide-in-from-top-2 duration-300"
-            >
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search Tenor GIFs..."
-                  className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:ring-2 focus:ring-[oklch(53%_0.187_39)] outline-none transition-all placeholder:text-slate-500"
-                />
+            <div className="relative z-50 mb-2" ref={searchContainerRef}>
+              <div className="relative">
+                <input type="text" value={searchQuery} onFocus={() => setShowSuggestions(true)} onChange={handleSearchInput}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { setShowSuggestions(false); performSearch(searchQuery); }}} 
+                  placeholder="Search GIFs..." className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:ring-2 focus:ring-yellow-500 outline-none" />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-
-                {/* X button to clear search and return to Images */}
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                {searchQuery && <button onClick={clearSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"><X className="w-4 h-4" /></button>}
               </div>
-              <button
-                type="submit"
-                disabled={isSearching}
-                className="bg-slate-800 hover:bg-slate-700 text-white px-6 rounded-xl font-bold transition-all border border-slate-700 disabled:opacity-50"
-              >
-                {isSearching ? <Loader2 className="animate-spin" /> : "Search"}
-              </button>
-            </form>
+              {showSuggestions && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95">
+                    {suggestions.length > 0 ? (
+                        <div className="p-2">{suggestions.map((t, i) => (
+                            <button key={i} onClick={() => selectSuggestion(t)} className="w-full text-left px-3 py-2 hover:bg-slate-800 rounded-lg text-slate-300 flex items-center gap-2">
+                                <TrendingUp className="w-3 h-3" /> {t}
+                            </button>
+                        ))}
+                        </div>
+                    ) : categories.length > 0 && !searchQuery ? (
+                        <div className="p-2 grid grid-cols-2 gap-2">{categories.map((c, i) => (
+                            <button key={i} onClick={() => selectSuggestion(c.searchterm)} className="relative h-16 rounded-lg overflow-hidden group">
+                                <img src={c.image} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100" />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="text-white font-bold text-xs">{c.name}</span></div>
+                            </button>
+                        ))}
+                        </div>
+                    ) : null}
+                </div>
+              )}
+            </div>
           )}
           <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-900/50">
-            <MemeToolbar
-              meme={meme}
-              handleStyleChange={handleStyleChange}
-              handleFilterChange={handleFilterChange}
-              handleStyleCommit={handleStyleCommit}
-            />
-
-            {/* The Randomize Button - Now directly attached to the image canvas */}
-            <button
-              onClick={getMemeImage}
-              disabled={loading || generating}
-              className={`w-full text-white font-bold py-3 px-6 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}
-            >
-              {generating ? (
-                <Loader2 className="animate-spin w-5 h-5" />
-              ) : mode === "video" ? (
-                <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              ) : (
-                <RefreshCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-700" />
-              )}
-
-              <span className="text-lg tracking-tight">
-                {generating ? "Cooking..." : mode === "video" ? "Get Random GIF" : "Get Random Image"}
-              </span>
+            <MemeToolbar meme={meme} handleStyleChange={handleStyleChange} handleFilterChange={handleFilterChange} handleStyleCommit={handleStyleCommit} />
+            <button onClick={getMemeImage} disabled={loading || generating} className={`w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}>
+              {generating ? <Loader2 className="animate-spin w-5 h-5" /> : mode === "video" ? <Video className="w-5 h-5" /> : <RefreshCcw className="w-5 h-5" />}
+              <span className="text-lg">{generating ? "Cooking..." : mode === "video" ? "Get Random GIF" : "Get Random Image"}</span>
             </button>
-
-            <MemeCanvas
-              ref={memeRef}
-              meme={meme}
-              loading={loading}
-              draggedId={draggedId}
-              onPointerDown={handlePointerDown}
-              onRemoveSticker={removeSticker}
-              onCanvasPointerDown={handleCanvasPointerDown}
+            <MemeCanvas 
+              ref={memeRef} 
+              meme={meme} 
+              loading={loading} 
+              draggedId={draggedId} 
+              onPointerDown={handlePointerDown} 
+              onRemoveSticker={removeSticker} 
+              onCanvasPointerDown={handleCanvasPointerDown} 
             />
           </div>
         </Suspense>
-        <div className="flex justify-between items-center px-2">
-          <p className="text-xs text-slate-500 font-mono">
-            {meme.imageUrl.startsWith("blob") ? "Custom Image" : "ImgFlip API"}
-            <span className="mx-2">•</span>
-            {memeRef.current?.offsetWidth || 0}x{memeRef.current?.offsetHeight || 0}px
-          </p>
-          <p className="text-xs text-slate-600 italic">Pro Tip: Click/Hold to move text 🔓</p>
-        </div>
       </div>
-
-      {/* WELCOME MODAL */}
       {showWelcome && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500">
-          <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-3xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="bg-[oklch(53%_0.187_39)] px-8 py-6 text-center">
-              <h2 className="text-2xl font-black tracking-tight text-white uppercase">Meme Creator</h2>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Meme Creator</h2>
               <p className="text-white/70 text-xs font-bold tracking-widest uppercase mt-1">Creation Guide</p>
             </div>
-            
             <div className="p-8 space-y-6">
               <section className="space-y-3">
-                <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider">How to use</h3>
-                <ul className="text-slate-300 text-sm space-y-2 list-disc list-outside pl-5 marker:text-slate-600">
-                  <li>Choose between <span className="text-white font-medium">Static Images</span> or <span className="text-white font-medium">Animated GIFs</span>.</li>
-                  <li>Add captions, move them with your mouse/touch, and style them using the toolbar.</li>
-                  <li>Apply filters and stickers to make your meme unique.</li>
+                <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider">Sharing GIFs</h3>
+                <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
+                  <li><span className="text-white font-medium">Unedited GIFs</span> can be shared directly to your favorite apps.</li>
+                  <li>If you add <span className="text-white font-medium">Text or Stickers</span>, we will automatically generate and download a high-quality file for you to share manually.</li>
+                  <li>This ensures your captions and animations are perfectly preserved for your friends!</li>
                 </ul>
               </section>
 
-              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
-                <h3 className="text-red-400 font-bold uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
-                  <Video className="w-3 h-3" /> Important Note
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+                <h3 className="text-blue-400 font-bold uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
+                  <Sparkles className="w-3 h-3" /> Pro Tip
                 </h3>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  When sharing animated memes, some apps may display them as static images. If this happens, use the <span className="text-white font-medium italic underline decoration-red-500/50">Download</span> button to save the high-quality animation directly to your device.
+                  Use the <b>Magic AI</b> button to instantly generate hilarious captions based on your selected template!
                 </p>
               </div>
 
               <button 
-                onClick={closeWelcome}
-                className="w-full bg-slate-100 hover:bg-white text-slate-900 font-black py-4 rounded-2xl transition-all active:scale-95 shadow-lg uppercase tracking-widest text-sm"
+                onClick={closeWelcome} 
+                className="w-full bg-slate-100 hover:bg-white transition-all active:scale-95 py-4 rounded-2xl text-slate-900 font-black uppercase tracking-widest text-sm shadow-lg"
               >
                 Start Creating
               </button>

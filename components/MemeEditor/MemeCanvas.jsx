@@ -7,20 +7,20 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
   return (
     <div 
       onPointerDown={onCanvasPointerDown}
-      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950"
+      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950 border-2 border-dashed border-slate-800/60 w-full overflow-hidden"
       role="img"
       aria-label={description}
     >
       <div
         ref={ref}
-        className="relative inline-block max-w-full overflow-hidden"
+        className="relative w-full flex items-center justify-center overflow-hidden shadow-2xl"
         style={{ backgroundColor: "#000000", color: "#ffffff" }}
       >
         {meme.isVideo ? (
             <video
                 key={meme.imageUrl}
                 src={meme.imageUrl}
-                className="max-w-full max-h-[70vh] min-w-[300px] object-contain block"
+                className="w-full max-h-[70vh] object-contain block"
                 loop
                 autoPlay
                 playsInline
@@ -41,7 +41,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
         ) : (
             <img
             src={meme.imageUrl}
-            className="max-w-full max-h-[70vh] min-w-[300px] object-contain block"
+            className="w-full max-h-[70vh] object-contain block"
             alt={`Template: ${meme.name}`}
             crossOrigin="anonymous"
             style={{
@@ -137,7 +137,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
                 ${stroke}px ${stroke}px 5px #000
               `,
               border: draggedId === textItem.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
-              borderRadius: "4px",
+              borderRadius: "0.2em",
             }}
           >
             {textItem.content}

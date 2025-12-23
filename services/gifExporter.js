@@ -130,7 +130,7 @@ export async function exportGif(meme, texts, stickers) {
             
             ctx.fillStyle = meme.textBgColor;
             // Draw a rounded rectangle for the background
-            const radius = 4;
+            const radius = fontSize * 0.15; // Proportional radius
             const bx = x - bgWidth / 2;
             const by = y - bgHeight / 2;
             

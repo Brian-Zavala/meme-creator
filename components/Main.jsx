@@ -623,7 +623,6 @@ export default function Main() {
             }} 
         />
 
-        <Suspense fallback={<div className="min-h-[400px] flex items-center justify-center bg-slate-900/50 rounded-2xl animate-pulse"><Loader2 className="animate-spin" /></div>}>
           {meme.mode === "video" && (
             <GifSearch 
               searchQuery={searchQuery}
@@ -666,7 +665,6 @@ export default function Main() {
               onCanvasPointerDown={handleCanvasPointerDown} 
             />
           </div>
-        </Suspense>
       </div>
       <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />
     </main>

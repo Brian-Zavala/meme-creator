@@ -40,7 +40,6 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
           onClick={() => setActiveTab("text")}
           role="tab"
           aria-selected={activeTab === "text"}
-          aria-controls="text-tools-panel"
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden ${
             activeTab === "text"
               ? "text-white bg-slate-800"
@@ -57,7 +56,6 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
           onClick={() => setActiveTab("image")}
           role="tab"
           aria-selected={activeTab === "image"}
-          aria-controls="image-tools-panel"
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden ${
             activeTab === "image"
               ? "text-white bg-slate-800"
@@ -70,80 +68,74 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
       </div>
 
       {/* Controls Area */}
-      <div className="flex flex-col gap-6 px-4 py-5 min-h-[64px]">
+      <div className="flex flex-col px-6 py-6 min-h-[80px] justify-center">
         
         {/* TEXT CONTROLS */}
         {activeTab === "text" && (
-          <div id="text-tools-panel" role="tabpanel" className="flex flex-wrap gap-6 items-center justify-between w-full">
+          <div id="text-tools-panel" role="tabpanel" className="flex flex-col md:flex-row items-center justify-between w-full gap-6 md:gap-8">
+            
             {/* Group 1: Size Controls */}
-            <div className={`flex-1 min-w-[200px] flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-3'}`}>
-                <div className="flex items-center gap-3 w-full">
+            <div className={`flex-1 w-full md:w-auto flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-4'}`}>
+                <div className="flex items-center gap-4 w-full">
                   <Type className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                  <label htmlFor="font-size-slider" className="sr-only">Font Size</label>
                   <input
-                    id="font-size-slider"
-                    type="range"
-                    min="2"
-                    max="120"
-                    name="fontSize"
+                    type="range" min="2" max="120" name="fontSize"
                     value={meme.fontSize}
                     onChange={handleStyleChange}
                     onMouseUp={handleStyleCommit}
                     onTouchEnd={handleStyleCommit}
-                    className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full h-2"
+                    className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
                     title="Font Size"
                   />
                 </div>
                 
                 {hasStickers && (
-                    <div className="flex items-center gap-3 w-full animate-in slide-in-from-top-1 fade-in duration-300">
+                    <div className="flex items-center gap-4 w-full animate-in slide-in-from-top-1 fade-in duration-300">
                       <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <label htmlFor="sticker-size-slider" className="sr-only">Sticker Size</label>
                       <input
-                        id="sticker-size-slider"
-                        type="range"
-                        min="5"
-                        max="250"
-                        name="stickerSize"
+                        type="range" min="5" max="250" name="stickerSize"
                         value={meme.stickerSize || 60}
                         onChange={handleStyleChange}
                         onMouseUp={handleStyleCommit}
                         onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full opacity-90 h-2"
+                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full opacity-90 h-2"
                         title="Sticker Size"
                       />
                     </div>
                 )}
             </div>
 
+            {/* Divider (Desktop Only) */}
+            <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />
+            {/* Divider (Mobile Only) */}
+            <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+
             {/* Group 2: Width Control */}
-            <div className="flex-1 min-w-[180px] flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
+            <div className="flex-1 w-full md:w-auto flex items-center gap-4">
               <MoveHorizontal className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-              <label htmlFor="max-width-slider" className="sr-only">Text Max Width</label>
               <input
-                id="max-width-slider"
-                type="range"
-                min="20"
-                max="100"
-                name="maxWidth"
+                type="range" min="20" max="100" name="maxWidth"
                 value={meme.maxWidth}
                 onChange={handleStyleChange}
                 onMouseUp={handleStyleCommit}
                 onTouchEnd={handleStyleCommit}
-                className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-full h-2"
+                className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
                 title="Text Width (Wrap)"
               />
             </div>
 
+            {/* Divider (Desktop Only) */}
+            <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />
+            {/* Divider (Mobile Only) */}
+            <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+
             {/* Group 3: Color Controls */}
-            <div className="flex items-center justify-end gap-5 min-w-[120px] border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6 ml-auto">
-              <div className="flex items-center gap-2" title="Text Color">
+            <div className="w-full md:w-auto flex items-center justify-center md:justify-end gap-6">
+              <div className="flex items-center gap-3" title="Text Color">
                 <Palette className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                <div className="relative overflow-hidden w-9 h-9 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
+                <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                   <input
-                    id="text-color-picker"
-                    type="color"
-                    name="textColor"
+                    type="color" name="textColor"
                     value={meme.textColor}
                     onChange={handleStyleChange}
                     onBlur={handleStyleCommit} 
@@ -152,14 +144,25 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 </div>
               </div>
 
+              <div className="flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Outline Color">
+                <div className="w-5 h-5 text-slate-400 shrink-0 flex items-center justify-center font-black text-xs border border-slate-400 rounded-sm">T</div>
+                <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
+                  <input
+                    type="color" name="textShadow"
+                    value={meme.textShadow || '#000000'}
+                    onChange={handleStyleChange}
+                    onBlur={handleStyleCommit} 
+                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                  />
+                </div>
+              </div>
+
               {hasText && (
-                <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300" title="Background Color">
+                <div className="flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Background Color">
                   <Brush className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                  <div className="relative overflow-hidden w-9 h-9 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
+                  <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                     <input
-                      id="text-bg-color-picker"
-                      type="color"
-                      name="textBgColor"
+                      type="color" name="textBgColor"
                       value={meme.textBgColor === 'transparent' ? '#000000' : meme.textBgColor}
                       onChange={handleStyleChange}
                       onBlur={handleStyleCommit} 
@@ -169,7 +172,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                   {meme.textBgColor !== 'transparent' && (
                     <button 
                       onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
-                      className="text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/50 px-2 py-1 rounded"
+                      className="text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/50 px-2 py-1.5 rounded ml-1"
                     >
                       Clear
                     </button>
@@ -182,7 +185,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
         {/* IMAGE CONTROLS */}
         {activeTab === "image" && (
-          <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+          <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full items-start">
             <div className="flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <Contrast className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
@@ -206,7 +209,9 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               </div>
             </div>
 
-            <div className="flex flex-col gap-5 border-t sm:border-t-0 sm:border-l border-slate-800 pt-5 sm:pt-0 sm:pl-6">
+            <div className="hidden lg:block w-px h-20 bg-slate-800 mx-auto" />
+
+            <div className="flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <Blur className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
@@ -229,7 +234,9 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               </div>
             </div>
 
-            <div className="flex flex-col gap-5 border-t lg:border-t-0 lg:border-l border-slate-800 pt-5 lg:pt-0 lg:pl-6">
+            <div className="hidden lg:block w-px h-20 bg-slate-800 mx-auto" />
+
+            <div className="flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <Sepia className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <input
@@ -252,7 +259,9 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               </div>
             </div>
 
-            <div className="flex flex-col gap-5 border-t lg:border-t-0 lg:border-l border-slate-800 pt-5 lg:pt-0 lg:pl-6">
+            <div className="hidden lg:block w-px h-20 bg-slate-800 mx-auto" />
+
+            <div className="flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <HueRotate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                 <input

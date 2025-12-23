@@ -31,3 +31,57 @@ export async function searchTenor(query) {
     return [];
   }
 }
+
+export async function registerShare(id, query) {
+  if (!id) return;
+  const queryParam = query ? `&q=${encodeURIComponent(query)}` : '';
+  const url = `https://tenor.googleapis.com/v2/registershare?key=${API_KEY}&client_key=${CLIENT_KEY}&id=${id}${queryParam}`;
+
+  try {
+    // Fire and forget - we don't need to wait for the response
+    fetch(url); 
+  } catch (e) {
+    console.warn("Failed to register share event", e);
+  }
+}
+
+export async function getAutocomplete(query) {
+  if (!query || query.length < 2) return [];
+  const url = `https://tenor.googleapis.com/v2/autocomplete?key=${API_KEY}&client_key=${CLIENT_KEY}&q=${encodeURIComponent(query)}&limit=5`;
+  
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.results || [];
+  } catch (e) {
+    console.error("Tenor Autocomplete Error:", e);
+    return [];
+  }
+}
+
+export async function getSearchSuggestions(query) {
+  if (!query) return [];
+  const url = `https://tenor.googleapis.com/v2/search_suggestions?key=${API_KEY}&client_key=${CLIENT_KEY}&q=${encodeURIComponent(query)}&limit=5`;
+  
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.results || [];
+  } catch (e) {
+    console.error("Tenor Suggestions Error:", e);
+    return [];
+  }
+}
+
+export async function getCategories() {
+  const url = `https://tenor.googleapis.com/v2/categories?key=${API_KEY}&client_key=${CLIENT_KEY}`;
+  
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.tags || []; // Returns array of { searchterm, path, image, name }
+  } catch (e) {
+    console.error("Tenor Categories Error:", e);
+    return [];
+  }
+}

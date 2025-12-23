@@ -2,17 +2,33 @@ import { Smile, Zap, Heart, Ghost, Flame, Crown } from "lucide-react";
 
 const STICKER_OPTIONS = [
   { id: "cool", emoji: "😎" },
+  { id: "skull", emoji: "💀" },
   { id: "fire", emoji: "🔥" },
   { id: "crown", emoji: "👑" },
   { id: "laugh", emoji: "😂" },
+  { id: "moai", emoji: "🗿" },
   { id: "heart", emoji: "❤️" },
   { id: "ghost", emoji: "👻" },
   { id: "mind-blown", emoji: "🤯" },
+  { id: "eyes", emoji: "👀" },
   { id: "party", emoji: "🎉" },
+  { id: "hundred", emoji: "💯" },
   { id: "deal-with-it", emoji: "🕶️" },
   { id: "clown", emoji: "🤡" },
+  { id: "cap", emoji: "🧢" },
   { id: "thug-life", emoji: "🔫" },
   { id: "money", emoji: "💰" },
+  { id: "stonks", emoji: "📈" },
+  { id: "siren", emoji: "🚨" },
+  { id: "big-brain", emoji: "🧠" },
+  { id: "salt", emoji: "🧂" },
+  { id: "trash", emoji: "🗑️" },
+  { id: "red-flag", emoji: "🚩" },
+  { id: "doge", emoji: "🐕" },
+  { id: "b-button", emoji: "🅱️" },
+  { id: "thinking", emoji: "🤔" },
+  { id: "shushing", emoji: "🤫" },
+  { id: "melting", emoji: "🫠" }
 ];
 
 export default function MemeStickerLibrary({ onAddSticker }) {

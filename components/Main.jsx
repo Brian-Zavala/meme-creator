@@ -889,7 +889,7 @@ export default function Main() {
                 getMemeImage(newMode);
               });
             }}
-            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold"
+            className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-[oklch(53%_0.187_39)] appearance-none cursor-pointer font-bold text-center"
           >
             <option value="image">🖼️ Static Images (ImgFlip)</option>
             <option value="video">🎥 Animated GIFs (Tenor)</option>
@@ -941,26 +941,6 @@ export default function Main() {
               </button>
             </form>
           )}
-          {/* The Randomize Button - Context Aware */}
-          <button
-            onClick={getMemeImage}
-            disabled={loading || generating}
-            className={`w-full text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 group border-t border-white/20 mb-2 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}
-          >
-            {generating ? (
-              <Loader2 className="animate-spin w-6 h-6" />
-            ) : mode === "video" ? (
-              // Show Video Icon when in Tenor Mode
-              <Video className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            ) : (
-              // Show Refresh Icon when in Image Mode
-              <RefreshCcw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-700" />
-            )}
-
-            <span className="text-xl tracking-tight">
-              {generating ? "Cooking..." : mode === "video" ? "Get Random GIF" : "Get Random Image"}
-            </span>
-          </button>{" "}
           <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-900/50">
             <MemeToolbar
               meme={meme}
@@ -968,6 +948,26 @@ export default function Main() {
               handleFilterChange={handleFilterChange}
               handleStyleCommit={handleStyleCommit}
             />
+
+            {/* The Randomize Button - Now directly attached to the image canvas */}
+            <button
+              onClick={getMemeImage}
+              disabled={loading || generating}
+              className={`w-full text-white font-bold py-3 px-6 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}
+            >
+              {generating ? (
+                <Loader2 className="animate-spin w-5 h-5" />
+              ) : mode === "video" ? (
+                <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              ) : (
+                <RefreshCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-700" />
+              )}
+
+              <span className="text-lg tracking-tight">
+                {generating ? "Cooking..." : mode === "video" ? "Get Random GIF" : "Get Random Image"}
+              </span>
+            </button>
+
             <MemeCanvas
               ref={memeRef}
               meme={meme}

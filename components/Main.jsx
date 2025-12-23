@@ -48,6 +48,7 @@ export default function Main() {
       imageUrl: "http://i.imgflip.com/1bij.jpg",
       sourceUrl: null,
       name: "Meme Name",
+      mode: "image",
       textColor: "#ffffff",
       textBgColor: "transparent",
       textShadow: "#000000",
@@ -78,6 +79,7 @@ export default function Main() {
           parsed.imageUrl = defaultState.imageUrl;
           parsed.name = defaultState.name;
           parsed.isVideo = defaultState.isVideo;
+          parsed.mode = defaultState.mode;
         }
         return { ...defaultState, ...parsed };
       } catch (e) {
@@ -109,7 +111,6 @@ export default function Main() {
   const [categories, setCategories] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [mode, setMode] = useState("image"); 
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
 
@@ -218,10 +219,10 @@ export default function Main() {
   }, [draggedId, updateTransient]);
 
   useEffect(() => {
-    if (mode === 'video') {
+    if (meme.mode === 'video') {
       getCategories().then(cats => setCategories(cats.slice(0, 8)));
     }
-  }, [mode]);
+  }, [meme.mode]);
 
   useEffect(() => {
     setLoading(true);
@@ -275,13 +276,13 @@ export default function Main() {
     if (results.length > 0) {
       setAllGifs(results);
       setVideoDeck([]);
-      setMode("video");
       const first = results[0];
       updateState((prev) => ({
         ...prev,
         imageUrl: first.url,
         sourceUrl: first.shareUrl,
         name: first.name.replace(/\s+/g, "-"),
+        mode: "video",
         isVideo: false,
         id: first.id,
         fontSize: calculateSmartFontSize(first.width, first.height, prev.texts)
@@ -294,7 +295,7 @@ export default function Main() {
 
   async function getMemeImage(forcedMode) {
     const requestId = ++requestCounterRef.current;
-    const activeMode = typeof forcedMode === 'string' ? forcedMode : mode;
+    const activeMode = typeof forcedMode === 'string' ? forcedMode : meme.mode;
     setGenerating(true);
     try {
       if (activeMode === "video") {
@@ -318,6 +319,7 @@ export default function Main() {
           imageUrl: newMeme.url,
           sourceUrl: newMeme.shareUrl,
           name: newMeme.name.replace(/\s+/g, "-"),
+          mode: "video",
           isVideo: false,
           id: newMeme.id,
           fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
@@ -340,6 +342,7 @@ export default function Main() {
             imageUrl: dataUrl,
             name: newMeme.name.replace(/\s+/g, "-"),
             fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+            mode: "image",
             isVideo: false
           }));
         } catch {
@@ -349,6 +352,7 @@ export default function Main() {
             imageUrl: newMeme.url,
             name: newMeme.name.replace(/\s+/g, "-"),
             fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+            mode: "image",
             isVideo: false
           }));
         }
@@ -396,6 +400,7 @@ export default function Main() {
         ...prev,
         imageUrl: localUrl,
         name: file.name.split(".")[0],
+        mode: "image",
         isVideo: file.type.startsWith("video/"),
       }));
     }
@@ -408,6 +413,7 @@ export default function Main() {
       texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
       stickers: [],
       fontSize: 40,
+      mode: "image",
       textColor: "#ffffff",
       textBgColor: "transparent",
       filters: { contrast: 100, brightness: 100, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0, saturate: 100, invert: 0 },
@@ -492,7 +498,7 @@ export default function Main() {
 
   async function handleDownload() {
     if (!memeRef.current) return;
-    if (mode === "video") {
+    if (meme.mode === "video") {
       const promise = (async () => {
         const blob = await exportGif(meme, meme.texts, meme.stickers);
         if (meme.id) registerShare(meme.id, searchQuery);
@@ -520,7 +526,7 @@ export default function Main() {
 
   async function handleShare() {
     if (!memeRef.current) return;
-    if (mode === "video") {
+    if (meme.mode === "video") {
       const hasContent = meme.texts.some(t => t.content?.trim()) || meme.stickers.length > 0;
       if (hasContent) {
         toast("Generating high-quality file for manual sharing...", { duration: 4000 });
@@ -571,7 +577,7 @@ export default function Main() {
   function clearSearch() {
     setSearchQuery("");
     setSuggestions([]);
-    setMode("image");
+    updateState((prev) => ({ ...prev, mode: "image" }));
     if (allMemes.length === 0) {
         setLoading(true);
         fetch("https://api.imgflip.com/get_memes").then(r => r.json()).then(d => {
@@ -607,15 +613,16 @@ export default function Main() {
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
         <ModeSelector 
-          mode={mode} 
+          mode={meme.mode} 
           onModeChange={(e) => {
-              const m = e.target.value; setMode(m);
+              const m = e.target.value; 
+              updateState((prev) => ({ ...prev, mode: m }));
               startTransition(() => { if (m === "image") clearSearch(); getMemeImage(m); });
             }} 
         />
 
         <Suspense fallback={<div className="min-h-[400px] flex items-center justify-center bg-slate-900/50 rounded-2xl animate-pulse"><Loader2 className="animate-spin" /></div>}>
-          {mode === "video" && (
+          {meme.mode === "video" && (
             <GifSearch 
               searchQuery={searchQuery}
               onSearchInput={handleSearchInput}
@@ -632,8 +639,8 @@ export default function Main() {
           <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-900/50">
             <MemeToolbar meme={meme} handleStyleChange={handleStyleChange} handleFilterChange={handleFilterChange} handleStyleCommit={handleStyleCommit} />
             <button onClick={getMemeImage} disabled={loading || generating} className={`w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] ${generating ? "animate-pulse-ring" : ""}`}>
-              {generating ? <Loader2 className="animate-spin w-5 h-5" /> : mode === "video" ? <Video className="w-5 h-5" /> : <RefreshCcw className="w-5 h-5" />}
-              <span className="text-lg">{generating ? "Cooking..." : mode === "video" ? "Get Random GIF" : "Get Random Image"}</span>
+              {generating ? <Loader2 className="animate-spin w-5 h-5" /> : meme.mode === "video" ? <Video className="w-5 h-5" /> : <RefreshCcw className="w-5 h-5" />}
+              <span className="text-lg">{generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}</span>
             </button>
             <MemeCanvas 
               ref={memeRef} 

@@ -26,11 +26,14 @@ export async function exportGif(meme, texts, stickers) {
       // 3. Initialize GIF encoder
       const gif = new GIF({
         workers: 4,
-        quality: 10,
+        quality: 1, // Higher quality (lower number) to reduce artifacts
         width: width,
         height: height,
         workerScript: '/gif.worker.js',
-        repeat: 0 // 0 = loop forever, -1 = play once
+        repeat: 0,
+        background: '#000000',
+        transparent: null, // Explicitly disable transparency to fix black speckles
+        dither: 'FloydSteinberg' // Better color blending
       });
 
       // 4. Create a temporary canvas for drawing
@@ -43,8 +46,9 @@ export async function exportGif(meme, texts, stickers) {
 
       // 5. Process each frame
       for (let i = 0; i < numFrames; i++) {
-        // Clear canvas
-        ctx.clearRect(0, 0, width, height);
+        // Clear canvas with solid black to prevent transparency artifacts (speckles)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, width, height);
 
         // Draw original GIF frame
         const frameData = ctx.createImageData(width, height);
@@ -90,6 +94,8 @@ export async function exportGif(meme, texts, stickers) {
 
         // Draw Texts
         for (const textItem of texts) {
+          if (!textItem.content.trim()) continue;
+
           const x = (textItem.x / 100) * width;
           const y = (textItem.y / 100) * height;
           const fontSize = meme.fontSize || 40;
@@ -100,6 +106,32 @@ export async function exportGif(meme, texts, stickers) {
           ctx.textBaseline = 'middle';
           
           const content = textItem.content.toUpperCase();
+          const metrics = ctx.measureText(content);
+          
+          // Draw Text Background if enabled
+          if (meme.textBgColor && meme.textBgColor !== 'transparent') {
+            const bgWidth = metrics.width + (fontSize * 0.4);
+            const bgHeight = fontSize * 1.2;
+            
+            ctx.fillStyle = meme.textBgColor;
+            // Draw a rounded rectangle for the background
+            const radius = 4;
+            const bx = x - bgWidth / 2;
+            const by = y - bgHeight / 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(bx + radius, by);
+            ctx.lineTo(bx + bgWidth - radius, by);
+            ctx.quadraticCurveTo(bx + bgWidth, by, bx + bgWidth, by + radius);
+            ctx.lineTo(bx + bgWidth, by + bgHeight - radius);
+            ctx.quadraticCurveTo(bx + bgWidth, by + bgHeight, bx + bgWidth - radius, by + bgHeight);
+            ctx.lineTo(bx + radius, by + bgHeight);
+            ctx.quadraticCurveTo(bx, by + bgHeight, bx, by + bgHeight - radius);
+            ctx.lineTo(bx, by + radius);
+            ctx.quadraticCurveTo(bx, by, bx + radius, by);
+            ctx.closePath();
+            ctx.fill();
+          }
           
           ctx.strokeStyle = meme.textShadow || '#000000';
           ctx.lineWidth = stroke * 2;

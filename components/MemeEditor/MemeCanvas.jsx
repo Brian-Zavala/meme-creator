@@ -85,9 +85,21 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
           </div>
         ))}
         
+        {/* SVG Filter for Text Background Alignment */}
+        <svg className="absolute w-0 h-0 invisible" aria-hidden="true">
+          <defs>
+            <filter id="text-bg-filter" x="-5%" y="-5%" width="110%" height="110%">
+              <feFlood floodColor={meme.textBgColor} result="flood" />
+              <feComposite in="flood" in2="SourceGraphic" operator="over" />
+            </filter>
+          </defs>
+        </svg>
+
         {meme.texts.map((textItem) => {
           if (!(textItem.content || "").trim()) return null;
           const stroke = Math.max(1, meme.fontSize / 25);
+          const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
+          
           return (
           <h2
             key={textItem.id}
@@ -100,10 +112,16 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
               top: `${textItem.y}%`,
               transform: "translate(-50%, -50%)",
               color: meme.textColor,
-              backgroundColor: meme.textBgColor,
+              // We use SVG filter instead of CSS background-color for better html2canvas alignment
+              // but we keep a fallback or secondary method for UI visual polish
+              backgroundColor: "transparent", 
+              backgroundImage: hasBg ? `linear-gradient(${meme.textBgColor}, ${meme.textBgColor})` : 'none',
+              backgroundPosition: 'center',
+              backgroundSize: 'calc(100% - 16px) 100%',
+              backgroundRepeat: 'no-repeat',
               display: "inline-block",
               textAlign: "center",
-              padding: meme.textBgColor !== 'transparent' ? '0.2em 0.4em' : '0',
+              padding: hasBg ? '0.15em 0.3em' : '0',
               fontSize: `${meme.fontSize}px`,
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: "Impact, sans-serif",
@@ -119,7 +137,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
                 ${stroke}px ${stroke}px 5px #000
               `,
               border: draggedId === textItem.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
-              borderRadius: "8px",
+              borderRadius: "4px",
             }}
           >
             {textItem.content}

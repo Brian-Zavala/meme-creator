@@ -104,7 +104,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
           <h2
             key={textItem.id}
             onPointerDown={(e) => onPointerDown(e, textItem.id)}
-            className={`absolute uppercase tracking-tighter leading-tight whitespace-pre-wrap break-words px-4 select-none touch-none z-40 ${
+            className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 ${
               draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
             }`}
             style={{
@@ -112,16 +112,11 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
               top: `${textItem.y}%`,
               transform: "translate(-50%, -50%)",
               color: meme.textColor,
-              // We use SVG filter instead of CSS background-color for better html2canvas alignment
-              // but we keep a fallback or secondary method for UI visual polish
-              backgroundColor: "transparent", 
-              backgroundImage: hasBg ? `linear-gradient(${meme.textBgColor}, ${meme.textBgColor})` : 'none',
-              backgroundPosition: 'center',
-              backgroundSize: 'calc(100% - 16px) 100%',
-              backgroundRepeat: 'no-repeat',
+              backgroundColor: hasBg ? meme.textBgColor : "transparent",
               display: "inline-block",
               textAlign: "center",
-              padding: hasBg ? '0.15em 0.3em' : '0',
+              padding: hasBg ? '0.25em 0.5em' : '0',
+              lineHeight: 1.2,
               fontSize: `${meme.fontSize}px`,
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: "Impact, sans-serif",

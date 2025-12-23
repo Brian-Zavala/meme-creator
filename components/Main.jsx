@@ -280,7 +280,7 @@ export default function Main() {
       updateState((prev) => ({
         ...prev,
         imageUrl: first.url,
-        sourceUrl: first.url,
+        sourceUrl: first.shareUrl,
         name: first.name.replace(/\s+/g, "-"),
         isVideo: false,
         id: first.id,
@@ -316,7 +316,7 @@ export default function Main() {
         updateState((prev) => ({
           ...prev,
           imageUrl: newMeme.url,
-          sourceUrl: newMeme.url,
+          sourceUrl: newMeme.shareUrl,
           name: newMeme.name.replace(/\s+/g, "-"),
           isVideo: false,
           id: newMeme.id,

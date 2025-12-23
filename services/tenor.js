@@ -7,7 +7,7 @@ export async function searchTenor(query) {
   const endpoint = query ? 'search' : 'featured';
   const queryParam = query ? `&q=${encodeURIComponent(query)}` : '';
   
-  const url = `https://tenor.googleapis.com/v2/${endpoint}?key=${API_KEY}&client_key=${CLIENT_KEY}&limit=50&media_filter=gif${queryParam}`;
+  const url = `https://tenor.googleapis.com/v2/${endpoint}?key=${API_KEY}&client_key=${CLIENT_KEY}&limit=50&media_filter=gif,mediumgif${queryParam}`;
 
   try {
     const response = await fetch(url);
@@ -23,6 +23,7 @@ export async function searchTenor(query) {
       id: item.id,
       name: item.content_description || query,
       url: item.media_formats.gif.url, // High-quality GIF
+      shareUrl: item.media_formats.mediumgif ? item.media_formats.mediumgif.url : item.media_formats.gif.url, // Optimized for sharing
       width: item.media_formats.gif.dims[0],
       height: item.media_formats.gif.dims[1],
     }));

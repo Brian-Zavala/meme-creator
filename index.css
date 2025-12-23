@@ -74,15 +74,38 @@ body {
 
 @keyframes radar-beam {
   0% {
-    box-shadow: 0 0 0 0 oklch(53% 0.187 39 / 0.25);
+    box-shadow: 0 0 0 0 oklch(53% 0.187 39 / 0.5);
   }
   100% {
-    box-shadow: 0 0 0 15px oklch(53% 0.187 39 / 0);
+    box-shadow: 0 0 0 25px oklch(53% 0.187 39 / 0);
   }
 }
 
 .animate-radar {
   animation: radar-beam 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes shimmer-rtl {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.animate-text-shimmer {
+  background: linear-gradient(
+    to left,
+    #ffffff 35%,
+    oklch(53% 0.187 39) 50%,
+    #ffffff 65%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: shimmer-rtl 0.8s ease-out forwards;
 }
 
 /* Glass Inputs */

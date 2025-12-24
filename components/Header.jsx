@@ -1,4 +1,6 @@
-export default function Header() {
+import { HelpCircle } from "lucide-react";
+
+export default function Header({ onOpenInstructions }) {
   return (
     <header className="header flex items-center justify-between px-6 py-4 bg-[oklch(53%_0.187_39)] shadow-lg select-none">
       <div className="flex items-center gap-3 cursor-default">
@@ -7,6 +9,14 @@ export default function Header() {
           <p className="text-[10px] font-bold text-white/80 tracking-[0.2em] uppercase">Free • No Watermark</p>
         </div>
       </div>
+      
+      <button 
+        onClick={onOpenInstructions}
+        className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
+        title="How to use"
+      >
+        <HelpCircle className="w-6 h-6" />
+      </button>
     </header>
   );
 }

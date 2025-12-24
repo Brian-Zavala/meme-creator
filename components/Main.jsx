@@ -16,7 +16,6 @@ import { MEME_QUOTES } from "../constants/memeQuotes";
 import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
-import { WelcomeModal } from "./WelcomeModal";
 import { MemeActions } from "./MemeEditor/MemeActions";
 import { GifSearch } from "./MemeEditor/GifSearch";
 import { ModeSelector } from "./MemeEditor/ModeSelector";
@@ -26,14 +25,6 @@ const MemeFineTune = lazy(() => import("./MemeEditor/MemeFineTune"));
 
 export default function Main() {
   const [isPending, startTransition] = useTransition();
-  const [showWelcome, setShowWelcome] = useState(() => {
-    return !localStorage.getItem("meme-creator-welcome-seen");
-  });
-
-  function closeWelcome() {
-    localStorage.setItem("meme-creator-welcome-seen", "true");
-    setShowWelcome(false);
-  }
 
   // --- State with History ---
   const { 
@@ -785,7 +776,6 @@ export default function Main() {
             )}
           </div>
       </div>
-      <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />
     </main>
   );
 }

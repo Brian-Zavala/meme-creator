@@ -365,10 +365,25 @@ export default function Main() {
   }
 
   function handleTextChange(id, value) {
-    updateState((prev) => ({
-      ...prev,
-      texts: prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t)),
-    }));
+    updateState((prev) => {
+      const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
+      const lastText = newTexts[newTexts.length - 1];
+      
+      // If the last text field is not empty, add a new one
+      if (lastText.content.trim().length > 0) {
+        newTexts.push({ 
+            id: crypto.randomUUID(), 
+            content: "", 
+            x: 50, 
+            y: 50 
+        });
+      }
+      
+      return {
+        ...prev,
+        texts: newTexts,
+      };
+    });
   }
 
   function handleStyleChange(event, shouldCommit = false) {

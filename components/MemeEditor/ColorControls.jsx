@@ -41,7 +41,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
   };
 
   return (
-    <div className="w-full md:w-auto flex flex-row flex-nowrap md:flex-wrap items-center justify-between md:justify-end gap-2 md:gap-6 animate-in slide-in-from-right duration-500 px-2 md:px-0">
+    <div className="w-full md:w-auto flex flex-row flex-nowrap items-center justify-between md:justify-end gap-2 md:gap-6 animate-in slide-in-from-right duration-500 px-2 md:px-0 shrink-0">
       
       {/* Text Color + Opacity */}
       <div className="flex flex-row md:flex-col items-center gap-2 md:gap-3">
@@ -66,14 +66,14 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             </div>
         </div>
         {hasText && (
-          <div className="h-12 w-4 flex items-center justify-center md:w-full md:h-auto">
+          <div className="relative h-12 w-4 md:w-full md:h-auto flex items-center justify-center">
               <input
                   type="range" min="0" max="100"
                   value={getOpacity(meme.textColor)}
                   onChange={(e) => changeOpacity('textColor', e.target.value, false)}
                   onMouseUp={(e) => changeOpacity('textColor', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textColor', e.target.value, true)}
-                  className="accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full"
+                  className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full touch-none"
                   title="Text Opacity"
               />
           </div>
@@ -103,14 +103,14 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             </div>
         </div>
         {hasText && (
-          <div className="h-12 w-4 flex items-center justify-center md:w-full md:h-auto">
+          <div className="relative h-12 w-4 md:w-full md:h-auto flex items-center justify-center">
               <input
                   type="range" min="0" max="100"
                   value={getOpacity(meme.textShadow || '#000000')}
                   onChange={(e) => changeOpacity('textShadow', e.target.value, false)}
                   onMouseUp={(e) => changeOpacity('textShadow', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textShadow', e.target.value, true)}
-                  className="accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full"
+                  className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full touch-none"
                   title="Outline Opacity"
               />
           </div>
@@ -140,14 +140,14 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                 />
             </div>
             </div>
-            <div className="h-12 w-4 flex items-center justify-center md:w-full md:h-auto">
+            <div className="relative h-12 w-4 md:w-full md:h-auto flex items-center justify-center">
                 <input
                     type="range" min="0" max="100"
                     value={getOpacity(meme.textBgColor)}
                     onChange={(e) => changeOpacity('textBgColor', e.target.value, false)}
                     onMouseUp={(e) => changeOpacity('textBgColor', e.target.value, true)}
                     onTouchEnd={(e) => changeOpacity('textBgColor', e.target.value, true)}
-                    className="accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full"
+                    className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full touch-none"
                     title="Background Opacity"
                 />
             </div>

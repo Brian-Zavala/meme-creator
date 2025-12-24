@@ -68,14 +68,14 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
       </div>
 
       {/* Controls Area */}
-      <div className="flex flex-col px-6 py-6 min-h-[80px] justify-center">
+      <div className="flex flex-col px-6 py-6 min-h-[80px] justify-center overflow-hidden">
         
         {/* TEXT CONTROLS */}
         {activeTab === "text" && (
-          <div id="text-tools-panel" role="tabpanel" className="flex flex-col md:flex-row items-center justify-between w-full gap-6 md:gap-8">
+          <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
             
             {/* Group 1: Size Controls */}
-            <div className={`flex-1 w-full md:w-auto flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-4'}`}>
+            <div className={`flex-1 w-full flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-4'}`}>
                 {hasText && (
                   <div className="flex flex-col w-full gap-2 animate-in fade-in duration-300">
                     <div className="flex items-center justify-between w-full relative">
@@ -119,15 +119,13 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 )}
             </div>
 
-            {/* Divider (Desktop Only) */}
-            {(hasText || hasStickers) && <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />}
-            {/* Divider (Mobile Only) */}
-            {(hasText || hasStickers) && <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
+            {/* Divider */}
+            {(hasText || hasStickers) && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
 
             {/* Group 2: Width Control */}
             {hasText && (
               <>
-                <div className="flex-1 w-full md:w-auto flex flex-col gap-2 animate-in fade-in duration-300">
+                <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
                   <div className="flex items-center justify-between w-full relative">
                     {meme.maxWidth != 100 && (
                         <button 
@@ -152,16 +150,14 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                   </div>
                 </div>
 
-                {/* Divider (Desktop Only) */}
-                <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />
-                {/* Divider (Mobile Only) */}
-                <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+                {/* Divider */}
+                <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
               </>
             )}
 
             {/* Group 3: Color Controls */}
             {hasText && (
-                <Suspense fallback={<div className="w-full md:w-auto h-20 bg-slate-800/20 rounded animate-pulse" />}>
+                <Suspense fallback={<div className="w-full md:w-auto h-20 bg-slate-800/20 rounded animate-pulse shrink-0" />}>
                     <ColorControls 
                         meme={meme} 
                         handleStyleChange={handleStyleChange} 

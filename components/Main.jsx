@@ -115,6 +115,22 @@ export default function Main() {
 
   const [pingKey, setPingKey] = useState(null);
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
+  const fineTuneRef = useRef(null);
+
+  useEffect(() => {
+    if (meme.selectedId && fineTuneRef.current) {
+        // We use a small timeout to ensure the component has rendered and settled
+        // especially since it's lazy loaded and wrapped in Suspense
+        const timer = setTimeout(() => {
+            fineTuneRef.current.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest',
+                inline: 'nearest'
+            });
+        }, 100);
+        return () => clearTimeout(timer);
+    }
+  }, [meme.selectedId]);
 
   const triggerFlash = (color) => {
     setFlashColor(color);
@@ -763,12 +779,14 @@ export default function Main() {
             />
             {selectedText && (
                 <Suspense fallback={null}>
-                    <MemeFineTune 
-                        selectedText={selectedText}
-                        onFineTune={handleFineTune}
-                        onFineTuneCommit={handleFineTuneCommit}
-                        onCenterText={handleCenterText}
-                    />
+                    <div ref={fineTuneRef}>
+                      <MemeFineTune 
+                          selectedText={selectedText}
+                          onFineTune={handleFineTune}
+                          onFineTuneCommit={handleFineTuneCommit}
+                          onCenterText={handleCenterText}
+                      />
+                    </div>
                 </Suspense>
             )}
           </div>

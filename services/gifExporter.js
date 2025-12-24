@@ -120,6 +120,11 @@ export async function exportGif(meme, texts, stickers) {
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           
+          // Match the editor's drop shadow
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetY = 2;
+
           const content = textItem.content.toUpperCase();
           const metrics = ctx.measureText(content);
           
@@ -148,13 +153,19 @@ export async function exportGif(meme, texts, stickers) {
             ctx.fill();
           }
           
-          ctx.strokeStyle = meme.textShadow || '#000000';
           ctx.lineWidth = stroke * 2;
           ctx.lineJoin = 'round';
-          ctx.strokeText(content, x, y);
           
           ctx.fillStyle = meme.textColor || '#ffffff';
           ctx.fillText(content, x, y);
+
+          ctx.strokeStyle = meme.textShadow || '#000000';
+          ctx.strokeText(content, x, y);
+
+          // Reset shadow for next iteration/element
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetY = 0;
         }
 
         // Add to GIF

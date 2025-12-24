@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Type, Smile, Plus, ChevronDown, HelpCircle, Sparkles } from "lucide-react";
+import { Type, Smile, Plus, ChevronDown, HelpCircle, Sparkles, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const STICKER_CATEGORIES = {
@@ -11,7 +11,7 @@ const STICKER_CATEGORIES = {
   "Symbols": ["⚠️", "🚫", "✅", "❌", "❓", "❗️", "💯", "💢", "💤", "💨"]
 };
 
-export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption }) {
+export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -48,12 +48,19 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
         </div>
         <button 
             onClick={onMagicCaption}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[oklch(53%_0.187_39)]/10 text-[oklch(53%_0.187_39)] hover:bg-[oklch(53%_0.187_39)]/20 transition-all active:scale-90 border border-[oklch(53%_0.187_39)]/20 group"
+            disabled={isMagicGenerating}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[oklch(53%_0.187_39)]/10 text-[oklch(53%_0.187_39)] hover:bg-[oklch(53%_0.187_39)]/20 transition-all active:scale-90 border border-[oklch(53%_0.187_39)]/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Generate Magic Caption"
             aria-label="Generate Magic Caption with AI"
         >
-            <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" aria-hidden="true" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">Magic AI</span>
+            {isMagicGenerating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+                <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" aria-hidden="true" />
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">
+                {isMagicGenerating ? "Generating..." : "Magic AI"}
+            </span>
         </button>
       </div>
 

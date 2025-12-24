@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import {
   Type,
-  Palette,
   MoveHorizontal,
   Image as ImageIcon,
   Sun,
@@ -13,8 +12,9 @@ import {
   Aperture as HueRotate,
   Droplet as Saturate,
   FlipVertical as Invert,
-  Paintbrush as Brush,
 } from "lucide-react";
+
+const ColorControls = lazy(() => import("./ColorControls"));
 
 export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit }) {
   const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
@@ -76,18 +76,32 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
             
             {/* Group 1: Size Controls */}
             <div className={`flex-1 w-full md:w-auto flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-4'}`}>
-                <div className="flex items-center gap-4 w-full">
-                  <Type className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                  <input
-                    type="range" min="2" max="120" name="fontSize"
-                    value={meme.fontSize}
-                    onChange={handleStyleChange}
-                    onMouseUp={handleStyleCommit}
-                    onTouchEnd={handleStyleCommit}
-                    className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
-                    title="Font Size"
-                  />
-                </div>
+                {hasText && (
+                  <div className="flex flex-col w-full gap-2 animate-in fade-in duration-300">
+                    <div className="flex items-center justify-between w-full relative">
+                        {meme.fontSize != 40 && (
+                            <button 
+                                onClick={() => handleStyleChange({ currentTarget: { name: 'fontSize', value: 40 } }, true)}
+                                className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                            >
+                                Reset
+                            </button>
+                        )}
+                        <div className="flex items-center gap-4 w-full">
+                            <Type className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                            <input
+                            type="range" min="2" max="120" name="fontSize"
+                            value={meme.fontSize}
+                            onChange={handleStyleChange}
+                            onMouseUp={handleStyleCommit}
+                            onTouchEnd={handleStyleCommit}
+                            className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
+                            title="Font Size"
+                            />
+                        </div>
+                    </div>
+                  </div>
+                )}
                 
                 {hasStickers && (
                     <div className="flex items-center gap-4 w-full animate-in slide-in-from-top-1 fade-in duration-300">
@@ -106,96 +120,55 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
             </div>
 
             {/* Divider (Desktop Only) */}
-            <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />
+            {(hasText || hasStickers) && <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />}
             {/* Divider (Mobile Only) */}
-            <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+            {(hasText || hasStickers) && <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
 
             {/* Group 2: Width Control */}
-            <div className="flex-1 w-full md:w-auto flex items-center gap-4">
-              <MoveHorizontal className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-              <input
-                type="range" min="20" max="100" name="maxWidth"
-                value={meme.maxWidth}
-                onChange={handleStyleChange}
-                onMouseUp={handleStyleCommit}
-                onTouchEnd={handleStyleCommit}
-                className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
-                title="Text Width (Wrap)"
-              />
-            </div>
-
-            {/* Divider (Desktop Only) */}
-            <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />
-            {/* Divider (Mobile Only) */}
-            <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
-
-            {/* Group 3: Color Controls */}
-            <div className="w-full md:w-auto flex items-center justify-center md:justify-end gap-6">
-              <div className="relative flex items-center gap-3" title="Text Color">
-                {meme.textColor !== '#ffffff' && (
-                    <button 
-                      onClick={() => handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true)}
-                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
-                    >
-                      Reset
-                    </button>
-                )}
-                <Palette className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
-                  <input
-                    type="color" name="textColor"
-                    value={meme.textColor}
-                    onChange={handleStyleChange}
-                    onBlur={handleStyleCommit} 
-                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              <div className="relative flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Outline Color">
-                {meme.textShadow !== '#000000' && (
-                    <button 
-                      onClick={() => handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true)}
-                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
-                    >
-                      Reset
-                    </button>
-                )}
-                <div className="w-5 h-5 text-slate-400 shrink-0 flex items-center justify-center font-black text-xs border border-slate-400 rounded-sm">T</div>
-                <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
-                  <input
-                    type="color" name="textShadow"
-                    value={meme.textShadow || '#000000'}
-                    onChange={handleStyleChange}
-                    onBlur={handleStyleCommit} 
-                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {hasText && (
-                <div className="relative flex items-center gap-3 animate-in fade-in zoom-in duration-300" title="Background Color">
-                  {meme.textBgColor !== 'transparent' && (
-                    <button 
-                      onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
-                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <Brush className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                  <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
-                    <input
-                      type="color" name="textBgColor"
-                      value={meme.textBgColor === 'transparent' ? '#000000' : meme.textBgColor}
-                      onChange={handleStyleChange}
-                      onBlur={handleStyleCommit} 
-                      className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                    />
+            {hasText && (
+              <>
+                <div className="flex-1 w-full md:w-auto flex flex-col gap-2 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between w-full relative">
+                    {meme.maxWidth != 100 && (
+                        <button 
+                            onClick={() => handleStyleChange({ currentTarget: { name: 'maxWidth', value: 100 } }, true)}
+                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                        >
+                            Reset
+                        </button>
+                    )}
+                    <div className="flex items-center gap-4 w-full">
+                        <MoveHorizontal className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                        <input
+                            type="range" min="20" max="100" name="maxWidth"
+                            value={meme.maxWidth}
+                            onChange={handleStyleChange}
+                            onMouseUp={handleStyleCommit}
+                            onTouchEnd={handleStyleCommit}
+                            className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
+                            title="Text Width (Wrap)"
+                        />
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
+
+                {/* Divider (Desktop Only) */}
+                <div className="hidden md:block w-px h-8 bg-slate-800 shrink-0" aria-hidden="true" />
+                {/* Divider (Mobile Only) */}
+                <div className="md:hidden w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+              </>
+            )}
+
+            {/* Group 3: Color Controls */}
+            {hasText && (
+                <Suspense fallback={<div className="w-full md:w-auto h-20 bg-slate-800/20 rounded animate-pulse" />}>
+                    <ColorControls 
+                        meme={meme} 
+                        handleStyleChange={handleStyleChange} 
+                        handleStyleCommit={handleStyleCommit} 
+                    />
+                </Suspense>
+            )}
           </div>
         )}
 

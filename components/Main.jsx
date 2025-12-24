@@ -498,7 +498,9 @@ export default function Main() {
 
   function handleCanvasPointerDown() {
     // Clear selection on background click
-    updateState(prev => ({ ...prev, selectedId: null }));
+    startTransition(() => {
+      updateState(prev => ({ ...prev, selectedId: null }));
+    });
     globalLastTapRef.current = 0;
   }
 
@@ -582,7 +584,9 @@ export default function Main() {
     } else if (isText) {
         // Long Press to Select Text
         longPressTimerRef.current = setTimeout(() => {
-            updateState(prev => ({ ...prev, selectedId: id }));
+            startTransition(() => {
+                updateState(prev => ({ ...prev, selectedId: id }));
+            });
             setDraggedId(null); // Stop dragging if selection triggers
             if (navigator.vibrate) navigator.vibrate(50);
             toast("Text Selected!", { icon: "✨", duration: 1000 });

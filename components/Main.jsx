@@ -407,19 +407,21 @@ export default function Main() {
   }
 
   function resetFilters() {
-    updateState((prev) => ({
-      ...prev,
-      filters: {
-        contrast: 100,
-        brightness: 100,
-        blur: 0,
-        grayscale: 0,
-        sepia: 0,
-        hueRotate: 0,
-        saturate: 100,
-        invert: 0,
-      },
-    }));
+    startTransition(() => {
+        updateState((prev) => ({
+        ...prev,
+        filters: {
+            contrast: 100,
+            brightness: 100,
+            blur: 0,
+            grayscale: 0,
+            sepia: 0,
+            hueRotate: 0,
+            saturate: 100,
+            invert: 0,
+        },
+        }));
+    });
     toast("Filters reset", { icon: "🎨" });
   }
 
@@ -462,16 +464,18 @@ export default function Main() {
 
   function handleReset() {
     triggerFlash("red");
-    updateState((prev) => ({
-      ...prev,
-      texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
-      stickers: [],
-      fontSize: 40,
-      mode: "image",
-      textColor: "#ffffff",
-      textBgColor: "transparent",
-      filters: { contrast: 100, brightness: 100, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0, saturate: 100, invert: 0 },
-    }));
+    startTransition(() => {
+        updateState((prev) => ({
+        ...prev,
+        texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
+        stickers: [],
+        fontSize: 40,
+        mode: "image",
+        textColor: "#ffffff",
+        textBgColor: "transparent",
+        filters: { contrast: 100, brightness: 100, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0, saturate: 100, invert: 0 },
+        }));
+    });
   }
 
   function addSticker(emoji) {
@@ -710,8 +714,11 @@ export default function Main() {
           mode={meme.mode} 
           onModeChange={(e) => {
               const m = e.target.value; 
-              updateState((prev) => ({ ...prev, mode: m }));
-              startTransition(() => { if (m === "image") clearSearch(); getMemeImage(m); });
+              startTransition(() => {
+                updateState((prev) => ({ ...prev, mode: m }));
+                if (m === "image") clearSearch(); 
+                getMemeImage(m);
+              });
             }} 
         />
 
@@ -766,14 +773,16 @@ export default function Main() {
               onRemoveSticker={removeSticker} 
               onCanvasPointerDown={handleCanvasPointerDown} 
             />
-            <Suspense fallback={null}>
-                <MemeFineTune 
-                    selectedText={selectedText}
-                    onFineTune={handleFineTune}
-                    onFineTuneCommit={handleFineTuneCommit}
-                    onCenterText={handleCenterText}
-                />
-            </Suspense>
+            {selectedText && (
+                <Suspense fallback={null}>
+                    <MemeFineTune 
+                        selectedText={selectedText}
+                        onFineTune={handleFineTune}
+                        onFineTuneCommit={handleFineTuneCommit}
+                        onCenterText={handleCenterText}
+                    />
+                </Suspense>
+            )}
           </div>
       </div>
       <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />

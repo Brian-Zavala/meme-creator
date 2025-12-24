@@ -92,7 +92,10 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               <input
                   type="range" min="0" max="100"
                   value={getOpacity(meme.textColor)}
-                  onChange={(e) => changeOpacity('textColor', e.target.value, false)}
+                  onChange={(e) => {
+                      if (navigator.vibrate) navigator.vibrate(5);
+                      changeOpacity('textColor', e.target.value, false);
+                  }}
                   onMouseUp={(e) => changeOpacity('textColor', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textColor', e.target.value, true)}
                   className="range-vertical accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
@@ -132,7 +135,10 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               <input
                   type="range" min="0" max="100"
                   value={getOpacity(meme.textShadow || '#000000')}
-                  onChange={(e) => changeOpacity('textShadow', e.target.value, false)}
+                  onChange={(e) => {
+                      if (navigator.vibrate) navigator.vibrate(5);
+                      changeOpacity('textShadow', e.target.value, false);
+                  }}
                   onMouseUp={(e) => changeOpacity('textShadow', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textShadow', e.target.value, true)}
                   className="range-vertical accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
@@ -172,7 +178,10 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                 <input
                     type="range" min="0" max="100"
                     value={getOpacity(meme.textBgColor)}
-                    onChange={(e) => changeOpacity('textBgColor', e.target.value, false)}
+                    onChange={(e) => {
+                        if (navigator.vibrate) navigator.vibrate(5);
+                        changeOpacity('textBgColor', e.target.value, false);
+                    }}
                     onMouseUp={(e) => changeOpacity('textBgColor', e.target.value, true)}
                     onTouchEnd={(e) => changeOpacity('textBgColor', e.target.value, true)}
                     className="range-vertical accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"

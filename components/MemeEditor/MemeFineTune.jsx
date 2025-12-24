@@ -14,7 +14,7 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Fine Tune</span>
             <button 
                 onClick={onCenterText}
-                className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg text-xs font-bold text-slate-300 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg text-xs font-bold text-slate-300 transition-all active:scale-95"
             >
                 <RefreshCcw className="w-3 h-3" /> Center
             </button>
@@ -28,7 +28,10 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
                     type="range" 
                     min="0" max="100" step="0.5"
                     value={selectedText.x}
-                    onChange={(e) => onFineTune('x', e.target.value)}
+                    onChange={(e) => {
+                        if (navigator.vibrate) navigator.vibrate(5);
+                        onFineTune('x', e.target.value);
+                    }}
                     onMouseUp={onFineTuneCommit}
                     onTouchEnd={onFineTuneCommit}
                     className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer"
@@ -42,7 +45,10 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
                     type="range" 
                     min="0" max="100" step="0.5"
                     value={selectedText.y}
-                    onChange={(e) => onFineTune('y', e.target.value)}
+                    onChange={(e) => {
+                        if (navigator.vibrate) navigator.vibrate(5);
+                        onFineTune('y', e.target.value);
+                    }}
                     onMouseUp={onFineTuneCommit}
                     onTouchEnd={onFineTuneCommit}
                     className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer"
@@ -57,7 +63,10 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
                 type="range" 
                 min="0" max="360" step="1"
                 value={selectedText.rotation || 0}
-                onChange={(e) => onFineTune('rotation', e.target.value)}
+                onChange={(e) => {
+                    if (navigator.vibrate) navigator.vibrate(5);
+                    onFineTune('rotation', e.target.value);
+                }}
                 onMouseUp={onFineTuneCommit}
                 onTouchEnd={onFineTuneCommit}
                 className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer"

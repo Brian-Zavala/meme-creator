@@ -1,4 +1,4 @@
-import { HelpCircle, Move, Type, Layers, Image as ImageIcon, Film } from "lucide-react";
+import { Move, Type, Layers, Image as ImageIcon, Film } from "lucide-react";
 
 export function InstructionModal({ isOpen, onClose }) {
   if (!isOpen) return null;
@@ -8,7 +8,7 @@ export function InstructionModal({ isOpen, onClose }) {
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
         <div className="bg-[oklch(53%_0.187_39)] px-8 py-6 text-center">
           <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center justify-center gap-2">
-            <HelpCircle className="w-6 h-6" /> How to Use
+            How to Use
           </h2>
           <p className="text-white/70 text-xs font-bold tracking-widest uppercase mt-1">Master the Creator</p>
         </div>

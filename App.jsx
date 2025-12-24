@@ -1,8 +1,41 @@
+import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Header from "./components/Header"
 import Main from "./components/Main"
+import { WelcomeModal } from "./components/WelcomeModal";
+import { InstructionModal } from "./components/InstructionModal";
 
 export default function App() {
+    const [showWelcome, setShowWelcome] = useState(false);
+    const [showInstructions, setShowInstructions] = useState(false);
+
+    useEffect(() => {
+        const welcomeSeen = localStorage.getItem("meme-creator-welcome-seen");
+        if (!welcomeSeen) {
+            setShowWelcome(true);
+        }
+    }, []);
+
+    const closeWelcome = () => {
+        localStorage.setItem("meme-creator-welcome-seen", "true");
+        setShowWelcome(false);
+        
+        // After welcome is closed, check if instructions have been seen
+        const instructionsSeen = localStorage.getItem("meme-creator-instructions-seen");
+        if (!instructionsSeen) {
+            setShowInstructions(true);
+        }
+    };
+
+    const closeInstructions = () => {
+        localStorage.setItem("meme-creator-instructions-seen", "true");
+        setShowInstructions(false);
+    };
+
+    const openInstructions = () => {
+        setShowInstructions(true);
+    };
+
     return (
         <div className="min-h-screen flex flex-col bg-slate-950 text-slate-50 font-sans">
             <Toaster 
@@ -15,10 +48,13 @@ export default function App() {
                     },
                 }}
             />
-            <Header />
+            <Header onOpenInstructions={openInstructions} />
             <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
                 <Main />
             </div>
+            
+            <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />
+            <InstructionModal isOpen={showInstructions} onClose={closeInstructions} />
         </div>
     )
 }

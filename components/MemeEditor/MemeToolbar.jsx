@@ -202,7 +202,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
                   return (
                     <button
-                      onClick={onResetFilters}
+                      onClick={() => startTransition(() => onResetFilters())}
                       className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all text-xs font-bold uppercase tracking-wide mb-2 animate-in fade-in slide-in-from-top-2"
                     >
                       <RefreshCcw className="w-3 h-3" /> Reset All Filters

@@ -406,6 +406,23 @@ export default function Main() {
     }));
   }
 
+  function resetFilters() {
+    updateState((prev) => ({
+      ...prev,
+      filters: {
+        contrast: 100,
+        brightness: 100,
+        blur: 0,
+        grayscale: 0,
+        sepia: 0,
+        hueRotate: 0,
+        saturate: 100,
+        invert: 0,
+      },
+    }));
+    toast("Filters reset", { icon: "🎨" });
+  }
+
   function handleStyleChange(event, shouldCommit = false) {
     const { value, name } = event.currentTarget;
     if (shouldCommit) {
@@ -713,7 +730,13 @@ export default function Main() {
             />
           )}
           <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50">
-            <MemeToolbar meme={meme} handleStyleChange={handleStyleChange} handleFilterChange={handleFilterChange} handleStyleCommit={handleStyleCommit} />
+            <MemeToolbar 
+                meme={meme} 
+                handleStyleChange={handleStyleChange} 
+                handleFilterChange={handleFilterChange} 
+                handleStyleCommit={handleStyleCommit} 
+                onResetFilters={resetFilters}
+            />
             <button 
               onClick={() => { setPingKey(Date.now()); getMemeImage(); }} 
               disabled={loading || generating} 

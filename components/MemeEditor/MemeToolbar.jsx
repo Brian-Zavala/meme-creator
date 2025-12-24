@@ -12,11 +12,12 @@ import {
   Aperture as HueRotate,
   Droplet as Saturate,
   FlipVertical as Invert,
+  RefreshCcw,
 } from "lucide-react";
 
 const ColorControls = lazy(() => import("./ColorControls"));
 
-export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit }) {
+export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters }) {
   const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
@@ -170,7 +171,33 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
         {/* IMAGE CONTROLS */}
         {activeTab === "image" && (
-          <div id="image-tools-panel" role="tabpanel" className="grid grid-cols-2 lg:flex lg:flex-row gap-x-4 gap-y-6 md:gap-8 lg:gap-10 w-full items-center">
+          <div id="image-tools-panel" role="tabpanel" className="flex flex-col gap-6 w-full items-center">
+            {/* Global Filter Reset */}
+            {(() => {
+                const filters = meme.filters || {};
+                const isModified = 
+                    (filters.contrast ?? 100) !== 100 ||
+                    (filters.brightness ?? 100) !== 100 ||
+                    (filters.blur ?? 0) !== 0 ||
+                    (filters.grayscale ?? 0) !== 0 ||
+                    (filters.sepia ?? 0) !== 0 ||
+                    (filters.hueRotate ?? 0) !== 0 ||
+                    (filters.saturate ?? 100) !== 100 ||
+                    (filters.invert ?? 0) !== 0;
+
+                if (!isModified) return null;
+
+                return (
+                    <button
+                        onClick={onResetFilters}
+                        className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all text-xs font-bold uppercase tracking-wide mb-2 animate-in fade-in slide-in-from-top-2"
+                    >
+                        <RefreshCcw className="w-3 h-3" /> Reset All Filters
+                    </button>
+                );
+            })()}
+
+            <div className="grid grid-cols-2 lg:flex lg:flex-row gap-x-4 gap-y-6 md:gap-8 lg:gap-10 w-full items-center">
             
             <div className="flex-1 w-full flex flex-col gap-5">
               <div className="flex items-center gap-3">
@@ -268,6 +295,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                   title="Invert"
                 />
               </div>
+            </div>
             </div>
           </div>
         )}

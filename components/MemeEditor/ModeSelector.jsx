@@ -6,10 +6,10 @@ export function ModeSelector({ mode, onModeChange }) {
       <select 
         value={mode} 
         onChange={onModeChange} 
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20 text-center"
       >
-        <option value="image" className="bg-slate-800 text-white">Static Images</option>
-        <option value="video" className="bg-slate-800 text-white">Animated GIFs</option>
+        <option value="image" className="bg-slate-800 text-white text-center">Static Images</option>
+        <option value="video" className="bg-slate-800 text-white text-center">Animated GIFs</option>
       </select>
       
       <div className="flex items-center justify-center py-3 px-4 h-full relative z-10 pointer-events-none">

@@ -46,7 +46,7 @@ export default function Main() {
       textColor: "#ffffff",
       textBgColor: "transparent",
       textShadow: "#000000",
-      fontSize: 40,
+      fontSize: 20,
       maxWidth: 100,
       filters: {
         contrast: 100,
@@ -135,26 +135,9 @@ export default function Main() {
     return items[index];
   };
 
-  const calculateSmartFontSize = useCallback((width, height, currentTexts = []) => {
-    const refWidth = 500;
-    const ar = (width && height) ? (width / height) : 1;
-    const effectiveWidth = ar < 1 ? refWidth * ar : refWidth;
-    const effectiveHeight = ar > 1 ? refWidth / ar : refWidth;
-    let size = effectiveWidth * 0.10;
-    currentTexts.forEach(t => {
-      const content = (t.content || "").trim();
-      if (!content) return;
-      const lines = content.split('\n');
-      const longestLine = lines.reduce((max, l) => Math.max(max, l.length), 0);
-      const allowedWidth = effectiveWidth * (meme.maxWidth / 100) * 0.9;
-      const estimatedTextWidth = longestLine * (size * 0.6);
-      if (estimatedTextWidth > allowedWidth) size *= (allowedWidth / estimatedTextWidth);
-      const allowedHeight = effectiveHeight * 0.4;
-      const estimatedTextHeight = lines.length * (size * 1.2);
-      if (estimatedTextHeight > allowedHeight) size *= (allowedHeight / estimatedTextHeight);
-    });
-    return Math.max(2, Math.min(120, Math.round(size)));
-  }, [meme.maxWidth]);
+  const calculateSmartFontSize = useCallback(() => {
+    return 20;
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -453,21 +436,35 @@ export default function Main() {
     }
   }
 
-  function handleReset() {
-    triggerFlash("red");
-    startTransition(() => {
-        updateState((prev) => ({
-        ...prev,
-        texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
-        stickers: [],
-        fontSize: 40,
-        mode: "image",
-        textColor: "#ffffff",
-        textBgColor: "transparent",
-        filters: { contrast: 100, brightness: 100, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0, saturate: 100, invert: 0 },
-        }));
-    });
-  }
+    function handleReset() {
+
+      triggerFlash("red");
+
+      startTransition(() => {
+
+          updateState((prev) => ({
+
+          ...prev,
+
+          texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
+
+          stickers: [],
+
+          fontSize: 20,
+
+          mode: "image",
+
+          textColor: "#ffffff",
+
+          textBgColor: "transparent",
+
+          filters: { contrast: 100, brightness: 100, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0, saturate: 100, invert: 0 },
+
+          }));
+
+      });
+
+    }
 
   function addSticker(emoji) {
     updateState((prev) => ({

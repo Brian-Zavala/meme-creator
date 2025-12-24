@@ -123,3 +123,21 @@ body {
 .animate-march {
   animation: march 1s linear infinite;
 }
+
+/* Vertical Slider Utility for Mobile */
+@layer utilities {
+  .range-vertical {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  
+  @media (min-width: 768px) {
+    .range-vertical {
+      writing-mode: horizontal-tb;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+  }
+}

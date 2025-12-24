@@ -46,7 +46,7 @@ export default function Main() {
       textColor: "#ffffff",
       textBgColor: "transparent",
       textShadow: "#000000",
-      fontSize: 20,
+      fontSize: 30,
       maxWidth: 100,
       filters: {
         contrast: 100,
@@ -120,9 +120,19 @@ export default function Main() {
   useEffect(() => {
     if (meme.selectedId && fineTuneRef.current) {
         const timer = setTimeout(() => {
-            const yCoord = fineTuneRef.current.getBoundingClientRect().top + window.scrollY;
+            const elementRect = fineTuneRef.current.getBoundingClientRect();
+            const elementTop = elementRect.top + window.scrollY;
+            const elementHeight = elementRect.height;
+            const windowHeight = window.innerHeight;
+            
+            // On mobile, scroll so fine-tune is at bottom, keeping canvas above in view
+            const isMobile = window.innerWidth < 768;
+            const targetScroll = isMobile 
+                ? elementTop - (windowHeight - elementHeight - 20) 
+                : elementTop - 150;
+
             window.scroll({
-                top: yCoord,
+                top: Math.max(0, targetScroll),
                 behavior: "smooth"
             });
         }, 150);
@@ -150,7 +160,7 @@ export default function Main() {
   };
 
   const calculateSmartFontSize = useCallback(() => {
-    return 20;
+    return 30;
   }, []);
 
   useEffect(() => {
@@ -460,13 +470,13 @@ export default function Main() {
 
           ...prev,
 
-          texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
+                  texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
 
-          stickers: [],
+                  stickers: [],
 
-          fontSize: 20,
+                  fontSize: 30,
 
-          mode: "image",
+                  mode: "image",
 
           textColor: "#ffffff",
 

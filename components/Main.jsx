@@ -119,15 +119,13 @@ export default function Main() {
 
   useEffect(() => {
     if (meme.selectedId && fineTuneRef.current) {
-        // We use a small timeout to ensure the component has rendered and settled
-        // especially since it's lazy loaded and wrapped in Suspense
         const timer = setTimeout(() => {
-            fineTuneRef.current.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'nearest',
-                inline: 'nearest'
+            const yCoord = fineTuneRef.current.getBoundingClientRect().top + window.scrollY;
+            window.scroll({
+                top: yCoord,
+                behavior: "smooth"
             });
-        }, 100);
+        }, 150);
         return () => clearTimeout(timer);
     }
   }, [meme.selectedId]);

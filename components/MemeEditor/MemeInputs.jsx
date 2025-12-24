@@ -59,24 +59,32 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
 
       {/* Scrolling Text Inputs area */}
       <div className="px-6 space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin mb-4" role="group" aria-label="Text Inputs">
-        {texts.map((textItem, index) => (
-          <div key={textItem.id} className="relative group animate-in slide-in-from-left duration-300">
-            <label htmlFor={`text-input-${textItem.id}`} className="sr-only">
-                {index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text line ${index + 1}`}
-            </label>
-            <input
-              id={`text-input-${textItem.id}`}
-              type="text"
-              placeholder={index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
-              className="w-full input-glass rounded-xl px-4 py-3 text-lg focus:outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-yellow-500"
-              onChange={(e) => handleTextChange(textItem.id, e.target.value)}
-              value={textItem.content}
-            />
-            <div className="absolute right-3 top-3.5 text-slate-600 pointer-events-none text-xs bg-slate-800 px-2 py-0.5 rounded uppercase" aria-hidden="true">
-              {index === 0 ? "TOP" : index === 1 ? "BOTTOM" : `#${index + 1}`}
-            </div>
-          </div>
-        ))}
+        {(() => {
+            // Find the index of the last input that has content
+            const lastFilledIndex = texts.findLastIndex(t => (t.content || "").trim().length > 0);
+            // Show up to that index + 1 (the next empty one), but at least show 2 (Top/Bottom)
+            // and never more than the total available in state.
+            const visibleCount = Math.min(Math.max(lastFilledIndex + 2, 2), texts.length);
+            
+            return texts.slice(0, visibleCount).map((textItem, index) => (
+              <div key={textItem.id} className="relative group animate-in slide-in-from-left duration-300">
+                <label htmlFor={`text-input-${textItem.id}`} className="sr-only">
+                    {index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text line ${index + 1}`}
+                </label>
+                <input
+                  id={`text-input-${textItem.id}`}
+                  type="text"
+                  placeholder={index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
+                  className="w-full input-glass rounded-xl px-4 py-3 text-lg focus:outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-yellow-500"
+                  onChange={(e) => handleTextChange(textItem.id, e.target.value)}
+                  value={textItem.content}
+                />
+                <div className="absolute right-3 top-3.5 text-slate-600 pointer-events-none text-xs bg-slate-800 px-2 py-0.5 rounded uppercase" aria-hidden="true">
+                  {index === 0 ? "TOP" : index === 1 ? "BOTTOM" : `#${index + 1}`}
+                </div>
+              </div>
+            ));
+        })()}
       </div>
 
       {/* Custom Sticker Dropdown Section */}

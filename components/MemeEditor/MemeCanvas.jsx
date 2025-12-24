@@ -1,16 +1,53 @@
 import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 
-const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
+const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTune, onFineTuneCommit, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
   const description = `Meme preview of ${meme.name || "Custom Image"} with ${meme.texts.length} text captions and ${meme.stickers?.length || 0} stickers`;
+  
+  const selectedText = meme.texts.find(t => t.id === selectedId);
 
   return (
     <div 
       onPointerDown={onCanvasPointerDown}
-      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950 border-2 border-dashed border-slate-800/60 w-full overflow-hidden"
+      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950 border-2 border-dashed border-slate-800/60 w-full overflow-hidden select-none"
       role="img"
       aria-label={description}
     >
+      {/* Fine-Tuning Controls Overlay */}
+      {selectedText && (
+        <div 
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-50 bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700/50 shadow-2xl animate-in slide-in-from-bottom-10 duration-300 w-[90%] max-w-sm" 
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-400 w-4 text-center">X</span>
+                <input 
+                    type="range" 
+                    min="0" max="100" step="0.5"
+                    value={selectedText.x}
+                    onChange={(e) => onFineTune('x', e.target.value)}
+                    onMouseUp={onFineTuneCommit}
+                    onTouchEnd={onFineTuneCommit}
+                    className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer"
+                />
+            </div>
+            <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-400 w-4 text-center">Y</span>
+                <input 
+                    type="range" 
+                    min="0" max="100" step="0.5"
+                    value={selectedText.y}
+                    onChange={(e) => onFineTune('y', e.target.value)}
+                    onMouseUp={onFineTuneCommit}
+                    onTouchEnd={onFineTuneCommit}
+                    className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer"
+                />
+            </div>
+        </div>
+      )}
+
       <div
         ref={ref}
         className="relative w-full flex items-center justify-center overflow-hidden shadow-2xl"
@@ -99,6 +136,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
           if (!(textItem.content || "").trim()) return null;
           const stroke = Math.max(1, meme.fontSize / 25);
           const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
+          const isSelected = selectedId === textItem.id;
           
           return (
           <h2
@@ -106,7 +144,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
             onPointerDown={(e) => onPointerDown(e, textItem.id)}
             className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 ${
               draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
-            }`}
+            } ${isSelected ? "z-50" : ""}`}
             style={{
               left: `${textItem.x}%`,
               top: `${textItem.y}%`,
@@ -120,21 +158,28 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, onPointerDown, onRemo
               fontSize: `${meme.fontSize}px`,
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: "Impact, sans-serif",
-              textShadow: `
-                ${stroke}px ${stroke}px 0 ${meme.textShadow},
-                -${stroke}px -${stroke}px 0 ${meme.textShadow},
-                ${stroke}px -${stroke}px 0 ${meme.textShadow},
-                -${stroke}px ${stroke}px 0 ${meme.textShadow},
-                0 ${stroke}px 0 ${meme.textShadow},
-                ${stroke}px 0 0 ${meme.textShadow},
-                0 -${stroke}px 0 ${meme.textShadow},
-                -${stroke}px 0 0 ${meme.textShadow},
-                ${stroke}px ${stroke}px 5px #000
-              `,
+              WebkitTextStroke: `${stroke}px ${meme.textShadow}`,
+              paintOrder: "fill stroke",
+              filter: "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))",
               border: draggedId === textItem.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
               borderRadius: "0.2em",
             }}
           >
+            {isSelected && (
+                <svg className="absolute inset-[-6px] w-[calc(100%+12px)] h-[calc(100%+12px)] pointer-events-none overflow-visible" xmlns="http://www.w3.org/2000/svg">
+                    <rect 
+                        width="100%" 
+                        height="100%" 
+                        rx="12" 
+                        ry="12" 
+                        fill="none" 
+                        stroke="oklch(53% 0.187 39)" 
+                        strokeWidth="3" 
+                        strokeDasharray="12 8" 
+                        className="animate-march"
+                    />
+                </svg>
+            )}
             {textItem.content}
           </h2>
         )})}

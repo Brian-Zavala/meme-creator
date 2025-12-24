@@ -115,6 +115,8 @@ export default function Main() {
   const searchContainerRef = useRef(null);
 
   const [pingKey, setPingKey] = useState(null);
+  const [isMagicGenerating, setIsMagicGenerating] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
 
   const triggerFlash = (color) => {
     setFlashColor(color);
@@ -365,24 +367,26 @@ export default function Main() {
   }
 
   function handleTextChange(id, value) {
-    updateState((prev) => {
-      const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
-      const lastText = newTexts[newTexts.length - 1];
-      
-      // If the last text field is not empty, add a new one
-      if (lastText.content.trim().length > 0) {
-        newTexts.push({ 
-            id: crypto.randomUUID(), 
-            content: "", 
-            x: 50, 
-            y: 50 
+    startTransition(() => {
+        updateState((prev) => {
+        const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
+        const lastText = newTexts[newTexts.length - 1];
+        
+        // If the last text field is not empty, add a new one
+        if (lastText.content.trim().length > 0) {
+            newTexts.push({ 
+                id: crypto.randomUUID(), 
+                content: "", 
+                x: 50, 
+                y: 50 
+            });
+        }
+        
+        return {
+            ...prev,
+            texts: newTexts,
+        };
         });
-      }
-      
-      return {
-        ...prev,
-        texts: newTexts,
-      };
     });
   }
 
@@ -454,36 +458,65 @@ export default function Main() {
   }
 
   function handleCanvasPointerDown() {
-    const now = Date.now();
-    if (now - globalLastTapRef.current < 450) {
-      undo();
-      triggerFlash("red");
-      toast("Undone", { icon: "↩️", duration: 800 });
-      globalLastTapRef.current = 0;
-      setStatusMessage("Action undone.");
-      return;
-    }
-    globalLastTapRef.current = now;
+    // Clear selection on background click
+    setSelectedId(null);
+    globalLastTapRef.current = 0;
   }
 
-  function generateMagicCaption() {
-    const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
-    const randomIndex = Math.floor(Math.random() * category.length);
-    const captions = category[randomIndex];
-
-    updateState((prev) => ({
-      ...prev,
-      texts: prev.texts.map((t, i) => ({
-        ...t,
-        content: captions[i] || "",
-      })),
-    }));
-
-    toast("Magic logic applied! ✨", {
-      icon: "🪄",
-      duration: 2000,
+  function handleFineTune(axis, value) {
+    if (!selectedId) return;
+    
+    startTransition(() => {
+      updateTransient((prev) => ({
+        ...prev,
+        texts: prev.texts.map((t) => (t.id === selectedId ? { ...t, [axis]: parseFloat(value) } : t)),
+      }));
     });
-    setStatusMessage("Magic captions generated.");
+  }
+
+  const handleFineTuneCommit = () => {
+    updateState((prev) => prev);
+  };
+
+  function generateMagicCaption() {
+    setIsMagicGenerating(true);
+    
+    // Simulate AI thinking time
+    setTimeout(() => {
+        const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
+        const randomIndex = Math.floor(Math.random() * category.length);
+        const captions = category[randomIndex];
+
+        updateState((prev) => {
+          const newTexts = prev.texts.map((t, i) => ({
+            ...t,
+            content: captions[i] || "",
+          }));
+
+          // Logic to add new field if last one is filled (same as handleTextChange)
+          const lastText = newTexts[newTexts.length - 1];
+          if (lastText && lastText.content.trim().length > 0) {
+            newTexts.push({ 
+                id: crypto.randomUUID(), 
+                content: "", 
+                x: 50, 
+                y: 50 
+            });
+          }
+
+          return {
+            ...prev,
+            texts: newTexts,
+          };
+        });
+
+        toast("Magic logic applied! ✨", {
+          icon: "🪄",
+          duration: 2000,
+        });
+        setStatusMessage("Magic captions generated.");
+        setIsMagicGenerating(false);
+    }, 800);
   }
 
   const handlePointerDown = useCallback((e, id) => {
@@ -492,6 +525,7 @@ export default function Main() {
     updateState((prev) => prev);
     startPosRef.current = { x: e.clientX, y: e.clientY };
     const isSticker = meme.stickers.some((s) => s.id === id);
+    const isText = meme.texts.some((t) => t.id === id);
 
     if (isSticker) {
       const now = Date.now();
@@ -507,11 +541,19 @@ export default function Main() {
         setDraggedId(null);
         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
       }, 600);
+    } else if (isText) {
+        // Long Press to Select Text
+        longPressTimerRef.current = setTimeout(() => {
+            setSelectedId(id);
+            setDraggedId(null); // Stop dragging if selection triggers
+            if (navigator.vibrate) navigator.vibrate(50);
+            toast("Text Selected!", { icon: "✨", duration: 1000 });
+        }, 500);
     }
 
     setDraggedId(id);
     if (navigator.vibrate) navigator.vibrate(20);
-  }, [meme.stickers, updateState]);
+  }, [meme.stickers, meme.texts, updateState]);
 
   async function handleDownload() {
     if (!memeRef.current) return;
@@ -615,6 +657,7 @@ export default function Main() {
           handleTextChange={handleTextChange} 
           onAddSticker={addSticker} 
           onMagicCaption={generateMagicCaption} 
+          isMagicGenerating={isMagicGenerating}
         />
         <MemeActions
           undo={undo}
@@ -675,6 +718,9 @@ export default function Main() {
               meme={meme} 
               loading={loading} 
               draggedId={draggedId} 
+              selectedId={selectedId}
+              onFineTune={handleFineTune}
+              onFineTuneCommit={handleFineTuneCommit}
               onPointerDown={handlePointerDown} 
               onRemoveSticker={removeSticker} 
               onCanvasPointerDown={handleCanvasPointerDown} 

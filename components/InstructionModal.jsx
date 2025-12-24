@@ -10,7 +10,6 @@ export function InstructionModal({ isOpen, onClose }) {
           <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center justify-center gap-2">
             How to Use
           </h2>
-          <p className="text-white/70 text-xs font-bold tracking-widest uppercase mt-1">Master the Creator</p>
         </div>
         <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 gap-6">

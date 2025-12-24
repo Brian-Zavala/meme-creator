@@ -60,8 +60,15 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
       {/* Scrolling Text Inputs area */}
       <div className="px-6 space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin mb-4" role="group" aria-label="Text Inputs">
         {(() => {
-            // Find the index of the last input that has content
-            const lastFilledIndex = texts.findLastIndex(t => (t.content || "").trim().length > 0);
+            // Find the index of the last input that has content (manual loop for safety)
+            let lastFilledIndex = -1;
+            for (let i = texts.length - 1; i >= 0; i--) {
+                if ((texts[i].content || "").trim().length > 0) {
+                    lastFilledIndex = i;
+                    break;
+                }
+            }
+            
             // Show up to that index + 1 (the next empty one), but at least show 2 (Top/Bottom)
             // and never more than the total available in state.
             const visibleCount = Math.min(Math.max(lastFilledIndex + 2, 2), texts.length);

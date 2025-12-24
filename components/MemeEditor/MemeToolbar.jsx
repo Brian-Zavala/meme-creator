@@ -50,7 +50,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
           onClick={() => handleTabChange("text")}
           role="tab"
           aria-selected={activeTab === "text"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${
             activeTab === "text"
               ? "text-white bg-slate-800"
               : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
@@ -66,7 +66,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
           onClick={() => handleTabChange("image")}
           role="tab"
           aria-selected={activeTab === "image"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${
             activeTab === "image"
               ? "text-white bg-slate-800"
               : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
@@ -95,8 +95,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <div className="flex items-center justify-between w-full relative">
                         {meme.fontSize != 20 && (
                           <button 
-                            onClick={() => handleStyleChange({ currentTarget: { name: 'fontSize', value: 20 } }, true)}
-                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                            onClick={() => {
+                              if (navigator.vibrate) navigator.vibrate(10);
+                              handleStyleChange({ currentTarget: { name: 'fontSize', value: 20 } }, true);
+                            }}
+                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
                           >
                             Reset
                           </button>
@@ -106,7 +109,10 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           <input
                             type="range" min="2" max="120" name="fontSize"
                             value={meme.fontSize}
-                            onChange={handleStyleChange}
+                            onChange={(e) => {
+                              if (navigator.vibrate) navigator.vibrate(5);
+                              handleStyleChange(e);
+                            }}
                             onMouseUp={handleStyleCommit}
                             onTouchEnd={handleStyleCommit}
                             className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
@@ -123,7 +129,10 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="5" max="250" name="stickerSize"
                         value={meme.stickerSize || 60}
-                        onChange={handleStyleChange}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleStyleChange(e);
+                        }}
                         onMouseUp={handleStyleCommit}
                         onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full opacity-90 h-2"
@@ -143,8 +152,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <div className="flex items-center justify-between w-full relative">
                         {meme.maxWidth != 100 && (
                           <button 
-                            onClick={() => handleStyleChange({ currentTarget: { name: 'maxWidth', value: 100 } }, true)}
-                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                            onClick={() => {
+                              if (navigator.vibrate) navigator.vibrate(10);
+                              handleStyleChange({ currentTarget: { name: 'maxWidth', value: 100 } }, true);
+                            }}
+                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
                           >
                             Reset
                           </button>
@@ -154,7 +166,10 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           <input
                             type="range" min="20" max="100" name="maxWidth"
                             value={meme.maxWidth}
-                            onChange={handleStyleChange}
+                            onChange={(e) => {
+                              if (navigator.vibrate) navigator.vibrate(5);
+                              handleStyleChange(e);
+                            }}
                             onMouseUp={handleStyleCommit}
                             onTouchEnd={handleStyleCommit}
                             className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
@@ -187,8 +202,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
               <div id="image-tools-panel" role="tabpanel" className="flex flex-col gap-6 w-full items-center">
                 {/* Global Filter Reset - Always Visible */}
                 <button
-                  onClick={() => startTransition(() => onResetFilters())}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all text-xs font-bold uppercase tracking-wide mb-2 animate-in fade-in slide-in-from-top-2"
+                  onClick={() => {
+                    if (navigator.vibrate) navigator.vibrate(15);
+                    startTransition(() => onResetFilters());
+                  }}
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all active:scale-95 text-xs font-bold uppercase tracking-wide mb-2 animate-in fade-in slide-in-from-top-2"
                 >
                   <RefreshCcw className="w-3 h-3" /> Reset All Filters
                 </button>
@@ -200,7 +218,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="200" name="contrast"
                         value={meme.filters?.contrast ?? 100}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Contrast"
                       />
@@ -210,7 +232,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="200" name="brightness"
                         value={meme.filters?.brightness ?? 100}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Brightness"
                       />
@@ -225,7 +251,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="10" step="0.5" name="blur"
                         value={meme.filters?.blur ?? 0}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Blur"
                       />
@@ -235,7 +265,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="100" name="grayscale"
                         value={meme.filters?.grayscale ?? 0}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Grayscale"
                       />
@@ -250,7 +284,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="100" name="sepia"
                         value={meme.filters?.sepia ?? 0}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Sepia"
                       />
@@ -260,7 +298,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="300" name="saturate"
                         value={meme.filters?.saturate ?? 100}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Saturation"
                       />
@@ -275,7 +317,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="360" name="hueRotate"
                         value={meme.filters?.hueRotate ?? 0}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Hue Rotate"
                       />
@@ -285,7 +331,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                       <input
                         type="range" min="0" max="100" name="invert"
                         value={meme.filters?.invert ?? 0}
-                        onChange={handleFilterChange} onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={(e) => {
+                          if (navigator.vibrate) navigator.vibrate(5);
+                          handleFilterChange(e);
+                        }} 
+                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
                         title="Invert"
                       />

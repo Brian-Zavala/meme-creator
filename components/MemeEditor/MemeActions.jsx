@@ -20,7 +20,7 @@ export function MemeActions({
         <button onClick={redo} disabled={!canRedo} className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95">
           <Redo2 className="w-4 h-4" /> Redo
         </button>
-        <button onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })} className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400">
+        <button onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })} className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95">
           <HelpCircle className="w-5 h-5" />
         </button>
       </div>

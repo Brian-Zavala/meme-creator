@@ -49,7 +49,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             {(meme.textColor.substring(0,7) !== '#ffffff' || getOpacity(meme.textColor) < 100) && (
                 <button 
                 onClick={() => handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true)}
-                className="absolute -top-[18px] md:-top-[26px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                className="absolute -top-[22px] md:-top-[30px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
                 >
                 Reset
                 </button>
@@ -73,7 +73,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                   onChange={(e) => changeOpacity('textColor', e.target.value, false)}
                   onMouseUp={(e) => changeOpacity('textColor', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textColor', e.target.value, true)}
-                  className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full"
+                  className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-full md:h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full touch-none"
                   title="Text Opacity"
               />
           </div>
@@ -86,7 +86,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             {((meme.textShadow || '#000000').substring(0,7) !== '#000000' || getOpacity(meme.textShadow || '#000000') < 100) && (
                 <button 
                 onClick={() => handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true)}
-                className="absolute -top-[18px] md:-top-[26px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                className="absolute -top-[22px] md:-top-[30px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
                 >
                 Reset
                 </button>
@@ -110,7 +110,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                   onChange={(e) => changeOpacity('textShadow', e.target.value, false)}
                   onMouseUp={(e) => changeOpacity('textShadow', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textShadow', e.target.value, true)}
-                  className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full"
+                  className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-full md:h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full touch-none"
                   title="Outline Opacity"
               />
           </div>
@@ -124,7 +124,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             {meme.textBgColor !== 'transparent' && (
                 <button 
                 onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
-                className="absolute -top-[18px] md:-top-[26px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                className="absolute -top-[22px] md:-top-[30px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
                 >
                 Reset
                 </button>
@@ -147,7 +147,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                     onChange={(e) => changeOpacity('textBgColor', e.target.value, false)}
                     onMouseUp={(e) => changeOpacity('textBgColor', e.target.value, true)}
                     onTouchEnd={(e) => changeOpacity('textBgColor', e.target.value, true)}
-                    className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full"
+                    className="absolute md:static top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 accent-[oklch(53%_0.187_39)] cursor-pointer h-full md:h-1.5 rounded-full opacity-70 hover:opacity-100 transition-opacity -rotate-90 md:rotate-0 w-12 md:w-full touch-none"
                     title="Background Opacity"
                 />
             </div>

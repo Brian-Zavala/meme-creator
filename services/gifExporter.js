@@ -161,11 +161,11 @@ export async function exportGif(meme, texts, stickers) {
           ctx.lineWidth = stroke * 2;
           ctx.lineJoin = 'round';
           
-          ctx.fillStyle = meme.textColor || '#ffffff';
-          ctx.fillText(content, 0, 0);
-
           ctx.strokeStyle = meme.textShadow || '#000000';
           ctx.strokeText(content, 0, 0);
+
+          ctx.fillStyle = meme.textColor || '#ffffff';
+          ctx.fillText(content, 0, 0);
 
           // Reset shadow for next iteration/element
           ctx.shadowColor = 'transparent';

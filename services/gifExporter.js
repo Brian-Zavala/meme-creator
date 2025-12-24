@@ -115,6 +115,11 @@ export async function exportGif(meme, texts, stickers) {
           const y = (textItem.y / 100) * height;
           const fontSize = meme.fontSize || 40;
           const stroke = Math.max(1, fontSize / 25);
+          const rotation = (textItem.rotation || 0) * (Math.PI / 180);
+
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(rotation);
           
           ctx.font = `bold ${fontSize}px Impact, sans-serif`;
           ctx.textAlign = 'center';
@@ -136,8 +141,8 @@ export async function exportGif(meme, texts, stickers) {
             ctx.fillStyle = meme.textBgColor;
             // Draw a rounded rectangle for the background
             const radius = fontSize * 0.15; // Proportional radius
-            const bx = x - bgWidth / 2;
-            const by = y - bgHeight / 2;
+            const bx = -bgWidth / 2;
+            const by = -bgHeight / 2;
             
             ctx.beginPath();
             ctx.moveTo(bx + radius, by);
@@ -157,15 +162,17 @@ export async function exportGif(meme, texts, stickers) {
           ctx.lineJoin = 'round';
           
           ctx.fillStyle = meme.textColor || '#ffffff';
-          ctx.fillText(content, x, y);
+          ctx.fillText(content, 0, 0);
 
           ctx.strokeStyle = meme.textShadow || '#000000';
-          ctx.strokeText(content, x, y);
+          ctx.strokeText(content, 0, 0);
 
           // Reset shadow for next iteration/element
           ctx.shadowColor = 'transparent';
           ctx.shadowBlur = 0;
           ctx.shadowOffsetY = 0;
+          
+          ctx.restore();
         }
 
         // Add to GIF

@@ -7,12 +7,14 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
   return (
     <div 
       onPointerDown={onCanvasPointerDown}
+      onContextMenu={(e) => e.preventDefault()}
       className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950 border-2 border-dashed border-slate-800/60 w-full select-none"
       role="img"
       aria-label={description}
     >
       <div
         ref={ref}
+        onPointerDown={onCanvasPointerDown}
         className="relative w-full flex items-center justify-center overflow-hidden shadow-2xl"
         style={{ backgroundColor: "#000000", color: "#ffffff" }}
       >
@@ -20,12 +22,14 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
             <video
                 key={meme.imageUrl}
                 src={meme.imageUrl}
-                className="w-full max-h-[70vh] object-contain block"
+                className="w-full max-h-[70vh] object-contain block pointer-events-none select-none"
+                draggable="false"
                 loop
                 autoPlay
                 playsInline
                 crossOrigin="anonymous"
                 style={{
+                    WebkitTouchCallout: "none",
                     filter: `
                       contrast(${meme.filters?.contrast ?? 100}%) 
                       brightness(${meme.filters?.brightness ?? 100}%) 
@@ -41,10 +45,12 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
         ) : (
             <img
             src={meme.imageUrl}
-            className="w-full max-h-[70vh] object-contain block"
+            className="w-full max-h-[70vh] object-contain block pointer-events-none select-none"
             alt={`Template: ${meme.name}`}
+            draggable="false"
             crossOrigin="anonymous"
             style={{
+                WebkitTouchCallout: "none",
                 filter: `
                   contrast(${meme.filters?.contrast ?? 100}%) 
                   brightness(${meme.filters?.brightness ?? 100}%) 

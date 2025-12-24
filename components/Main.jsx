@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useTransition, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy } from "react";
 import html2canvas from "html2canvas";
 import {
   RefreshCcw,
@@ -20,6 +20,9 @@ import { WelcomeModal } from "./WelcomeModal";
 import { MemeActions } from "./MemeEditor/MemeActions";
 import { GifSearch } from "./MemeEditor/GifSearch";
 import { ModeSelector } from "./MemeEditor/ModeSelector";
+
+const ColorControls = lazy(() => import("./MemeEditor/ColorControls"));
+const MemeFineTune = lazy(() => import("./MemeEditor/MemeFineTune"));
 
 export default function Main() {
   const [isPending, startTransition] = useTransition();
@@ -65,11 +68,12 @@ export default function Main() {
         invert: 0,
       },
       texts: [
-        { id: "top", content: "", x: 50, y: 5 },
-        { id: "bottom", content: "", x: 50, y: 95 },
+        { id: "top", content: "", x: 50, y: 5, rotation: 0 },
+        { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
       ],
       stickers: [],
       isVideo: false,
+      selectedId: null,
     };
 
     if (saved) {
@@ -80,6 +84,10 @@ export default function Main() {
           parsed.name = defaultState.name;
           parsed.isVideo = defaultState.isVideo;
           parsed.mode = defaultState.mode;
+        }
+        // Ensure legacy texts have rotation
+        if (parsed.texts) {
+            parsed.texts = parsed.texts.map(t => ({ ...t, rotation: t.rotation ?? 0 }));
         }
         return { ...defaultState, ...parsed };
       } catch (e) {
@@ -116,7 +124,6 @@ export default function Main() {
 
   const [pingKey, setPingKey] = useState(null);
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
 
   const triggerFlash = (color) => {
     setFlashColor(color);
@@ -176,7 +183,7 @@ export default function Main() {
           const moveX = e.clientX - startPosRef.current.x;
           const moveY = e.clientY - startPosRef.current.y;
           const distance = Math.hypot(moveX, moveY);
-          if (distance > 5) {
+          if (distance > 15) {
             clearTimeout(longPressTimerRef.current);
             longPressTimerRef.current = null;
           }
@@ -378,7 +385,8 @@ export default function Main() {
                 id: crypto.randomUUID(), 
                 content: "", 
                 x: 50, 
-                y: 50 
+                y: 50,
+                rotation: 0
             });
         }
         
@@ -388,6 +396,14 @@ export default function Main() {
         };
         });
     });
+  }
+
+  function handleCenterText() {
+    if (!meme.selectedId) return;
+    updateState((prev) => ({
+      ...prev,
+      texts: prev.texts.map((t) => (t.id === meme.selectedId ? { ...t, x: 50, y: 50 } : t)),
+    }));
   }
 
   function handleStyleChange(event, shouldCommit = false) {
@@ -459,17 +475,17 @@ export default function Main() {
 
   function handleCanvasPointerDown() {
     // Clear selection on background click
-    setSelectedId(null);
+    updateState(prev => ({ ...prev, selectedId: null }));
     globalLastTapRef.current = 0;
   }
 
   function handleFineTune(axis, value) {
-    if (!selectedId) return;
+    if (!meme.selectedId) return;
     
     startTransition(() => {
       updateTransient((prev) => ({
         ...prev,
-        texts: prev.texts.map((t) => (t.id === selectedId ? { ...t, [axis]: parseFloat(value) } : t)),
+        texts: prev.texts.map((t) => (t.id === meme.selectedId ? { ...t, [axis]: parseFloat(value) } : t)),
       }));
     });
   }
@@ -522,7 +538,6 @@ export default function Main() {
   const handlePointerDown = useCallback((e, id) => {
     e.stopPropagation();
 
-    updateState((prev) => prev);
     startPosRef.current = { x: e.clientX, y: e.clientY };
     const isSticker = meme.stickers.some((s) => s.id === id);
     const isText = meme.texts.some((t) => t.id === id);
@@ -544,11 +559,11 @@ export default function Main() {
     } else if (isText) {
         // Long Press to Select Text
         longPressTimerRef.current = setTimeout(() => {
-            setSelectedId(id);
+            updateState(prev => ({ ...prev, selectedId: id }));
             setDraggedId(null); // Stop dragging if selection triggers
             if (navigator.vibrate) navigator.vibrate(50);
             toast("Text Selected!", { icon: "✨", duration: 1000 });
-        }, 500);
+        }, 350);
     }
 
     setDraggedId(id);
@@ -646,6 +661,8 @@ export default function Main() {
     }
   }
 
+  const selectedText = meme.selectedId ? meme.texts.find(t => t.id === meme.selectedId) : null;
+
   return (
     <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-in fade-in duration-500 relative">
       <div className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
@@ -695,7 +712,7 @@ export default function Main() {
               containerRef={searchContainerRef}
             />
           )}
-          <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-900/50">
+          <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50">
             <MemeToolbar meme={meme} handleStyleChange={handleStyleChange} handleFilterChange={handleFilterChange} handleStyleCommit={handleStyleCommit} />
             <button 
               onClick={() => { setPingKey(Date.now()); getMemeImage(); }} 
@@ -718,13 +735,22 @@ export default function Main() {
               meme={meme} 
               loading={loading} 
               draggedId={draggedId} 
-              selectedId={selectedId}
+              selectedId={meme.selectedId}
               onFineTune={handleFineTune}
               onFineTuneCommit={handleFineTuneCommit}
+              onCenterText={handleCenterText}
               onPointerDown={handlePointerDown} 
               onRemoveSticker={removeSticker} 
               onCanvasPointerDown={handleCanvasPointerDown} 
             />
+            <Suspense fallback={null}>
+                <MemeFineTune 
+                    selectedText={selectedText}
+                    onFineTune={handleFineTune}
+                    onFineTuneCommit={handleFineTuneCommit}
+                    onCenterText={handleCenterText}
+                />
+            </Suspense>
           </div>
       </div>
       <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />

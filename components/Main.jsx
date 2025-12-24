@@ -729,7 +729,7 @@ export default function Main() {
               containerRef={searchContainerRef}
             />
           )}
-          <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50">
+          <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
             <MemeToolbar 
                 meme={meme} 
                 handleStyleChange={handleStyleChange} 

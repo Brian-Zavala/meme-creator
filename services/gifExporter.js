@@ -12,7 +12,6 @@ export async function exportGif(meme, texts, stickers) {
   return new Promise(async (resolve, reject) => {
     try {
       // 1. Fetch the source GIF
-      // We use the proxy if needed, but here we assume meme.imageUrl is already proxied or accessible
       const response = await fetch(meme.imageUrl);
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
@@ -26,48 +25,99 @@ export async function exportGif(meme, texts, stickers) {
       // 3. Initialize GIF encoder
       const gif = new GIF({
         workers: 4,
-        quality: 1, // Higher quality (lower number) to reduce artifacts
+        quality: 1, // Higher quality
         width: width,
         height: height,
         workerScript: '/gif.worker.js',
         repeat: 0,
         background: '#000000',
-        transparent: null, // Explicitly disable transparency to fix black speckles
-        dither: 'FloydSteinberg' // Better color blending
+        transparent: null,
+        dither: 'FloydSteinberg'
       });
-
-      // 4. Create a temporary canvas for drawing
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
       console.log(`Processing ${numFrames} frames for GIF export...`);
 
-      // 5. Process each frame
+      // -- Setup Canvases --
+      
+      // A. Video State Canvas: Tracks the underlying GIF video (composition of frames)
+      const videoCanvas = document.createElement('canvas');
+      videoCanvas.width = width;
+      videoCanvas.height = height;
+      const videoCtx = videoCanvas.getContext('2d', { willReadFrequently: true });
+      
+      // B. Render Canvas: The final composite for each frame (Video + Filters + Text)
+      const renderCanvas = document.createElement('canvas');
+      renderCanvas.width = width;
+      renderCanvas.height = height;
+      const renderCtx = renderCanvas.getContext('2d', { willReadFrequently: true });
+
+      // C. Helper for decoding raw frames
+      const rawFrameData = new Uint8ClampedArray(width * height * 4);
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      const tempCtx = tempCanvas.getContext('2d');
+
+      // State for disposal handling
+      let previousInfo = null;
+      let savedState = null; // For disposal = 3 (Restore to Previous)
+
+      // 4. Process each frame
       for (let i = 0; i < numFrames; i++) {
-        // Clear canvas with solid black to prevent transparency artifacts (speckles)
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, width, height);
-
-        // Decode raw frame data
-        const frameData = ctx.createImageData(width, height);
-        reader.decodeAndBlitFrameRGBA(i, frameData.data);
+        const info = reader.frameInfo(i);
         
-        // Create a temporary canvas to hold the raw frame (with transparency)
-        // We do this because putImageData overwrites pixels (ignoring alpha blending).
-        // By putting it on a temp canvas first, we can then drawImage it onto the main canvas,
-        // which RESPECTS alpha blending and composites it over our black background.
-        const rawFrameCanvas = document.createElement('canvas');
-        rawFrameCanvas.width = width;
-        rawFrameCanvas.height = height;
-        const rawCtx = rawFrameCanvas.getContext('2d');
-        rawCtx.putImageData(frameData, 0, 0);
+        // --- Disposal Handling (Cleanup from PREVIOUS frame) ---
+        // We must dispose of frame (i-1) before drawing frame (i)
+        if (i > 0 && previousInfo) {
+            const { disposal, x, y, width: fWidth, height: fHeight } = previousInfo;
+            
+            if (disposal === 2) {
+                // Restore to Background (Clear the rect of the previous frame)
+                videoCtx.clearRect(x, y, fWidth, fHeight);
+            } else if (disposal === 3 && savedState) {
+                // Restore to Previous (Put back the state from before the previous frame)
+                videoCtx.putImageData(savedState, 0, 0);
+            }
+            // Disposal 0 or 1 means "Keep" (Do nothing)
+        }
 
-        // Draw the raw frame onto the main canvas (compositing over black)
-        ctx.drawImage(rawFrameCanvas, 0, 0);
+        // --- Save State (If CURRENT frame needs to be undone later) ---
+        // If THIS frame's disposal is 3, we need to save the CURRENT canvas state 
+        // *before* we draw this frame, so we can restore it when we get to the *next* frame.
+        if (info.disposal === 3) {
+            savedState = videoCtx.getImageData(0, 0, width, height);
+        }
 
-        // Apply filters if any
+        // --- Decode & Draw Current Frame ---
+        // 1. Clear the raw data buffer for the new frame
+        rawFrameData.fill(0);
+        
+        // 2. Decode pixels into the buffer
+        // decodeAndBlitFrameRGBA writes pixels for the frame into the buffer.
+        // It handles the frame's x/y offsets implicitly if we pass a full-sized buffer.
+        reader.decodeAndBlitFrameRGBA(i, rawFrameData);
+
+        // 3. Put this frame's delta onto a temp canvas
+        const frameImageData = new ImageData(rawFrameData, width, height);
+        tempCtx.putImageData(frameImageData, 0, 0);
+
+        // 4. Composite onto the video state canvas
+        // This layers the new frame over the persisting background/previous frame
+        videoCtx.drawImage(tempCanvas, 0, 0);
+        
+        // Update previous info for the next loop
+        previousInfo = info;
+
+
+        // --- Final Composition (Video + Effects + Text) ---
+        
+        // 1. Clear Render Canvas
+        renderCtx.clearRect(0, 0, width, height);
+        
+        // 2. Draw the Video State
+        renderCtx.drawImage(videoCanvas, 0, 0);
+        
+        // 3. Apply Filters
         if (meme.filters) {
           const filterStr = `
             contrast(${meme.filters.contrast ?? 100}%) 
@@ -80,34 +130,35 @@ export async function exportGif(meme, texts, stickers) {
             invert(${meme.filters.invert ?? 0}%)
           `.replace(/\s+/g, ' ').trim();
           
-          // Apply filters using a second temp canvas to avoid self-referential drawing issues
-          const filteredCanvas = document.createElement('canvas');
-          filteredCanvas.width = width;
-          filteredCanvas.height = height;
-          const fCtx = filteredCanvas.getContext('2d');
-          fCtx.filter = filterStr;
-          fCtx.drawImage(canvas, 0, 0);
-          
-          // Draw filtered result back to main canvas
-          ctx.drawImage(filteredCanvas, 0, 0);
-          
-          // Reset filter
-          ctx.filter = 'none';
+          if (filterStr !== 'none') {
+             // Create a temp canvas for filtering to avoid self-referential drawing issues
+             const fCanvas = document.createElement('canvas');
+             fCanvas.width = width;
+             fCanvas.height = height;
+             const fCtx = fCanvas.getContext('2d');
+             
+             fCtx.filter = filterStr;
+             fCtx.drawImage(renderCanvas, 0, 0);
+             
+             // Copy back
+             renderCtx.clearRect(0, 0, width, height);
+             renderCtx.drawImage(fCanvas, 0, 0);
+          }
         }
 
-        // Draw Stickers
+        // 4. Draw Stickers
         for (const sticker of (stickers || [])) {
           const x = (sticker.x / 100) * width;
           const y = (sticker.y / 100) * height;
           const size = meme.stickerSize || 60;
           
-          ctx.font = `${size}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(sticker.url, x, y);
+          renderCtx.font = `${size}px sans-serif`;
+          renderCtx.textAlign = 'center';
+          renderCtx.textBaseline = 'middle';
+          renderCtx.fillText(sticker.url, x, y);
         }
 
-        // Draw Texts
+        // 5. Draw Texts
         for (const textItem of texts) {
           if (!textItem.content.trim()) continue;
 
@@ -117,72 +168,64 @@ export async function exportGif(meme, texts, stickers) {
           const stroke = Math.max(1, fontSize / 25);
           const rotation = (textItem.rotation || 0) * (Math.PI / 180);
 
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(rotation);
+          renderCtx.save();
+          renderCtx.translate(x, y);
+          renderCtx.rotate(rotation);
           
-          ctx.font = `bold ${fontSize}px Impact, sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          renderCtx.font = `bold ${fontSize}px Impact, sans-serif`;
+          renderCtx.textAlign = 'center';
+          renderCtx.textBaseline = 'middle';
           
-          // Match the editor's drop shadow
-          ctx.shadowColor = 'rgba(0,0,0,0.8)';
-          ctx.shadowBlur = 4;
-          ctx.shadowOffsetY = 2;
+          renderCtx.shadowColor = 'rgba(0,0,0,0.8)';
+          renderCtx.shadowBlur = 4;
+          renderCtx.shadowOffsetY = 2;
 
           const content = textItem.content.toUpperCase();
-          const metrics = ctx.measureText(content);
+          const metrics = renderCtx.measureText(content);
           
-          // Draw Text Background if enabled
           if (meme.textBgColor && meme.textBgColor !== 'transparent') {
             const bgWidth = metrics.width + (fontSize * 0.4);
             const bgHeight = fontSize * 1.2;
             
-            ctx.fillStyle = meme.textBgColor;
-            // Draw a rounded rectangle for the background
-            const radius = fontSize * 0.15; // Proportional radius
+            renderCtx.fillStyle = meme.textBgColor;
+            const radius = fontSize * 0.15;
             const bx = -bgWidth / 2;
             const by = -bgHeight / 2;
             
-            ctx.beginPath();
-            ctx.moveTo(bx + radius, by);
-            ctx.lineTo(bx + bgWidth - radius, by);
-            ctx.quadraticCurveTo(bx + bgWidth, by, bx + bgWidth, by + radius);
-            ctx.lineTo(bx + bgWidth, by + bgHeight - radius);
-            ctx.quadraticCurveTo(bx + bgWidth, by + bgHeight, bx + bgWidth - radius, by + bgHeight);
-            ctx.lineTo(bx + radius, by + bgHeight);
-            ctx.quadraticCurveTo(bx, by + bgHeight, bx, by + bgHeight - radius);
-            ctx.lineTo(bx, by + radius);
-            ctx.quadraticCurveTo(bx, by, bx + radius, by);
-            ctx.closePath();
-            ctx.fill();
+            renderCtx.beginPath();
+            renderCtx.moveTo(bx + radius, by);
+            renderCtx.lineTo(bx + bgWidth - radius, by);
+            renderCtx.quadraticCurveTo(bx + bgWidth, by, bx + bgWidth, by + radius);
+            renderCtx.lineTo(bx + bgWidth, by + bgHeight - radius);
+            renderCtx.quadraticCurveTo(bx + bgWidth, by + bgHeight, bx + bgWidth - radius, by + bgHeight);
+            renderCtx.lineTo(bx + radius, by + bgHeight);
+            renderCtx.quadraticCurveTo(bx, by + bgHeight, bx, by + bgHeight - radius);
+            renderCtx.lineTo(bx, by + radius);
+            renderCtx.quadraticCurveTo(bx, by, bx + radius, by);
+            renderCtx.closePath();
+            renderCtx.fill();
           }
           
-          ctx.lineWidth = stroke * 2;
-          ctx.lineJoin = 'round';
+          renderCtx.lineWidth = stroke * 2;
+          renderCtx.lineJoin = 'round';
           
-          ctx.strokeStyle = meme.textShadow || '#000000';
-          ctx.strokeText(content, 0, 0);
+          renderCtx.strokeStyle = meme.textShadow || '#000000';
+          renderCtx.strokeText(content, 0, 0);
 
-          ctx.fillStyle = meme.textColor || '#ffffff';
-          ctx.fillText(content, 0, 0);
+          renderCtx.fillStyle = meme.textColor || '#ffffff';
+          renderCtx.fillText(content, 0, 0);
 
-          // Reset shadow for next iteration/element
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetY = 0;
+          renderCtx.shadowColor = 'transparent';
+          renderCtx.shadowBlur = 0;
+          renderCtx.shadowOffsetY = 0;
           
-          ctx.restore();
+          renderCtx.restore();
         }
 
         // Add to GIF
-        const info = reader.frameInfo(i);
-        // Delay is in centiseconds, convert to ms. Min 20ms for safety.
+        // info.delay is in 1/100ths of a second. Math.max(20, ...) ensures we don't have 0ms frames.
         const delay = Math.max(20, (info.delay || 10) * 10);
-        
-        // Capture the pixels ourselves using the optimized context
-        const finalImageData = ctx.getImageData(0, 0, width, height);
-        gif.addFrame(finalImageData, { delay, copy: true });
+        gif.addFrame(renderCtx, { delay, copy: true });
       }
 
       // 6. Finalize

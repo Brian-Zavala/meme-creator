@@ -98,7 +98,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                   }}
                   onMouseUp={(e) => changeOpacity('textColor', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textColor', e.target.value, true)}
-                  className="range-vertical md:range-slider accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+                  className="range-vertical range-slider cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
                   style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textColor)) : getSliderStyle(getOpacity(meme.textColor))}
                   title="Text Opacity"
               />
@@ -141,7 +141,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                   }}
                   onMouseUp={(e) => changeOpacity('textShadow', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textShadow', e.target.value, true)}
-                  className="range-vertical md:range-slider accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+                  className="range-vertical range-slider cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
                   style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textShadow || '#000000')) : getSliderStyle(getOpacity(meme.textShadow || '#000000'))}
                   title="Outline Opacity"
               />
@@ -184,7 +184,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                     }}
                     onMouseUp={(e) => changeOpacity('textBgColor', e.target.value, true)}
                     onTouchEnd={(e) => changeOpacity('textBgColor', e.target.value, true)}
-                    className="range-vertical md:range-slider accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+                    className="range-vertical range-slider cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
                     style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textBgColor)) : getSliderStyle(getOpacity(meme.textBgColor))}
                     title="Background Opacity"
                 />

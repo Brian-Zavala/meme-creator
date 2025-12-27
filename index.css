@@ -136,6 +136,7 @@ body {
   @media (min-width: 768px) {
     .range-vertical {
       writing-mode: horizontal-tb;
+      direction: ltr;
       appearance: none;
       -webkit-appearance: none;
     }

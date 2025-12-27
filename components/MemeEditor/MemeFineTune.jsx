@@ -3,6 +3,16 @@ import { RefreshCcw, RotateCw } from "lucide-react";
 export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommit, onCenterText }) {
   if (!selectedText) return null;
 
+  // Helper for range slider background
+  const getSliderStyle = (value, min, max) => {
+    const val = ((value - min) / (max - min)) * 100;
+    const color = 'oklch(53% 0.187 39)'; // McDonald's Red/Orange
+    const track = 'rgb(30 41 59)'; // slate-800
+    return {
+      background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
+    };
+  };
+
   return (
     <div 
         className="w-full bg-slate-900 border-t border-slate-800 p-4 animate-in slide-in-from-bottom-5 duration-300 flex flex-col gap-3 rounded-b-2xl relative z-30" 
@@ -34,7 +44,8 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
                     }}
                     onMouseUp={onFineTuneCommit}
                     onTouchEnd={onFineTuneCommit}
-                    className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer"
+                    className="range-slider flex-1 h-1.5 rounded-full cursor-pointer"
+                    style={getSliderStyle(selectedText.x, 0, 100)}
                 />
             </div>
 
@@ -51,7 +62,8 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
                     }}
                     onMouseUp={onFineTuneCommit}
                     onTouchEnd={onFineTuneCommit}
-                    className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer"
+                    className="range-slider flex-1 h-1.5 rounded-full cursor-pointer"
+                    style={getSliderStyle(selectedText.y, 0, 100)}
                 />
             </div>
         </div>
@@ -69,7 +81,8 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
                 }}
                 onMouseUp={onFineTuneCommit}
                 onTouchEnd={onFineTuneCommit}
-                className="flex-1 accent-[oklch(53%_0.187_39)] h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer"
+                className="range-slider flex-1 h-1.5 rounded-full cursor-pointer"
+                style={getSliderStyle(selectedText.rotation || 0, 0, 360)}
             />
         </div>
     </div>

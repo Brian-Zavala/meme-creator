@@ -236,7 +236,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.contrast ?? 100, 0, 200)}
                         title="Contrast"
                       />
                     </div>
@@ -250,7 +251,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.brightness ?? 100, 0, 200)}
                         title="Brightness"
                       />
                     </div>
@@ -269,7 +271,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.blur ?? 0, 0, 10)}
                         title="Blur"
                       />
                     </div>
@@ -283,7 +286,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.grayscale ?? 0, 0, 100)}
                         title="Grayscale"
                       />
                     </div>
@@ -302,7 +306,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.sepia ?? 0, 0, 100)}
                         title="Sepia"
                       />
                     </div>
@@ -316,7 +321,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.saturate ?? 100, 0, 300)}
                         title="Saturation"
                       />
                     </div>
@@ -335,7 +341,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.hueRotate ?? 0, 0, 360)}
                         title="Hue Rotate"
                       />
                     </div>
@@ -349,7 +356,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                           handleFilterChange(e);
                         }} 
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer h-2"
+                        className="range-slider w-full cursor-pointer h-2 rounded-full"
+                        style={getSliderStyle(meme.filters?.invert ?? 0, 0, 100)}
                         title="Invert"
                       />
                     </div>

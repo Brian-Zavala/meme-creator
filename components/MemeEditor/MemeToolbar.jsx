@@ -31,6 +31,16 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
 
   const isCollapsed = activeTab === 'text' && !hasText && !hasStickers;
 
+  // Helper for range slider background
+  const getSliderStyle = (value, min, max) => {
+    const val = ((value - min) / (max - min)) * 100;
+    const color = 'oklch(53% 0.187 39)'; // McDonald's Red/Orange
+    const track = 'rgba(255, 255, 255, 0.2)';
+    return {
+      background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
+    };
+  };
+
   return (
     <div
       className="flex flex-col bg-slate-900 border-b border-slate-800 backdrop-blur-md z-20 relative rounded-t-2xl"
@@ -115,7 +125,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                             }}
                             onMouseUp={handleStyleCommit}
                             onTouchEnd={handleStyleCommit}
-                            className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
+                            className="range-slider w-full cursor-pointer rounded-full h-2"
+                            style={getSliderStyle(meme.fontSize, 2, 120)}
                             title="Font Size"
                           />
                         </div>
@@ -135,7 +146,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                         }}
                         onMouseUp={handleStyleCommit}
                         onTouchEnd={handleStyleCommit}
-                        className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full opacity-90 h-2"
+                        className="range-slider w-full cursor-pointer rounded-full opacity-90 h-2"
+                        style={getSliderStyle(meme.stickerSize || 60, 5, 250)}
                         title="Sticker Size"
                       />
                     </div>
@@ -172,7 +184,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                             }}
                             onMouseUp={handleStyleCommit}
                             onTouchEnd={handleStyleCommit}
-                            className="w-full accent-[oklch(53%_0.187_39)] cursor-pointer rounded-full h-2"
+                            className="range-slider w-full cursor-pointer rounded-full h-2"
+                            style={getSliderStyle(meme.maxWidth, 20, 100)}
                             title="Text Width (Wrap)"
                           />
                         </div>

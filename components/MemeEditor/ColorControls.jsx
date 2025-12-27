@@ -27,26 +27,6 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
     handleStyleChange({ currentTarget: { name, value: finalColor } }, commit);
   };
 
-  // Helper for dynamic slider background (fill effect)
-  const getSliderBg = (value) => {
-    const color = 'oklch(53% 0.187 39)';
-    const empty = 'rgb(30 41 59)'; // slate-800
-    // On mobile (vertical-lr), the fill goes from bottom to top. 
-    // Since we use writing-mode: vertical-lr, we need to handle the gradient direction.
-    return {
-      background: `linear-gradient(to right, ${color} 0%, ${color} ${value}%, ${empty} ${value}%, ${empty} 100%)`
-    };
-  };
-
-  const getVerticalSliderBg = (value) => {
-    const color = 'oklch(53% 0.187 39)';
-    const empty = 'rgb(30 41 59)'; // slate-800
-    // For vertical sliders, the "top" in linear-gradient actually corresponds to the "end" of the slider
-    return {
-      background: `linear-gradient(to top, ${color} 0%, ${color} ${value}%, ${empty} ${value}%, ${empty} 100%)`
-    };
-  };
-
   // Helper to handle color picker change (preserving opacity)
   const onColorPick = (name, newHex) => {
     let currentOpacity = getOpacity(meme[name]);
@@ -58,6 +38,26 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
     const alphaHex = alphaInt.toString(16).padStart(2, '0');
     const finalColor = `${newHex}${alphaHex}`;
     handleStyleChange({ currentTarget: { name, value: finalColor } }, false);
+  };
+
+  // Dynamic slider style to fix desktop display bug where track color was inverted
+  const getSliderStyle = (opacity) => {
+    const val = parseInt(opacity, 10) || 0;
+    const color = 'oklch(53% 0.187 39)'; // McDonald's Red/Orange
+    const track = 'rgba(255, 255, 255, 0.2)'; // Semi-transparent white track
+    return {
+      background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
+    };
+  };
+
+  // Helper for vertical slider background (Mobile)
+  const getVerticalSliderBg = (value) => {
+    const color = 'oklch(53% 0.187 39)';
+    const empty = 'rgb(30 41 59)'; // slate-800
+    // For vertical sliders, the "top" in linear-gradient actually corresponds to the "end" of the slider
+    return {
+      background: `linear-gradient(to top, ${color} 0%, ${color} ${value}%, ${empty} ${value}%, ${empty} 100%)`
+    };
   };
 
   return (
@@ -98,8 +98,8 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                   }}
                   onMouseUp={(e) => changeOpacity('textColor', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textColor', e.target.value, true)}
-                  className="range-vertical accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-                  style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textColor)) : getSliderBg(getOpacity(meme.textColor))}
+                  className="range-vertical md:range-slider accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+                  style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textColor)) : getSliderStyle(getOpacity(meme.textColor))}
                   title="Text Opacity"
               />
           </div>
@@ -141,8 +141,8 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                   }}
                   onMouseUp={(e) => changeOpacity('textShadow', e.target.value, true)}
                   onTouchEnd={(e) => changeOpacity('textShadow', e.target.value, true)}
-                  className="range-vertical accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-                  style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textShadow || '#000000')) : getSliderBg(getOpacity(meme.textShadow || '#000000'))}
+                  className="range-vertical md:range-slider accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+                  style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textShadow || '#000000')) : getSliderStyle(getOpacity(meme.textShadow || '#000000'))}
                   title="Outline Opacity"
               />
           </div>
@@ -184,8 +184,8 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
                     }}
                     onMouseUp={(e) => changeOpacity('textBgColor', e.target.value, true)}
                     onTouchEnd={(e) => changeOpacity('textBgColor', e.target.value, true)}
-                    className="range-vertical accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-                    style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textBgColor)) : getSliderBg(getOpacity(meme.textBgColor))}
+                    className="range-vertical md:range-slider accent-[oklch(53%_0.187_39)] cursor-pointer h-12 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+                    style={window.innerWidth < 768 ? getVerticalSliderBg(getOpacity(meme.textBgColor)) : getSliderStyle(getOpacity(meme.textBgColor))}
                     title="Background Opacity"
                 />
             </div>

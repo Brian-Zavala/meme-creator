@@ -27,6 +27,13 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
     handleStyleChange({ currentTarget: { name, value: finalColor } }, commit);
   };
 
+  // Helper to ensure valid hex for color input
+  const toSafeHex = (color) => {
+    if (!color || color === 'transparent') return '#000000';
+    if (color.startsWith('#') && color.length >= 7) return color.substring(0, 7);
+    return '#000000';
+  };
+
   // Helper to handle color picker change (preserving opacity)
   const onColorPick = (name, newHex) => {
     let currentOpacity = getOpacity(meme[name]);
@@ -79,7 +86,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               <div className="relative overflow-hidden w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                 <input
                     type="color" name="textColor"
-                    value={meme.textColor.substring(0, 7)}
+                    value={toSafeHex(meme.textColor)}
                     onChange={(e) => onColorPick('textColor', e.target.value)}
                     onBlur={handleStyleCommit} 
                     className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
@@ -122,7 +129,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               <div className="relative overflow-hidden w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                 <input
                     type="color" name="textShadow"
-                    value={(meme.textShadow || '#000000').substring(0, 7)}
+                    value={toSafeHex(meme.textShadow || '#000000')}
                     onChange={(e) => onColorPick('textShadow', e.target.value)}
                     onBlur={handleStyleCommit} 
                     className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
@@ -166,7 +173,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               <div className="relative overflow-hidden w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
                   <input
                   type="color" name="textBgColor"
-                  value={meme.textBgColor === 'transparent' ? '#000000' : meme.textBgColor.substring(0, 7)}
+                  value={toSafeHex(meme.textBgColor)}
                   onChange={(e) => onColorPick('textBgColor', e.target.value)}
                   onBlur={handleStyleCommit} 
                   className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"

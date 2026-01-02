@@ -46,6 +46,7 @@ export default function Main() {
       textColor: "#ffffff",
       textBgColor: "transparent",
       textShadow: "#000000",
+      fontFamily: "Impact",
       fontSize: 30,
       maxWidth: 100,
       filters: {
@@ -475,6 +476,8 @@ export default function Main() {
                   stickers: [],
 
                   fontSize: 30,
+
+                  fontFamily: "Impact",
 
                   mode: "image",
 

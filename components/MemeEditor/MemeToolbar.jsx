@@ -17,6 +17,21 @@ import {
 
 const ColorControls = lazy(() => import("./ColorControls"));
 
+const FONTS = [
+  { name: "Impact", label: "Impact" },
+  { name: "Anton", label: "Block" },
+  { name: "Archivo Black", label: "Bold" },
+  { name: "Oswald", label: "Tall" },
+  { name: "Montserrat", label: "Modern" },
+  { name: "Roboto", label: "Clean" },
+  { name: "Comic Neue", label: "Comic" },
+  { name: "Bangers", label: "Loud" },
+  { name: "Permanent Marker", label: "Marker" },
+  { name: "Creepster", label: "Scary" },
+  { name: "Cinzel", label: "Epic" },
+  { name: "Pacifico", label: "Script" },
+];
+
 export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters }) {
   const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
   const [isPending, startTransition] = useTransition();
@@ -97,6 +112,34 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
             {/* TEXT CONTROLS */}
             {activeTab === "text" && (
               <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
+                
+                {/* Group 0: Font Selector (Horizontal Scroll) */}
+                {hasText && (
+                  <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-none snap-x mask-fade-sides">
+                      {FONTS.map((font) => (
+                        <button
+                          key={font.name}
+                          onClick={() => {
+                            if (navigator.vibrate) navigator.vibrate(10);
+                            handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
+                          }}
+                          className={`snap-center shrink-0 px-4 py-2 rounded-lg border text-sm transition-all active:scale-95 ${
+                            (meme.fontFamily || "Impact") === font.name
+                              ? "bg-slate-100 text-slate-900 border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                              : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                          }`}
+                          style={{ fontFamily: `${font.name}, sans-serif` }}
+                        >
+                          {font.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Divider */}
+                {hasText && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
                 
                 {/* Group 1: Size Controls */}
                 <div className={`flex-1 w-full flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-4'}`}>

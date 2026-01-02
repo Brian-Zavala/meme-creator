@@ -126,7 +126,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
               lineHeight: 1.2,
               fontSize: `${meme.fontSize}px`,
               maxWidth: `${meme.maxWidth}%`,
-              fontFamily: "Impact, sans-serif",
+              fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
               WebkitTextStroke: `${stroke * 2}px ${meme.textShadow}`,
               paintOrder: "stroke fill",
               filter: "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))",

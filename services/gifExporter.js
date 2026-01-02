@@ -172,7 +172,7 @@ export async function exportGif(meme, texts, stickers) {
           renderCtx.translate(x, y);
           renderCtx.rotate(rotation);
           
-          renderCtx.font = `bold ${fontSize}px Impact, sans-serif`;
+          renderCtx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
           renderCtx.textAlign = 'center';
           renderCtx.textBaseline = 'middle';
           

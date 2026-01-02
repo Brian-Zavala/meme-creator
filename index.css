@@ -1,4 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bangers&family=Cinzel:wght@400;700&family=Comic+Neue:wght@400;700&family=Creepster&family=Inter:wght@400;500;600;700;900&family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Pacifico&family=Permanent+Marker&display=swap');
 @import "tailwindcss";
+
 :root {
   font-family:
     "Inter",
@@ -137,9 +139,17 @@ body {
     .range-vertical {
       writing-mode: horizontal-tb;
       direction: ltr;
-      appearance: none;
-      -webkit-appearance: none;
-    }
+    appearance: none;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 

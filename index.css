@@ -203,3 +203,11 @@ body {
   border-radius: 9999px;
   background: transparent;
 }
+
+/* Mobile Vertical Slider Thumb Alignment */
+@media (max-width: 767px) {
+  .range-vertical.range-slider::-webkit-slider-thumb {
+    margin-top: 0;
+    margin-left: -5px; /* (Track 6px - Thumb 16px) / 2 */
+  }
+}

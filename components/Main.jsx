@@ -794,7 +794,7 @@ export default function Main() {
                 getMemeImage(); 
               }} 
               disabled={loading || generating} 
-              className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[oklch(53%_0.187_39)] hover:bg-[oklch(56%_0.187_39)] transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
+              className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-[#c2410c] hover:bg-[#ea580c] transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
             >
               {pingKey && (
                 <span 

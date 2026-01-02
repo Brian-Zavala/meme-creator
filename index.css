@@ -26,7 +26,7 @@ button,
 }
 body {
   /* Ultra Dark Studio Background with subtle red/gold ambience */
-  @apply bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-slate-100 min-h-screen antialiased selection:bg-[oklch(53%_0.187_39)] selection:text-white;
+  @apply bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-slate-100 min-h-screen antialiased selection:bg-[#c2410c] selection:text-white;
 }
 
 /* Custom Scrollbar */
@@ -76,10 +76,10 @@ body {
 
 @keyframes radar-beam {
   0% {
-    box-shadow: 0 0 0 0 oklch(53% 0.187 39 / 0.1);
+    box-shadow: 0 0 0 0 #c2410c;
   }
   100% {
-    box-shadow: 0 0 0 25px oklch(53% 0.187 39 / 0);
+    box-shadow: 0 0 0 25px #ea580c00;
   }
 }
 
@@ -99,7 +99,7 @@ body {
 }
 
 .animate-text-shimmer {
-  background: linear-gradient(to left, #ffffff 45%, oklch(53% 0.187 39) 50%, #ffffff 55%);
+  background: linear-gradient(to left, #ffffff 45%, #c2410c 50%, #ffffff 55%);
   background-size: 300% auto;
   color: transparent;
   background-clip: text;
@@ -112,7 +112,7 @@ body {
   @apply bg-white/5 border border-white/10 backdrop-blur-sm transition-all duration-300;
 }
 .input-glass:focus {
-  @apply bg-white/10 border-[oklch(53%_0.187_39)] ring-1 ring-[oklch(53%_0.187_39)];
+  @apply bg-white/10 border-[#c2410c] ring-1 ring-[#c2410c];
 }
 
 /* Marching Ants Animation for SVG Border */

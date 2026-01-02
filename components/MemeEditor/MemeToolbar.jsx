@@ -121,21 +121,27 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                         if (navigator.vibrate) navigator.vibrate(10);
                         const isModern = meme.paddingTop > 0;
                         handleStyleChange({ currentTarget: { name: 'paddingTop', value: isModern ? 0 : 25 } }, true);
-                        if (!isModern) {
-                            setTimeout(() => {
+                        
+                        setTimeout(() => {
+                            if (!isModern) {
+                                // Turning ON: Black text, no shadow
                                 handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
                                 handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                            }, 50);
-                        }
+                            } else {
+                                // Turning OFF: White text, black shadow (Classic)
+                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                                handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                            }
+                        }, 50);
                      }}
                      className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 border text-xs uppercase font-bold tracking-wider ${
                        meme.paddingTop > 0 
-                       ? "bg-[oklch(53%_0.187_39)] text-white border-[oklch(53%_0.187_39)] shadow-lg shadow-orange-900/20" 
+                       ? "bg-[#c2410c] text-white border-[#c2410c] shadow-lg shadow-orange-900/20" 
                        : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                      }`}
                    >
                      <PanelTop className="w-4 h-4" />
-                     {meme.paddingTop > 0 ? "Modern Mode On" : "Modern Mode Off"}
+                     {meme.paddingTop > 0 ? "Caption Bar On" : "Caption Bar Off"}
                    </button>
                 </div>
 

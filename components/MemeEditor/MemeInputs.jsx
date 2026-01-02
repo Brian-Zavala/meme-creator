@@ -143,6 +143,8 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                             <Upload className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
                             <span className="text-xs font-bold uppercase tracking-wide">Upload Custom Sticker</span>
                             <input 
+                              id="sticker-upload"
+                              name="sticker-upload"
                               type="file" 
                               accept="image/png,image/jpeg,image/webp,image/gif"
                               className="hidden"

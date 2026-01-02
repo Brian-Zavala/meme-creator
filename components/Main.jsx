@@ -627,7 +627,11 @@ export default function Main() {
         URL.revokeObjectURL(url);
         triggerFireworks();
       })();
-      toast.promise(promise, { loading: "Encoding GIF...", success: "Downloaded!", error: "Error" });
+      toast.promise(promise, { 
+        loading: "Encoding GIF...", 
+        success: "Downloaded!", 
+        error: (err) => { console.error("GIF Export Error:", err); return "Export failed"; } 
+      });
     } else {
       const promise = (async () => {
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
@@ -637,7 +641,11 @@ export default function Main() {
         link.click();
         triggerFireworks();
       })();
-      toast.promise(promise, { loading: "Generating...", success: "Downloaded!", error: "Error" });
+      toast.promise(promise, { 
+        loading: "Generating...", 
+        success: "Downloaded!", 
+        error: (err) => { console.error("Image Export Error:", err); return "Export failed"; } 
+      });
     }
   }
 
@@ -659,34 +667,47 @@ export default function Main() {
           await navigator.share({ files: [file] });
           if (meme.id) registerShare(meme.id, searchQuery);
           triggerFireworks();
+          toast.success("Shared!");
         } else {
           await navigator.share({ url: shareUrl });
+          toast.success("Shared!");
         }
-      } catch {
-        try {
-          const htmlBlob = new Blob([`<img src="${shareUrl}" alt="GIF" />`], { type: "text/html" });
-          const textBlob = new Blob([shareUrl], { type: "text/plain" });
-          await navigator.clipboard.write([
-            new ClipboardItem({
-              "text/html": htmlBlob,
-              "text/plain": textBlob,
-            }),
-          ]);
-          toast.success("GIF copied to clipboard!");
-        } catch (e) {
-          await navigator.clipboard.writeText(shareUrl);
-          toast.success("Link copied!");
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.error("Share Error:", e);
+            try {
+            const htmlBlob = new Blob([`<img src="${shareUrl}" alt="GIF" />`], { type: "text/html" });
+            const textBlob = new Blob([shareUrl], { type: "text/plain" });
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                "text/html": htmlBlob,
+                "text/plain": textBlob,
+                }),
+            ]);
+            toast.success("GIF copied to clipboard!");
+            } catch (err) {
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success("Link copied!");
+            }
         }
       }
     } else {
-      const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-      const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
-      const file = new File([blob], `meme.png`, { type: "image/png" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file] });
-      } else {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        toast.success("Copied!");
+      try {
+        const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
+        const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+        const file = new File([blob], `meme.png`, { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            toast.success("Shared!");
+        } else {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+            toast.success("Copied!");
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.error("Share Error:", e);
+            toast.error("Share failed");
+        }
       }
     }
   }

@@ -705,7 +705,7 @@ export default function Main() {
       <div className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
         style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }} />
 
-      <div className="lg:col-span-5 space-y-8 order-2 lg:order-1">
+      <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
         <MemeInputs 
           texts={meme.texts} 
           handleTextChange={handleTextChange} 

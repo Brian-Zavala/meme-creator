@@ -48,6 +48,7 @@ export default function Main() {
       textShadow: "#000000",
       fontFamily: "Impact",
       fontSize: 30,
+      paddingTop: 0,
       maxWidth: 100,
       filters: {
         contrast: 100,
@@ -478,6 +479,8 @@ export default function Main() {
                   fontSize: 30,
 
                   fontFamily: "Impact",
+                  
+                  paddingTop: 0,
 
                   mode: "image",
 
@@ -493,10 +496,10 @@ export default function Main() {
 
     }
 
-  function addSticker(emoji) {
+  function addSticker(emoji, type = 'emoji') {
     updateState((prev) => ({
       ...prev,
-      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: emoji, x: 50, y: 50 }],
+      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: emoji, type, x: 50, y: 50 }],
     }));
   }
 

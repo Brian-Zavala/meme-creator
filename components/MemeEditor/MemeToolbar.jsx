@@ -13,6 +13,7 @@ import {
   Droplet as Saturate,
   FlipVertical as Invert,
   RefreshCcw,
+  PanelTop,
 } from "lucide-react";
 
 const ColorControls = lazy(() => import("./ColorControls"));
@@ -113,10 +114,35 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
             {activeTab === "text" && (
               <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
                 
+                {/* Group -1: Layout (Caption Bar) */}
+                <div className="w-full flex justify-center animate-in fade-in duration-300">
+                   <button
+                     onClick={() => {
+                        if (navigator.vibrate) navigator.vibrate(10);
+                        const isModern = meme.paddingTop > 0;
+                        handleStyleChange({ currentTarget: { name: 'paddingTop', value: isModern ? 0 : 25 } }, true);
+                        if (!isModern) {
+                            setTimeout(() => {
+                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                                handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                            }, 50);
+                        }
+                     }}
+                     className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 border text-xs uppercase font-bold tracking-wider ${
+                       meme.paddingTop > 0 
+                       ? "bg-[oklch(53%_0.187_39)] text-white border-[oklch(53%_0.187_39)] shadow-lg shadow-orange-900/20" 
+                       : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                     }`}
+                   >
+                     <PanelTop className="w-4 h-4" />
+                     {meme.paddingTop > 0 ? "Modern Mode On" : "Modern Mode Off"}
+                   </button>
+                </div>
+
                 {/* Group 0: Font Selector (Horizontal Scroll) */}
                 {hasText && (
                   <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-none snap-x mask-fade-sides">
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides">
                       {FONTS.map((font) => (
                         <button
                           key={font.name}

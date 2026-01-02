@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Type, Smile, Plus, ChevronDown, HelpCircle, Sparkles, Loader2 } from "lucide-react";
+import { Type, Smile, Plus, ChevronDown, HelpCircle, Sparkles, Loader2, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 
 const STICKER_CATEGORIES = {
@@ -137,6 +137,28 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                     aria-label="Sticker Categories"
                 >
                     <div className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin">
+                        {/* Custom Upload Button */}
+                        <div className="mb-2">
+                          <label className="flex items-center justify-center gap-2 w-full py-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 hover:text-white text-slate-400 rounded-xl cursor-pointer transition-all active:scale-95 group border-dashed">
+                            <Upload className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
+                            <span className="text-xs font-bold uppercase tracking-wide">Upload Custom Sticker</span>
+                            <input 
+                              type="file" 
+                              accept="image/png,image/jpeg,image/webp,image/gif"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  const url = URL.createObjectURL(file);
+                                  selectSticker(url); // We need to pass type='image' but selectSticker only takes one arg currently
+                                  onAddSticker(url, 'image'); // Call prop directly
+                                  setIsOpen(false);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+
                         {Object.entries(STICKER_CATEGORIES).map(([category, stickers]) => (
                             <div key={category} className="mb-4 last:mb-0" role="group" aria-label={category}>
                                 <div className="px-3 py-2 flex items-center gap-2" aria-hidden="true">

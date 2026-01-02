@@ -16,7 +16,11 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
         ref={ref}
         onPointerDown={onCanvasPointerDown}
         className="relative w-full flex items-center justify-center overflow-hidden shadow-2xl"
-        style={{ backgroundColor: "#000000", color: "#ffffff" }}
+        style={{ 
+            backgroundColor: meme.paddingTop > 0 ? '#ffffff' : '#000000', 
+            paddingTop: meme.paddingTop ? `${meme.paddingTop}%` : '0',
+            alignItems: meme.paddingTop > 0 ? 'flex-start' : 'center'
+        }}
       >
         {meme.isVideo ? (
             <video
@@ -78,6 +82,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
               left: `${sticker.x}%`,
               top: `${sticker.y}%`,
               fontSize: `${meme.stickerSize || 60}px`, // Independent sticker size
+              width: sticker.type === 'image' ? `${meme.stickerSize || 60}px` : 'auto',
               transform: "translate(-50%, -50%)",
             }}
             role="img"
@@ -87,7 +92,16 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
                 if(e.key === 'Delete' || e.key === 'Backspace') onRemoveSticker(sticker.id);
             }}
           >
-            {sticker.url}
+            {sticker.type === 'image' ? (
+              <img 
+                src={sticker.url} 
+                alt="sticker" 
+                className="w-full h-full object-contain pointer-events-none select-none drop-shadow-md"
+                draggable="false"
+              />
+            ) : (
+              sticker.url
+            )}
           </div>
         ))}
         

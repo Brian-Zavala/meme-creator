@@ -180,6 +180,30 @@ export async function exportGif(meme, texts, stickers) {
           }
         }
 
+        // 3.5 Draw Drawings
+        if (meme.drawings && meme.drawings.length > 0) {
+            renderCtx.save();
+            renderCtx.lineCap = 'round';
+            renderCtx.lineJoin = 'round';
+            
+            meme.drawings.forEach(d => {
+                if (!d.points || d.points.length < 2) return;
+                renderCtx.beginPath();
+                renderCtx.strokeStyle = d.color;
+                renderCtx.lineWidth = d.width * (exportWidth / 800); 
+                renderCtx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
+                
+                renderCtx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
+                for (let i = 1; i < d.points.length; i++) {
+                    renderCtx.lineTo(d.points[i].x * exportWidth, d.points[i].y * exportHeight);
+                }
+                renderCtx.stroke();
+            });
+            
+            renderCtx.globalCompositeOperation = 'source-over';
+            renderCtx.restore();
+        }
+
         // 4. Draw Stickers
         for (const sticker of (stickers || [])) {
           const x = (sticker.x / 100) * exportWidth;

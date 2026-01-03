@@ -1,9 +1,103 @@
-import { forwardRef } from "react";
+import { forwardRef, useRef, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
-const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTune, onFineTuneCommit, onCenterText, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
+const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, activeTool, onDrawCommit, onFineTune, onFineTuneCommit, onCenterText, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
   const description = `Meme preview of ${meme.name || "Custom Image"} with ${meme.texts.length} text captions and ${meme.stickers?.length || 0} stickers`;
-  
+  const drawCanvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const currentPathRef = useRef([]);
+
+  // Render Drawings
+  useEffect(() => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Handle resizing
+    const rect = canvas.getBoundingClientRect();
+    if (canvas.width !== rect.width || canvas.height !== rect.height) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    (meme.drawings || []).forEach(d => {
+        if (d.points.length < 2) return;
+        ctx.beginPath();
+        ctx.strokeStyle = d.color;
+        ctx.lineWidth = d.width * (canvas.width / 800); // Scale relative to generic width
+        ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
+        
+        ctx.moveTo(d.points[0].x * canvas.width, d.points[0].y * canvas.height);
+        d.points.slice(1).forEach(p => ctx.lineTo(p.x * canvas.width, p.y * canvas.height));
+        ctx.stroke();
+    });
+    
+    ctx.globalCompositeOperation = 'source-over'; // Reset
+  }, [meme.drawings, meme.paddingTop]); // Re-render on layout change too
+
+  const handleDrawStart = (e) => {
+    if (activeTool !== 'pen' && activeTool !== 'eraser') return;
+    e.stopPropagation(); // Stop drag/select
+    setIsDrawing(true);
+    
+    const canvas = drawCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    currentPathRef.current = [{x, y}];
+  };
+
+  const handleDrawMove = (e) => {
+    if (!isDrawing) return;
+    e.stopPropagation();
+    
+    const canvas = drawCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    currentPathRef.current.push({x, y});
+
+    // Live Draw
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = (meme.drawWidth || 5) * (rect.width / 800);
+    ctx.strokeStyle = activeTool === 'eraser' ? 'rgba(255,255,255,0.5)' : (meme.drawColor || '#ff0000');
+    
+    // Eraser preview: difficult on same canvas. Just draw color or white?
+    // We'll draw color.
+    
+    const pts = currentPathRef.current;
+    if (pts.length >= 2) {
+        ctx.beginPath();
+        const p1 = pts[pts.length - 2];
+        const p2 = pts[pts.length - 1];
+        ctx.moveTo(p1.x * rect.width, p1.y * rect.height);
+        ctx.lineTo(p2.x * rect.width, p2.y * rect.height);
+        ctx.stroke();
+    }
+  };
+
+  const handleDrawEnd = (e) => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    e.stopPropagation();
+    
+    if (currentPathRef.current.length > 1) {
+        onDrawCommit({
+            points: currentPathRef.current,
+            color: meme.drawColor || '#ff0000',
+            width: meme.drawWidth || 5,
+            mode: activeTool // pen or eraser
+        });
+    }
+    currentPathRef.current = [];
+  };
+
   return (
     <div 
       onPointerDown={onCanvasPointerDown}
@@ -22,6 +116,14 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
             alignItems: meme.paddingTop > 0 ? 'flex-start' : 'center'
         }}
       >
+        <canvas 
+            ref={drawCanvasRef}
+            className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' || activeTool === 'eraser' ? 'cursor-crosshair pointer-events-auto' : 'pointer-events-none'}`}
+            onPointerDown={handleDrawStart}
+            onPointerMove={handleDrawMove}
+            onPointerUp={handleDrawEnd}
+            onPointerLeave={handleDrawEnd}
+        />
         {meme.isVideo ? (
             <video
                 key={meme.imageUrl}

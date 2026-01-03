@@ -49,6 +49,8 @@ export default function Main() {
       fontFamily: "Impact",
       fontSize: 30,
       paddingTop: 0,
+      drawColor: "#ff0000",
+      drawWidth: 5,
       maxWidth: 100,
       filters: {
         contrast: 100,
@@ -65,6 +67,7 @@ export default function Main() {
         { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
       ],
       stickers: [],
+      drawings: [],
       isVideo: false,
       selectedId: null,
     };
@@ -95,6 +98,7 @@ export default function Main() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
+  const [activeTool, setActiveTool] = useState("move"); // move | pen | eraser
   const [flashColor, setFlashColor] = useState(null); 
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
@@ -448,6 +452,22 @@ export default function Main() {
 
   function handleStyleCommit() { updateState((prev) => prev); }
 
+  function handleDrawCommit(newPath) {
+    startTransition(() => {
+        updateState((prev) => ({
+            ...prev,
+            drawings: [...prev.drawings, newPath]
+        }));
+    });
+  }
+
+  function handleClearDrawings() {
+    startTransition(() => {
+        updateState((prev) => ({ ...prev, drawings: [] }));
+    });
+    toast.success("Drawings cleared");
+  }
+
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
@@ -475,12 +495,17 @@ export default function Main() {
                   texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
 
                   stickers: [],
+                  
+                  drawings: [],
 
                   fontSize: 30,
 
                   fontFamily: "Impact",
                   
                   paddingTop: 0,
+
+                  drawColor: "#ff0000",
+                  drawWidth: 5,
 
                   mode: "image",
 
@@ -782,10 +807,13 @@ export default function Main() {
           <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
             <MemeToolbar 
                 meme={meme} 
+                activeTool={activeTool}
+                setActiveTool={setActiveTool}
                 handleStyleChange={handleStyleChange} 
                 handleFilterChange={handleFilterChange} 
                 handleStyleCommit={handleStyleCommit} 
                 onResetFilters={resetFilters}
+                onClearDrawings={handleClearDrawings}
             />
             <button 
               onClick={() => { 
@@ -813,6 +841,8 @@ export default function Main() {
               loading={loading} 
               draggedId={draggedId} 
               selectedId={meme.selectedId}
+              activeTool={activeTool}
+              onDrawCommit={handleDrawCommit}
               onFineTune={handleFineTune}
               onFineTuneCommit={handleFineTuneCommit}
               onCenterText={handleCenterText}

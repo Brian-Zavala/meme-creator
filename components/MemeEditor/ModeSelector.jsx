@@ -21,7 +21,7 @@ export function ModeSelector({ mode, onModeChange }) {
   };
 
   return (
-    <div className="relative w-full z-30" ref={containerRef}>
+    <div className="relative w-full z-[60]" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full rounded-xl bg-slate-900/50 border border-slate-700 p-3 flex items-center justify-center relative transition-all active:scale-[0.99] ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}

@@ -482,44 +482,37 @@ export default function Main() {
     }
   }
 
-    function handleReset() {
-
-      triggerFlash("red");
-
-      startTransition(() => {
-
-          updateState((prev) => ({
-
-          ...prev,
-
-                  texts: [{ id: "top", content: "", x: 50, y: 5 }, { id: "bottom", content: "", x: 50, y: 95 }],
-
-                  stickers: [],
-                  
-                  drawings: [],
-
-                  fontSize: 30,
-
-                  fontFamily: "Impact",
-                  
-                  paddingTop: 0,
-
-                  drawColor: "#ff0000",
-                  drawWidth: 5,
-
-                  mode: "image",
-
-          textColor: "#ffffff",
-
-          textBgColor: "transparent",
-
-          filters: { contrast: 100, brightness: 100, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0, saturate: 100, invert: 0 },
-
-          }));
-
-      });
-
-    }
+  function handleReset() {
+    triggerFlash("red");
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        texts: [
+          { id: "top", content: "", x: 50, y: 5, rotation: 0 },
+          { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
+        ],
+        stickers: [],
+        drawings: [],
+        fontSize: 30,
+        fontFamily: "Impact",
+        paddingTop: 0,
+        drawColor: "#ff0000",
+        drawWidth: 5,
+        textColor: "#ffffff",
+        textBgColor: "transparent",
+        filters: {
+          contrast: 100,
+          brightness: 100,
+          blur: 0,
+          grayscale: 0,
+          sepia: 0,
+          hueRotate: 0,
+          saturate: 100,
+          invert: 0,
+        },
+      }));
+    });
+  }
 
   function addSticker(emoji, type = 'emoji') {
     updateState((prev) => ({

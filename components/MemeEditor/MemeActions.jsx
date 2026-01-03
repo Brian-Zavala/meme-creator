@@ -35,7 +35,7 @@ export function MemeActions({ undo, redo, canUndo, canRedo, onFileUpload, onRese
           onClick={onReset}
           className="bg-slate-800 hover:bg-red-900/30 hover:text-red-400 text-slate-400 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-700 col-span-2"
         >
-          <Eraser className="w-4 h-4" /> <span>Remove Text</span>
+          <Eraser className="w-4 h-4" /> <span>Remove Everything</span>
         </button>
         <button
           onClick={onDownload}

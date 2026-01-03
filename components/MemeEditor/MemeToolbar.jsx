@@ -50,7 +50,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
   // Helper for range slider background
   const getSliderStyle = (value, min, max) => {
     const val = ((value - min) / (max - min)) * 100;
-    const color = '#c2410c'; // McDonald's Red/Orange
+    const color = 'var(--color-brand)'; 
     const track = 'rgba(255, 255, 255, 0.2)';
     return {
       background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
@@ -67,7 +67,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
       <div className="flex border-b border-slate-800 relative" role="tablist">
         {/* Animated Active Tab Indicator */}
         <div 
-          className={`absolute bottom-0 h-0.5 bg-[#c2410c] transition-all duration-300 ease-out z-10 ${
+          className={`absolute bottom-0 h-0.5 bg-brand transition-all duration-300 ease-out z-10 ${
             activeTab === "text" ? "left-0 w-1/2" : "left-1/2 w-1/2"
           }`}
         />
@@ -136,7 +136,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                      }}
                      className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 border text-xs uppercase font-bold tracking-wider ${
                        meme.paddingTop > 0 
-                       ? "bg-[#c2410c] text-white border-[#c2410c] shadow-lg shadow-orange-900/20" 
+                       ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20" 
                        : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                      }`}
                    >

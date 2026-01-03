@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy } from "react";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import {
   RefreshCcw,
   Loader2,

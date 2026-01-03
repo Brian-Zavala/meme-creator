@@ -6,9 +6,9 @@ export function InstructionModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-        <div className="bg-[oklch(53%_0.187_39)] px-8 py-6 text-center">
-          <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center justify-center gap-2">
-            How to Use
+        <div className="bg-[#c2410c] px-8 py-6 text-center">
+          <h2 className="text-2xl font-black text-white tracking-tighter drop-shadow-md">
+            HOW TO USE
           </h2>
         </div>
         <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">

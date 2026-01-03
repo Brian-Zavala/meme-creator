@@ -50,7 +50,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
   // Dynamic slider style to fix desktop display bug where track color was inverted
   const getSliderStyle = (opacity) => {
     const val = parseInt(opacity, 10) || 0;
-    const color = 'oklch(53% 0.187 39)'; // McDonald's Red/Orange
+    const color = '#c2410c'; // McDonald's Red/Orange
     const track = 'rgba(255, 255, 255, 0.2)'; // Semi-transparent white track
     return {
       background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
@@ -59,7 +59,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
 
   // Helper for vertical slider background (Mobile)
   const getVerticalSliderBg = (value) => {
-    const color = 'oklch(53% 0.187 39)';
+    const color = '#c2410c';
     const empty = 'rgb(30 41 59)'; // slate-800
     // For vertical sliders, the "top" in linear-gradient actually corresponds to the "end" of the slider
     return {

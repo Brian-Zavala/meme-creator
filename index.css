@@ -1,6 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bangers&family=Cinzel:wght@400;700&family=Comic+Neue:wght@400;700&family=Creepster&family=Inter:wght@400;500;600;700;900&family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Pacifico&family=Permanent+Marker&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --color-brand: oklch(53% 0.187 39);
+  --color-brand-dark: oklch(48% 0.187 39);
+}
+
 :root {
   font-family:
     "Inter",
@@ -26,7 +31,7 @@ button,
 }
 body {
   /* Ultra Dark Studio Background with subtle red/gold ambience */
-  @apply bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-slate-100 min-h-screen antialiased selection:bg-[#c2410c] selection:text-white;
+  @apply bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-slate-100 min-h-screen antialiased selection:bg-brand selection:text-white;
 }
 
 /* Custom Scrollbar */
@@ -76,10 +81,10 @@ body {
 
 @keyframes radar-beam {
   0% {
-    box-shadow: 0 0 0 0 #c2410c;
+    box-shadow: 0 0 0 0 var(--color-brand);
   }
   100% {
-    box-shadow: 0 0 0 25px #ea580c00;
+    box-shadow: 0 0 0 25px var(--color-brand-transparent);
   }
 }
 
@@ -99,7 +104,7 @@ body {
 }
 
 .animate-text-shimmer {
-  background: linear-gradient(to left, #ffffff 45%, #c2410c 50%, #ffffff 55%);
+  background: linear-gradient(to left, #ffffff 45%, var(--color-brand) 50%, #ffffff 55%);
   background-size: 300% auto;
   color: transparent;
   background-clip: text;
@@ -112,7 +117,7 @@ body {
   @apply bg-white/5 border border-white/10 backdrop-blur-sm transition-all duration-300;
 }
 .input-glass:focus {
-  @apply bg-white/10 border-[#c2410c] ring-1 ring-[#c2410c];
+  @apply bg-white/10 border-brand ring-1 ring-brand;
 }
 
 /* Marching Ants Animation for SVG Border */

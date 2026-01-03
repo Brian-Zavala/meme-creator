@@ -6,7 +6,7 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
   // Helper for range slider background
   const getSliderStyle = (value, min, max) => {
     const val = ((value - min) / (max - min)) * 100;
-    const color = '#c2410c'; // McDonald's Red/Orange
+    const color = 'var(--color-brand)'; // McDonald's Red/Orange
     const track = 'rgb(30 41 59)'; // slate-800
     return {
       background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`

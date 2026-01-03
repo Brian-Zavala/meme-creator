@@ -118,7 +118,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, activeToo
       >
         <canvas 
             ref={drawCanvasRef}
-            className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' || activeTool === 'eraser' ? 'cursor-crosshair pointer-events-auto' : 'pointer-events-none'}`}
+            className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' ? 'cursor-crosshair pointer-events-auto' : activeTool === 'eraser' ? 'cursor-eraser pointer-events-auto' : 'pointer-events-none'}`}
             onPointerDown={handleDrawStart}
             onPointerMove={handleDrawMove}
             onPointerUp={handleDrawEnd}

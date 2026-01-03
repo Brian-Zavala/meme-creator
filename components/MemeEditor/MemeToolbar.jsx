@@ -148,7 +148,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                 {/* Group 0: Font Selector (Horizontal Scroll) */}
                 {hasText && (
                   <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides">
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
                       {FONTS.map((font) => (
                         <button
                           key={font.name}

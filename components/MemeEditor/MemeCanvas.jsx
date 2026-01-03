@@ -156,7 +156,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
                         rx="12" 
                         ry="12" 
                         fill="none" 
-                        stroke="#c2410c" 
+                        stroke="var(--color-brand)" 
                         strokeWidth="3" 
                         strokeDasharray="12 8" 
                         className="animate-march"
@@ -170,7 +170,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
 
       {loading && (
         <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center z-50 backdrop-blur-sm gap-4">
-          <Loader2 className="w-10 h-10 text-[#c2410c] animate-spin" />
+          <Loader2 className="w-10 h-10 text-brand animate-spin" />
           <p className="text-slate-400 font-medium animate-pulse">Fetching templates...</p>
         </div>
       )}

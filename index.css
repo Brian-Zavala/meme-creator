@@ -177,6 +177,10 @@ body {
   }
 }
 
+.cursor-eraser {
+  cursor: url('/images/canvas/eraser.png') 16 16, auto;
+}
+
 /* Custom Range Slider (Desktop) */
 .range-slider {
   -webkit-appearance: none;

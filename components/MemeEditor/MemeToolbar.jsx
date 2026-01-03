@@ -14,6 +14,9 @@ import {
   FlipVertical as Invert,
   RefreshCcw,
   PanelTop,
+  Pencil,
+  Eraser,
+  Trash2,
 } from "lucide-react";
 
 const ColorControls = lazy(() => import("./ColorControls"));
@@ -33,8 +36,8 @@ const FONTS = [
   { name: "Pacifico", label: "Script" },
 ];
 
-export default function MemeToolbar({ meme, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters }) {
-  const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image'
+export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings }) {
+  const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image' | 'draw'
   const [isPending, startTransition] = useTransition();
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
@@ -42,6 +45,11 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
   const handleTabChange = (tab) => {
     startTransition(() => {
       setActiveTab(tab);
+      if (tab === 'draw') {
+          setActiveTool('pen');
+      } else {
+          setActiveTool('move');
+      }
     });
   };
 
@@ -67,8 +75,8 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
       <div className="flex border-b border-slate-800 relative" role="tablist">
         {/* Animated Active Tab Indicator */}
         <div 
-          className={`absolute bottom-0 h-0.5 bg-brand transition-all duration-300 ease-out z-10 ${
-            activeTab === "text" ? "left-0 w-1/2" : "left-1/2 w-1/2"
+          className={`absolute bottom-0 h-0.5 bg-brand transition-all duration-300 ease-out z-10 w-1/3 ${
+            activeTab === "text" ? "left-0" : activeTab === "image" ? "left-1/3" : "left-2/3"
           }`}
         />
         
@@ -100,6 +108,22 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
         >
           <ImageIcon className={`w-4 h-4 transition-transform duration-300 ${activeTab === "image" ? "scale-110" : "scale-100"}`} /> 
           Image
+        </button>
+
+        <div className="w-px bg-slate-800 z-0" role="presentation"></div>
+
+        <button
+          onClick={() => handleTabChange("draw")}
+          role="tab"
+          aria-selected={activeTab === "draw"}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${
+            activeTab === "draw"
+              ? "text-white bg-slate-800"
+              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+          }`}
+        >
+          <Pencil className={`w-4 h-4 transition-transform duration-300 ${activeTab === "draw" ? "scale-110" : "scale-100"}`} /> 
+          Draw
         </button>
       </div>
 
@@ -438,6 +462,70 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* DRAW CONTROLS */}
+            {activeTab === "draw" && (
+              <div id="draw-tools-panel" role="tabpanel" className="flex flex-col gap-6 w-full items-center animate-in fade-in duration-300">
+                 {/* Tools */}
+                 <div className="flex gap-4">
+                    <button
+                        onClick={() => setActiveTool('pen')}
+                        className={`p-3 rounded-xl border transition-all ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                        title="Pen Tool"
+                    >
+                        <Pencil className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => setActiveTool('eraser')}
+                        className={`p-3 rounded-xl border transition-all ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                        title="Eraser Tool"
+                    >
+                        <Eraser className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={onClearDrawings}
+                        className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all"
+                        title="Clear All"
+                    >
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                 </div>
+
+                 <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+
+                 {/* Settings */}
+                 <div className="flex items-center gap-8 w-full max-w-md px-4">
+                    {/* Color */}
+                    <div className="flex flex-col gap-2 items-center">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Color</span>
+                        <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer shadow-sm">
+                            <input
+                                type="color"
+                                value={meme.drawColor || "#ff0000"}
+                                onChange={(e) => handleStyleChange(e)}
+                                name="drawColor"
+                                className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Width */}
+                    <div className="flex flex-col gap-2 flex-1">
+                        <div className="flex justify-between">
+                            <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Stroke Width</span>
+                            <span className="text-[10px] font-bold text-slate-400 font-mono">{meme.drawWidth}px</span>
+                        </div>
+                        <input
+                            type="range" min="1" max="50" name="drawWidth"
+                            value={meme.drawWidth || 5}
+                            onChange={(e) => handleStyleChange(e)}
+                            className="range-slider w-full cursor-pointer h-2 rounded-full"
+                            style={getSliderStyle(meme.drawWidth || 5, 1, 50)}
+                        />
+                    </div>
+                 </div>
               </div>
             )}
           </div>

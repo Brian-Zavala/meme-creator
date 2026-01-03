@@ -50,7 +50,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
   // Helper for range slider background
   const getSliderStyle = (value, min, max) => {
     const val = ((value - min) / (max - min)) * 100;
-    const color = 'oklch(53% 0.187 39)'; // McDonald's Red/Orange
+    const color = '#c2410c'; // McDonald's Red/Orange
     const track = 'rgba(255, 255, 255, 0.2)';
     return {
       background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
@@ -67,7 +67,7 @@ export default function MemeToolbar({ meme, handleStyleChange, handleFilterChang
       <div className="flex border-b border-slate-800 relative" role="tablist">
         {/* Animated Active Tab Indicator */}
         <div 
-          className={`absolute bottom-0 h-0.5 bg-[oklch(53%_0.187_39)] transition-all duration-300 ease-out z-10 ${
+          className={`absolute bottom-0 h-0.5 bg-[#c2410c] transition-all duration-300 ease-out z-10 ${
             activeTab === "text" ? "left-0 w-1/2" : "left-1/2 w-1/2"
           }`}
         />

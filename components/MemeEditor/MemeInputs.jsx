@@ -49,7 +49,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
         <button 
             onClick={onMagicCaption}
             disabled={isMagicGenerating}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[oklch(53%_0.187_39)]/10 text-[oklch(53%_0.187_39)] hover:bg-[oklch(53%_0.187_39)]/20 transition-all active:scale-90 border border-[oklch(53%_0.187_39)]/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#c2410c]/10 text-[#c2410c] hover:bg-[#c2410c]/20 transition-all active:scale-90 border border-[#c2410c]/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Generate Magic Caption"
             aria-label="Generate Magic Caption with AI"
         >
@@ -109,10 +109,10 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                 aria-haspopup="true"
                 aria-expanded={isOpen}
                 aria-label="Add Sticker Menu"
-                className={`flex-1 flex items-center justify-between bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-xl px-4 py-3 transition-all active:scale-95 group focus:outline-none focus:ring-2 focus:ring-yellow-500 ${isOpen ? 'ring-2 ring-[oklch(53%_0.187_39)] border-transparent' : ''}`}
+                className={`flex-1 flex items-center justify-between bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-xl px-4 py-3 transition-all active:scale-95 group focus:outline-none focus:ring-2 focus:ring-yellow-500 ${isOpen ? 'ring-2 ring-[#c2410c] border-transparent' : ''}`}
             >
                 <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded-lg bg-[oklch(53%_0.187_39)]/10 text-[oklch(53%_0.187_39)] group-hover:bg-[oklch(53%_0.187_39)]/20 transition-colors" aria-hidden="true">
+                    <div className="p-1.5 rounded-lg bg-[#c2410c]/10 text-[#c2410c] group-hover:bg-[#c2410c]/20 transition-colors" aria-hidden="true">
                         <Smile className="w-5 h-5" />
                     </div>
                     <span className="text-slate-300 font-medium">Add a sticker...</span>

@@ -15,7 +15,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, onFineTun
       <div
         ref={ref}
         onPointerDown={onCanvasPointerDown}
-        className="relative w-full flex items-center justify-center overflow-hidden shadow-2xl"
+        className="relative w-full flex items-center justify-center overflow-hidden"
         style={{ 
             backgroundColor: meme.paddingTop > 0 ? '#ffffff' : '#000000', 
             paddingTop: meme.paddingTop ? `${meme.paddingTop}%` : '0',

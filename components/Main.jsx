@@ -3,7 +3,10 @@ import html2canvas from "html2canvas-pro";
 import {
   RefreshCcw,
   Loader2,
-  Video
+  Video,
+  Undo2,
+  Redo2,
+  HelpCircle
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
@@ -16,10 +19,10 @@ import { MEME_QUOTES } from "../constants/memeQuotes";
 import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
-import { MemeActions } from "./MemeEditor/MemeActions";
-import { GifSearch } from "./MemeEditor/GifSearch";
-import { ModeSelector } from "./MemeEditor/ModeSelector";
 
+const MemeActions = lazy(() => import("./MemeEditor/MemeActions").then(module => ({ default: module.MemeActions })));
+const GifSearch = lazy(() => import("./MemeEditor/GifSearch").then(module => ({ default: module.GifSearch })));
+const ModeSelector = lazy(() => import("./MemeEditor/ModeSelector").then(module => ({ default: module.ModeSelector })));
 const ColorControls = lazy(() => import("./MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("./MemeEditor/MemeFineTune"));
 
@@ -759,44 +762,46 @@ export default function Main() {
           onMagicCaption={generateMagicCaption} 
           isMagicGenerating={isMagicGenerating}
         />
-        <MemeActions
-          undo={undo}
-          redo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onFileUpload={handleFileUpload}
-          onReset={handleReset}
-          onDownload={handleDownload}
-          onShare={handleShare}
-        />
+        <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+            <MemeActions
+            onFileUpload={handleFileUpload}
+            onReset={handleReset}
+            onDownload={handleDownload}
+            onShare={handleShare}
+            />
+        </Suspense>
       </div>
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
-        <ModeSelector 
-          mode={meme.mode} 
-          onModeChange={(e) => {
-              const m = e.target.value; 
-              startTransition(() => {
-                updateState((prev) => ({ ...prev, mode: m }));
-                if (m === "image") clearSearch(); 
-                getMemeImage(m);
-              });
-            }} 
-        />
+        <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+            <ModeSelector 
+            mode={meme.mode} 
+            onModeChange={(e) => {
+                const m = e.target.value; 
+                startTransition(() => {
+                    updateState((prev) => ({ ...prev, mode: m }));
+                    if (m === "image") clearSearch(); 
+                    getMemeImage(m);
+                });
+                }} 
+            />
+        </Suspense>
 
           {meme.mode === "video" && (
-            <GifSearch 
-              searchQuery={searchQuery}
-              onSearchInput={handleSearchInput}
-              onFocus={() => setShowSuggestions(true)}
-              onClear={clearSearch}
-              suggestions={suggestions}
-              showSuggestions={showSuggestions}
-              categories={categories}
-              onSelectSuggestion={selectSuggestion}
-              onKeyDown={(e) => { if (e.key === 'Enter') { setShowSuggestions(false); performSearch(searchQuery); }}}
-              containerRef={searchContainerRef}
-            />
+            <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                <GifSearch 
+                searchQuery={searchQuery}
+                onSearchInput={handleSearchInput}
+                onFocus={() => setShowSuggestions(true)}
+                onClear={clearSearch}
+                suggestions={suggestions}
+                showSuggestions={showSuggestions}
+                categories={categories}
+                onSelectSuggestion={selectSuggestion}
+                onKeyDown={(e) => { if (e.key === 'Enter') { setShowSuggestions(false); performSearch(searchQuery); }}}
+                containerRef={searchContainerRef}
+                />
+            </Suspense>
           )}
           <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
             <MemeToolbar 
@@ -856,6 +861,30 @@ export default function Main() {
                     </div>
                 </Suspense>
             )}
+          </div>
+
+          {/* Undo / Redo Controls */}
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
+            >
+              <Undo2 className="w-4 h-4" /> Undo
+            </button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
+            >
+              <Redo2 className="w-4 h-4" /> Redo
+            </button>
+            <button
+              onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })}
+              className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
           </div>
       </div>
     </main>

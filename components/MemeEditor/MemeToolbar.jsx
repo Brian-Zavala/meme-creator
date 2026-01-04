@@ -2,6 +2,7 @@ import { useState, lazy, Suspense, useTransition } from "react";
 import {
   Type,
   MoveHorizontal,
+  ArrowLeftRight,
   Image as ImageIcon,
   Sun,
   Contrast,
@@ -286,6 +287,42 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             className="range-slider w-full cursor-pointer rounded-full h-2"
                             style={getSliderStyle(meme.maxWidth, 20, 100)}
                             title="Text Width (Wrap)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+
+                    {/* Group 2.5: Letter Spacing */}
+                    <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between w-full relative">
+                        {meme.letterSpacing !== 0 && (
+                          <button 
+                            onClick={() => {
+                              if (navigator.vibrate) navigator.vibrate(10);
+                              handleStyleChange({ currentTarget: { name: 'letterSpacing', value: 0 } }, true);
+                            }}
+                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                          >
+                            Reset
+                          </button>
+                        )}
+                        <div className="flex items-center gap-4 w-full">
+                          <ArrowLeftRight className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                          <input
+                            type="range" min="-5" max="50" step="1" name="letterSpacing"
+                            value={meme.letterSpacing || 0}
+                            onChange={(e) => {
+                              if (navigator.vibrate) navigator.vibrate(5);
+                              handleStyleChange(e);
+                            }}
+                            onMouseUp={handleStyleCommit}
+                            onTouchEnd={handleStyleCommit}
+                            className="range-slider w-full cursor-pointer rounded-full h-2"
+                            style={getSliderStyle(meme.letterSpacing || 0, -5, 50)}
+                            title="Letter Spacing"
                           />
                         </div>
                       </div>

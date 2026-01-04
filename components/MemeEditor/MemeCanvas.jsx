@@ -241,6 +241,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, activeToo
               padding: hasBg ? '0.25em 0.5em' : '0',
               lineHeight: 1.2,
               fontSize: `${meme.fontSize}px`,
+              letterSpacing: `${meme.letterSpacing || 0}px`,
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
               WebkitTextStroke: `${stroke * 2}px ${meme.textShadow}`,

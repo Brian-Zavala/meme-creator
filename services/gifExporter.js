@@ -240,6 +240,10 @@ export async function exportGif(meme, texts, stickers) {
           renderCtx.translate(x, y);
           renderCtx.rotate(rotation);
           
+          if (renderCtx.letterSpacing !== undefined) {
+              renderCtx.letterSpacing = `${meme.letterSpacing || 0}px`;
+          }
+
           renderCtx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
           renderCtx.textAlign = 'center';
           renderCtx.textBaseline = 'middle';

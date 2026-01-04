@@ -476,12 +476,15 @@ export default function Main() {
     const file = event.target.files[0];
     if (file) {
       const localUrl = URL.createObjectURL(file);
+      const isGif = file.type === "image/gif";
+      const isVideo = file.type.startsWith("video/");
+      
       updateState((prev) => ({
         ...prev,
         imageUrl: localUrl,
         name: file.name.split(".")[0],
-        mode: "image",
-        isVideo: file.type.startsWith("video/"),
+        mode: (isGif || isVideo) ? "video" : "image",
+        isVideo: isVideo,
       }));
     }
   }

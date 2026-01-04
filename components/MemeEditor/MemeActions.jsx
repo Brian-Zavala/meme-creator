@@ -4,7 +4,7 @@ export function MemeActions({ onFileUpload, onReset, onDownload, onShare }) {
   return (
     <div className="grid grid-cols-2 gap-3">
         <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-700 col-span-2">
-          <ImagePlus className="w-4 h-4" /> <span>Upload Image</span>
+          <ImagePlus className="w-4 h-4" /> <span>Upload your own</span>
           <input type="file" className="hidden" accept="image/*,video/*" onChange={onFileUpload} />
         </label>
         <button

@@ -713,10 +713,23 @@ export default function Main() {
       });
     } else {
       const promise = (async () => {
+        // 1. Capture the current view (Fried BG + Clean Text)
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
+        let finalDataUrl = canvas.toDataURL("image/png");
+
+        // 2. If Deep Fry is active, fry the WHOLE thing (Text included)
+        // This results in "Double Fried BG + Single Fried Text" which adds to the chaotic aesthetic.
+        if ((meme.filters?.deepFry || 0) > 0) {
+            const friedBlobUrl = await deepFryImage(finalDataUrl, meme.filters.deepFry);
+            
+            // Convert Blob URL back to Data URL for consistency with existing link logic
+            // (Or just use the blob url directly)
+            finalDataUrl = friedBlobUrl;
+        }
+
         const link = document.createElement("a");
-        link.download = `${meme.name}-${Date.now()}.png`;
-        link.href = canvas.toDataURL("image/png");
+        link.download = `${meme.name}-${Date.now()}.png`; // PNG acts as container, but deepFry returns JPEG blob usually. Browser handles it.
+        link.href = finalDataUrl;
         link.click();
         triggerFireworks();
       })();
@@ -775,8 +788,19 @@ export default function Main() {
       }
     } else {
       try {
+        // 1. Capture
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-        const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+        let blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+
+        // 2. Deep Fry Override
+        if ((meme.filters?.deepFry || 0) > 0) {
+           const initialUrl = URL.createObjectURL(blob);
+           const friedBlobUrl = await deepFryImage(initialUrl, meme.filters.deepFry);
+           const friedResponse = await fetch(friedBlobUrl);
+           blob = await friedResponse.blob();
+           URL.revokeObjectURL(initialUrl);
+        }
+
         const file = new File([blob], `meme.png`, { type: "image/png" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file] });

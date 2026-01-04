@@ -1,18 +1,12 @@
-import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy } from "react";
+import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue } from "react";
 import html2canvas from "html2canvas-pro";
-import {
-  RefreshCcw,
-  Loader2,
-  Video,
-  Undo2,
-  Redo2,
-  HelpCircle
-} from "lucide-react";
+import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
 import { searchTenor, registerShare, getAutocomplete, getCategories } from "../services/tenor";
 import { exportGif } from "../services/gifExporter";
+import { deepFryImage } from "../services/imageProcessor";
 import { MEME_QUOTES } from "../constants/memeQuotes";
 
 // Sub-components
@@ -20,9 +14,11 @@ import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
 
-const MemeActions = lazy(() => import("./MemeEditor/MemeActions").then(module => ({ default: module.MemeActions })));
-const GifSearch = lazy(() => import("./MemeEditor/GifSearch").then(module => ({ default: module.GifSearch })));
-const ModeSelector = lazy(() => import("./MemeEditor/ModeSelector").then(module => ({ default: module.ModeSelector })));
+const MemeActions = lazy(() => import("./MemeEditor/MemeActions").then((module) => ({ default: module.MemeActions })));
+const GifSearch = lazy(() => import("./MemeEditor/GifSearch").then((module) => ({ default: module.GifSearch })));
+const ModeSelector = lazy(() =>
+  import("./MemeEditor/ModeSelector").then((module) => ({ default: module.ModeSelector })),
+);
 const ColorControls = lazy(() => import("./MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("./MemeEditor/MemeFineTune"));
 
@@ -30,7 +26,7 @@ export default function Main() {
   const [isPending, startTransition] = useTransition();
 
   // --- State with History ---
-  const { 
+  const {
     state: meme,
     updateState,
     updateTransient,
@@ -65,6 +61,7 @@ export default function Main() {
         hueRotate: 0,
         saturate: 100,
         invert: 0,
+        deepFry: 0,
       },
       texts: [
         { id: "top", content: "", x: 50, y: 5, rotation: 0 },
@@ -87,7 +84,7 @@ export default function Main() {
         }
         // Ensure legacy texts have rotation
         if (parsed.texts) {
-            parsed.texts = parsed.texts.map(t => ({ ...t, rotation: t.rotation ?? 0 }));
+          parsed.texts = parsed.texts.map((t) => ({ ...t, rotation: t.rotation ?? 0 }));
         }
         return { ...defaultState, ...parsed };
       } catch (e) {
@@ -97,13 +94,13 @@ export default function Main() {
     return defaultState;
   });
 
-  const [allMemes, setAllMemes] = useState([]); 
-  const [allGifs, setAllGifs] = useState([]);   
+  const [allMemes, setAllMemes] = useState([]);
+  const [allGifs, setAllGifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
   const [activeTool, setActiveTool] = useState("move"); // move | pen | eraser
-  const [flashColor, setFlashColor] = useState(null); 
+  const [flashColor, setFlashColor] = useState(null);
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
   const globalLastTapRef = useRef(0);
@@ -127,26 +124,69 @@ export default function Main() {
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
   const fineTuneRef = useRef(null);
 
+  // Deep Fry State
+  const [processedImage, setProcessedImage] = useState(null);
+  const deferredDeepFry = useDeferredValue(meme.filters?.deepFry);
+
+  useEffect(() => {
+    const level = parseInt(deferredDeepFry || 0, 10);
+
+    // Cleanup old URL to prevent memory leaks
+    if (processedImage && processedImage.startsWith("blob:")) {
+      URL.revokeObjectURL(processedImage);
+    }
+
+    if (level === 0) {
+      setProcessedImage(null);
+      return;
+    }
+
+    // No need for heavy debounce here because the Worker + DeferredValue handles the load.
+    // A small delay ensures we don't spam threads if user is scrubbing insanely fast.
+    const timer = setTimeout(async () => {
+      if (meme.mode === "video") {
+        toast("GIF freezes for performance, but export stays animated!", {
+          id: "fry-warning",
+          icon: (
+            <picture>
+              <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.webp" type="image/webp" />
+              <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.gif" alt="🚨" width="32" height="32" />
+            </picture>
+          ),
+        });
+      }
+
+      try {
+        const fried = await deepFryImage(meme.imageUrl, level);
+        startTransition(() => {
+          setProcessedImage(fried);
+        });
+      } catch (e) {
+        console.error("Deep Fry Failed", e);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [deferredDeepFry, meme.imageUrl]);
+
   useEffect(() => {
     if (meme.selectedId && fineTuneRef.current) {
-        const timer = setTimeout(() => {
-            const elementRect = fineTuneRef.current.getBoundingClientRect();
-            const elementTop = elementRect.top + window.scrollY;
-            const elementHeight = elementRect.height;
-            const windowHeight = window.innerHeight;
-            
-            // On mobile, scroll so fine-tune is at bottom, keeping canvas above in view
-            const isMobile = window.innerWidth < 768;
-            const targetScroll = isMobile 
-                ? elementTop - (windowHeight - elementHeight - 20) 
-                : elementTop - 150;
+      const timer = setTimeout(() => {
+        const elementRect = fineTuneRef.current.getBoundingClientRect();
+        const elementTop = elementRect.top + window.scrollY;
+        const elementHeight = elementRect.height;
+        const windowHeight = window.innerHeight;
 
-            window.scroll({
-                top: Math.max(0, targetScroll),
-                behavior: "smooth"
-            });
-        }, 150);
-        return () => clearTimeout(timer);
+        // On mobile, scroll so fine-tune is at bottom, keeping canvas above in view
+        const isMobile = window.innerWidth < 768;
+        const targetScroll = isMobile ? elementTop - (windowHeight - elementHeight - 20) : elementTop - 150;
+
+        window.scroll({
+          top: Math.max(0, targetScroll),
+          behavior: "smooth",
+        });
+      }, 150);
+      return () => clearTimeout(timer);
     }
   }, [meme.selectedId]);
 
@@ -238,8 +278,8 @@ export default function Main() {
   }, [draggedId, updateTransient]);
 
   useEffect(() => {
-    if (meme.mode === 'video') {
-      getCategories().then(cats => setCategories(cats.slice(0, 8)));
+    if (meme.mode === "video") {
+      getCategories().then((cats) => setCategories(cats.slice(0, 8)));
     }
   }, [meme.mode]);
 
@@ -273,8 +313,8 @@ export default function Main() {
       searchTimeoutRef.current = setTimeout(async () => {
         const autoResults = await getAutocomplete(val);
         startTransition(() => {
-            setSuggestions(autoResults);
-            setShowSuggestions(true);
+          setSuggestions(autoResults);
+          setShowSuggestions(true);
         });
       }, 300);
     } else {
@@ -304,7 +344,7 @@ export default function Main() {
         mode: "video",
         isVideo: false,
         id: first.id,
-        fontSize: calculateSmartFontSize(first.width, first.height, prev.texts)
+        fontSize: calculateSmartFontSize(first.width, first.height, prev.texts),
       }));
     } else {
       toast.error("No GIFs found");
@@ -314,7 +354,7 @@ export default function Main() {
 
   async function getMemeImage(forcedMode) {
     const requestId = ++requestCounterRef.current;
-    const activeMode = typeof forcedMode === 'string' ? forcedMode : meme.mode;
+    const activeMode = typeof forcedMode === "string" ? forcedMode : meme.mode;
     setGenerating(true);
     try {
       if (activeMode === "video") {
@@ -350,7 +390,7 @@ export default function Main() {
           const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
           if (!response.ok) throw new Error();
           const blob = await response.blob();
-          const dataUrl = await new Promise(r => {
+          const dataUrl = await new Promise((r) => {
             const reader = new FileReader();
             reader.onload = () => r(reader.result);
             reader.readAsDataURL(blob);
@@ -362,7 +402,7 @@ export default function Main() {
             name: newMeme.name.replace(/\s+/g, "-"),
             fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
             mode: "image",
-            isVideo: false
+            isVideo: false,
           }));
         } catch {
           if (requestId !== requestCounterRef.current) return;
@@ -372,7 +412,7 @@ export default function Main() {
             name: newMeme.name.replace(/\s+/g, "-"),
             fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
             mode: "image",
-            isVideo: false
+            isVideo: false,
           }));
         }
       }
@@ -383,26 +423,26 @@ export default function Main() {
 
   function handleTextChange(id, value) {
     startTransition(() => {
-        updateState((prev) => {
+      updateState((prev) => {
         const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
         const lastText = newTexts[newTexts.length - 1];
-        
+
         // If the last text field is not empty, add a new one
         if (lastText.content.trim().length > 0) {
-            newTexts.push({ 
-                id: crypto.randomUUID(), 
-                content: "", 
-                x: 50, 
-                y: 50,
-                rotation: 0
-            });
+          newTexts.push({
+            id: crypto.randomUUID(),
+            content: "",
+            x: 50,
+            y: 50,
+            rotation: 0,
+          });
         }
-        
+
         return {
-            ...prev,
-            texts: newTexts,
+          ...prev,
+          texts: newTexts,
         };
-        });
+      });
     });
   }
 
@@ -416,19 +456,20 @@ export default function Main() {
 
   function resetFilters() {
     startTransition(() => {
-        updateState((prev) => ({
+      updateState((prev) => ({
         ...prev,
         filters: {
-            contrast: 100,
-            brightness: 100,
-            blur: 0,
-            grayscale: 0,
-            sepia: 0,
-            hueRotate: 0,
-            saturate: 100,
-            invert: 0,
+          contrast: 100,
+          brightness: 100,
+          blur: 0,
+          grayscale: 0,
+          sepia: 0,
+          hueRotate: 0,
+          saturate: 100,
+          invert: 0,
+          deepFry: 0,
         },
-        }));
+      }));
     });
     toast("Filters reset", { icon: "🎨" });
   }
@@ -447,27 +488,29 @@ export default function Main() {
   function handleFilterChange(event) {
     const { value, name } = event.currentTarget;
     startTransition(() => {
-        updateTransient((prev) => ({
+      updateTransient((prev) => ({
         ...prev,
         filters: { ...prev.filters, [name]: value },
-        }));
+      }));
     });
   }
 
-  function handleStyleCommit() { updateState((prev) => prev); }
+  function handleStyleCommit() {
+    updateState((prev) => prev);
+  }
 
   function handleDrawCommit(newPath) {
     startTransition(() => {
-        updateState((prev) => ({
-            ...prev,
-            drawings: [...prev.drawings, newPath]
-        }));
+      updateState((prev) => ({
+        ...prev,
+        drawings: [...prev.drawings, newPath],
+      }));
     });
   }
 
   function handleClearDrawings() {
     startTransition(() => {
-        updateState((prev) => ({ ...prev, drawings: [] }));
+      updateState((prev) => ({ ...prev, drawings: [] }));
     });
     toast.success("Drawings cleared");
   }
@@ -478,12 +521,12 @@ export default function Main() {
       const localUrl = URL.createObjectURL(file);
       const isGif = file.type === "image/gif";
       const isVideo = file.type.startsWith("video/");
-      
+
       updateState((prev) => ({
         ...prev,
         imageUrl: localUrl,
         name: file.name.split(".")[0],
-        mode: (isGif || isVideo) ? "video" : "image",
+        mode: isGif || isVideo ? "video" : "image",
         isVideo: isVideo,
       }));
     }
@@ -516,12 +559,13 @@ export default function Main() {
           hueRotate: 0,
           saturate: 100,
           invert: 0,
+          deepFry: 0,
         },
       }));
     });
   }
 
-  function addSticker(emoji, type = 'emoji') {
+  function addSticker(emoji, type = "emoji") {
     updateState((prev) => ({
       ...prev,
       stickers: [...prev.stickers, { id: crypto.randomUUID(), url: emoji, type, x: 50, y: 50 }],
@@ -540,14 +584,14 @@ export default function Main() {
   function handleCanvasPointerDown() {
     // Clear selection on background click
     startTransition(() => {
-      updateState(prev => ({ ...prev, selectedId: null }));
+      updateState((prev) => ({ ...prev, selectedId: null }));
     });
     globalLastTapRef.current = 0;
   }
 
   function handleFineTune(axis, value) {
     if (!meme.selectedId) return;
-    
+
     startTransition(() => {
       updateTransient((prev) => ({
         ...prev,
@@ -562,85 +606,91 @@ export default function Main() {
 
   function generateMagicCaption() {
     setIsMagicGenerating(true);
-    
+
     // Simulate AI thinking time
     setTimeout(() => {
-        const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
-        const randomIndex = Math.floor(Math.random() * category.length);
-        const captions = category[randomIndex];
+      const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
+      const randomIndex = Math.floor(Math.random() * category.length);
+      const captions = category[randomIndex];
 
-        updateState((prev) => {
-          const newTexts = prev.texts.map((t, i) => ({
-            ...t,
-            content: captions[i] || "",
-          }));
+      updateState((prev) => {
+        const newTexts = prev.texts.map((t, i) => ({
+          ...t,
+          content: captions[i] || "",
+        }));
 
-          // Logic to add new field if last one is filled (same as handleTextChange)
-          const lastText = newTexts[newTexts.length - 1];
-          if (lastText && lastText.content.trim().length > 0) {
-            newTexts.push({ 
-                id: crypto.randomUUID(), 
-                content: "", 
-                x: 50, 
-                y: 50 
-            });
-          }
+        // Logic to add new field if last one is filled (same as handleTextChange)
+        const lastText = newTexts[newTexts.length - 1];
+        if (lastText && lastText.content.trim().length > 0) {
+          newTexts.push({
+            id: crypto.randomUUID(),
+            content: "",
+            x: 50,
+            y: 50,
+          });
+        }
 
-          return {
-            ...prev,
-            texts: newTexts,
-          };
-        });
+        return {
+          ...prev,
+          texts: newTexts,
+        };
+      });
 
-        toast("Magic logic applied! ✨", {
-          icon: "🪄",
-          duration: 2000,
-        });
-        setStatusMessage("Magic captions generated.");
-        setIsMagicGenerating(false);
+      toast("Magic logic applied! ✨", {
+        icon: "🪄",
+        duration: 2000,
+      });
+      setStatusMessage("Magic captions generated.");
+      setIsMagicGenerating(false);
     }, 800);
   }
 
-  const handlePointerDown = useCallback((e, id) => {
-    e.stopPropagation();
+  const handlePointerDown = useCallback(
+    (e, id) => {
+      e.stopPropagation();
 
-    startPosRef.current = { x: e.clientX, y: e.clientY };
-    const isSticker = meme.stickers.some((s) => s.id === id);
-    const isText = meme.texts.some((t) => t.id === id);
+      startPosRef.current = { x: e.clientX, y: e.clientY };
+      const isSticker = meme.stickers.some((s) => s.id === id);
+      const isText = meme.texts.some((t) => t.id === id);
 
-    if (isSticker) {
-      const now = Date.now();
-      if (lastTapRef.current.id === id && now - lastTapRef.current.time < 450) {
-        removeSticker(id);
-        lastTapRef.current = { id: null, time: 0 };
-        return;
-      }
-      lastTapRef.current = { id, time: now };
+      if (isSticker) {
+        const now = Date.now();
+        if (lastTapRef.current.id === id && now - lastTapRef.current.time < 450) {
+          removeSticker(id);
+          lastTapRef.current = { id: null, time: 0 };
+          return;
+        }
+        lastTapRef.current = { id, time: now };
 
-      longPressTimerRef.current = setTimeout(() => {
-        removeSticker(id);
-        setDraggedId(null);
-        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-      }, 600);
-    } else if (isText) {
+        longPressTimerRef.current = setTimeout(() => {
+          removeSticker(id);
+          setDraggedId(null);
+          if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+        }, 600);
+      } else if (isText) {
         // Long Press to Select Text
         longPressTimerRef.current = setTimeout(() => {
-            startTransition(() => {
-                updateState(prev => ({ ...prev, selectedId: id }));
-            });
-            setDraggedId(null); // Stop dragging if selection triggers
-            if (navigator.vibrate) navigator.vibrate(50);
-            toast("Text Selected!", { icon: "✨", duration: 1000 });
+          startTransition(() => {
+            updateState((prev) => ({ ...prev, selectedId: id }));
+          });
+          setDraggedId(null); // Stop dragging if selection triggers
+          if (navigator.vibrate) navigator.vibrate(50);
+          toast("Text Selected!", { icon: "✨", duration: 1000 });
         }, 350);
-    }
+      }
 
-    setDraggedId(id);
-    if (navigator.vibrate) navigator.vibrate(20);
-  }, [meme.stickers, meme.texts, updateState]);
+      setDraggedId(id);
+      if (navigator.vibrate) navigator.vibrate(20);
+    },
+    [meme.stickers, meme.texts, updateState],
+  );
 
   async function handleDownload() {
     if (!memeRef.current) return;
     if (meme.mode === "video") {
+      const isDeepFrying = (meme.filters?.deepFry || 0) > 0;
+      const loadingMsg = isDeepFrying ? "Deep frying every frame... (this takes longer) 🍟" : "Encoding GIF...";
+
       const promise = (async () => {
         const blob = await exportGif(meme, meme.texts, meme.stickers);
         if (meme.id) registerShare(meme.id, searchQuery);
@@ -652,10 +702,14 @@ export default function Main() {
         URL.revokeObjectURL(url);
         triggerFireworks();
       })();
-      toast.promise(promise, { 
-        loading: "Encoding GIF...", 
-        success: "Downloaded!", 
-        error: (err) => { console.error("GIF Export Error:", err); return "Export failed"; } 
+
+      toast.promise(promise, {
+        loading: loadingMsg,
+        success: "Downloaded!",
+        error: (err) => {
+          console.error("GIF Export Error:", err);
+          return "Export failed";
+        },
       });
     } else {
       const promise = (async () => {
@@ -666,10 +720,13 @@ export default function Main() {
         link.click();
         triggerFireworks();
       })();
-      toast.promise(promise, { 
-        loading: "Generating...", 
-        success: "Downloaded!", 
-        error: (err) => { console.error("Image Export Error:", err); return "Export failed"; } 
+      toast.promise(promise, {
+        loading: "Generating...",
+        success: "Downloaded!",
+        error: (err) => {
+          console.error("Image Export Error:", err);
+          return "Export failed";
+        },
       });
     }
   }
@@ -677,7 +734,7 @@ export default function Main() {
   async function handleShare() {
     if (!memeRef.current) return;
     if (meme.mode === "video") {
-      const hasContent = meme.texts.some(t => t.content?.trim()) || meme.stickers.length > 0;
+      const hasContent = meme.texts.some((t) => t.content?.trim()) || meme.stickers.length > 0;
       if (hasContent) {
         toast("Generating high-quality file for manual sharing...", { duration: 4000 });
         handleDownload();
@@ -698,40 +755,40 @@ export default function Main() {
           toast.success("Shared!");
         }
       } catch (e) {
-        if (e.name !== 'AbortError') {
-            console.error("Share Error:", e);
-            try {
+        if (e.name !== "AbortError") {
+          console.error("Share Error:", e);
+          try {
             const htmlBlob = new Blob([`<img src="${shareUrl}" alt="GIF" />`], { type: "text/html" });
             const textBlob = new Blob([shareUrl], { type: "text/plain" });
             await navigator.clipboard.write([
-                new ClipboardItem({
+              new ClipboardItem({
                 "text/html": htmlBlob,
                 "text/plain": textBlob,
-                }),
+              }),
             ]);
             toast.success("GIF copied to clipboard!");
-            } catch (err) {
+          } catch (err) {
             await navigator.clipboard.writeText(shareUrl);
             toast.success("Link copied!");
-            }
+          }
         }
       }
     } else {
       try {
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-        const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+        const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
         const file = new File([blob], `meme.png`, { type: "image/png" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file] });
-            toast.success("Shared!");
+          await navigator.share({ files: [file] });
+          toast.success("Shared!");
         } else {
-            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-            toast.success("Copied!");
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast.success("Copied!");
         }
       } catch (e) {
-        if (e.name !== 'AbortError') {
-            console.error("Share Error:", e);
-            toast.error("Share failed");
+        if (e.name !== "AbortError") {
+          console.error("Share Error:", e);
+          toast.error("Share failed");
         }
       }
     }
@@ -742,153 +799,166 @@ export default function Main() {
     setSuggestions([]);
     updateState((prev) => ({ ...prev, mode: "image" }));
     if (allMemes.length === 0) {
-        setLoading(true);
-        fetch("https://api.imgflip.com/get_memes").then(r => r.json()).then(d => {
-            setAllMemes(d.data.memes);
-            setLoading(false);
+      setLoading(true);
+      fetch("https://api.imgflip.com/get_memes")
+        .then((r) => r.json())
+        .then((d) => {
+          setAllMemes(d.data.memes);
+          setLoading(false);
         });
     }
   }
 
-  const selectedText = meme.selectedId ? meme.texts.find(t => t.id === meme.selectedId) : null;
+  const selectedText = meme.selectedId ? meme.texts.find((t) => t.id === meme.selectedId) : null;
 
   return (
     <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-in fade-in duration-500 relative">
-      <div className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
-        style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }} />
+      <div
+        className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
+        style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }}
+      />
 
       <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
-        <MemeInputs 
-          texts={meme.texts} 
-          handleTextChange={handleTextChange} 
-          onAddSticker={addSticker} 
-          onMagicCaption={generateMagicCaption} 
+        <MemeInputs
+          texts={meme.texts}
+          handleTextChange={handleTextChange}
+          onAddSticker={addSticker}
+          onMagicCaption={generateMagicCaption}
           isMagicGenerating={isMagicGenerating}
         />
         <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-            <MemeActions
+          <MemeActions
             onFileUpload={handleFileUpload}
             onReset={handleReset}
             onDownload={handleDownload}
             onShare={handleShare}
-            />
+          />
         </Suspense>
       </div>
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
         <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-            <ModeSelector 
-            mode={meme.mode} 
+          <ModeSelector
+            mode={meme.mode}
             onModeChange={(e) => {
-                const m = e.target.value; 
-                startTransition(() => {
-                    updateState((prev) => ({ ...prev, mode: m }));
-                    if (m === "image") clearSearch(); 
-                    getMemeImage(m);
-                });
-                }} 
-            />
+              const m = e.target.value;
+              startTransition(() => {
+                updateState((prev) => ({ ...prev, mode: m }));
+                if (m === "image") clearSearch();
+                getMemeImage(m);
+              });
+            }}
+          />
         </Suspense>
 
-          {meme.mode === "video" && (
-            <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-                <GifSearch 
-                searchQuery={searchQuery}
-                onSearchInput={handleSearchInput}
-                onFocus={() => setShowSuggestions(true)}
-                onClear={clearSearch}
-                suggestions={suggestions}
-                showSuggestions={showSuggestions}
-                categories={categories}
-                onSelectSuggestion={selectSuggestion}
-                onKeyDown={(e) => { if (e.key === 'Enter') { setShowSuggestions(false); performSearch(searchQuery); }}}
-                containerRef={searchContainerRef}
+        {meme.mode === "video" && (
+          <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+            <GifSearch
+              searchQuery={searchQuery}
+              onSearchInput={handleSearchInput}
+              onFocus={() => setShowSuggestions(true)}
+              onClear={clearSearch}
+              suggestions={suggestions}
+              showSuggestions={showSuggestions}
+              categories={categories}
+              onSelectSuggestion={selectSuggestion}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setShowSuggestions(false);
+                  performSearch(searchQuery);
+                }
+              }}
+              containerRef={searchContainerRef}
+            />
+          </Suspense>
+        )}
+        <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
+          <MemeToolbar
+            meme={meme}
+            activeTool={activeTool}
+            setActiveTool={setActiveTool}
+            handleStyleChange={handleStyleChange}
+            handleFilterChange={handleFilterChange}
+            handleStyleCommit={handleStyleCommit}
+            onResetFilters={resetFilters}
+            onClearDrawings={handleClearDrawings}
+          />
+          <button
+            onClick={() => {
+              if (navigator.vibrate) navigator.vibrate(30);
+              setPingKey(Date.now());
+              getMemeImage();
+            }}
+            disabled={loading || generating}
+            className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-brand hover:bg-brand-dark transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
+          >
+            {pingKey && <span key={pingKey} className="absolute inset-0 animate-radar pointer-events-none" />}
+            <div className="relative z-10 flex items-center justify-center gap-2">
+              {generating ? (
+                <Loader2 className="animate-spin w-5 h-5" />
+              ) : meme.mode === "video" ? (
+                <Video className="w-5 h-5" />
+              ) : (
+                <RefreshCcw className="w-5 h-5" />
+              )}
+              <span className="text-lg">
+                {generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}
+              </span>
+            </div>
+          </button>
+          <MemeCanvas
+            ref={memeRef}
+            meme={meme}
+            overrideImageUrl={processedImage}
+            loading={loading}
+            draggedId={draggedId}
+            selectedId={meme.selectedId}
+            activeTool={activeTool}
+            onDrawCommit={handleDrawCommit}
+            onFineTune={handleFineTune}
+            onFineTuneCommit={handleFineTuneCommit}
+            onCenterText={handleCenterText}
+            onPointerDown={handlePointerDown}
+            onRemoveSticker={removeSticker}
+            onCanvasPointerDown={handleCanvasPointerDown}
+          />
+          {selectedText && (
+            <Suspense fallback={null}>
+              <div ref={fineTuneRef}>
+                <MemeFineTune
+                  selectedText={selectedText}
+                  onFineTune={handleFineTune}
+                  onFineTuneCommit={handleFineTuneCommit}
+                  onCenterText={handleCenterText}
                 />
+              </div>
             </Suspense>
           )}
-          <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
-            <MemeToolbar 
-                meme={meme} 
-                activeTool={activeTool}
-                setActiveTool={setActiveTool}
-                handleStyleChange={handleStyleChange} 
-                handleFilterChange={handleFilterChange} 
-                handleStyleCommit={handleStyleCommit} 
-                onResetFilters={resetFilters}
-                onClearDrawings={handleClearDrawings}
-            />
-            <button 
-              onClick={() => { 
-                if (navigator.vibrate) navigator.vibrate(30);
-                setPingKey(Date.now()); 
-                getMemeImage(); 
-              }} 
-              disabled={loading || generating} 
-              className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-brand hover:bg-brand-dark transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
-            >
-              {pingKey && (
-                <span 
-                  key={pingKey} 
-                  className="absolute inset-0 animate-radar pointer-events-none" 
-                />
-              )}
-              <div className="relative z-10 flex items-center justify-center gap-2">
-                {generating ? <Loader2 className="animate-spin w-5 h-5" /> : meme.mode === "video" ? <Video className="w-5 h-5" /> : <RefreshCcw className="w-5 h-5" />}
-                <span className="text-lg">{generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}</span>
-              </div>
-            </button>
-            <MemeCanvas 
-              ref={memeRef} 
-              meme={meme} 
-              loading={loading} 
-              draggedId={draggedId} 
-              selectedId={meme.selectedId}
-              activeTool={activeTool}
-              onDrawCommit={handleDrawCommit}
-              onFineTune={handleFineTune}
-              onFineTuneCommit={handleFineTuneCommit}
-              onCenterText={handleCenterText}
-              onPointerDown={handlePointerDown} 
-              onRemoveSticker={removeSticker} 
-              onCanvasPointerDown={handleCanvasPointerDown} 
-            />
-            {selectedText && (
-                <Suspense fallback={null}>
-                    <div ref={fineTuneRef}>
-                      <MemeFineTune 
-                          selectedText={selectedText}
-                          onFineTune={handleFineTune}
-                          onFineTuneCommit={handleFineTuneCommit}
-                          onCenterText={handleCenterText}
-                      />
-                    </div>
-                </Suspense>
-            )}
-          </div>
+        </div>
 
-          {/* Undo / Redo Controls */}
-          <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
-            <button
-              onClick={undo}
-              disabled={!canUndo}
-              className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
-            >
-              <Undo2 className="w-4 h-4" /> Undo
-            </button>
-            <button
-              onClick={redo}
-              disabled={!canRedo}
-              className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
-            >
-              <Redo2 className="w-4 h-4" /> Redo
-            </button>
-            <button
-              onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })}
-              className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
-          </div>
+        {/* Undo / Redo Controls */}
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
+          >
+            <Undo2 className="w-4 h-4" /> Undo
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
+          >
+            <Redo2 className="w-4 h-4" /> Redo
+          </button>
+          <button
+            onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })}
+            className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </main>
   );

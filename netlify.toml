@@ -1,11 +1,11 @@
 [[redirects]]
-  from = "/ingest/static/*"
+  from = "/ph/static/*"
   to = "https://us-assets.i.posthog.com/static/:splat"
   status = 200
   force = true
 
 [[redirects]]
-  from = "/ingest/*"
+  from = "/ph/*"
   to = "https://us.i.posthog.com/:splat"
   status = 200
   force = true

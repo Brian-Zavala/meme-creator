@@ -49,6 +49,7 @@ export default function Main() {
       fontFamily: "Impact",
       fontSize: 30,
       paddingTop: 0,
+      letterSpacing: 0,
       drawColor: "#ff0000",
       drawWidth: 5,
       maxWidth: 100,

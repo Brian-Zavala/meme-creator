@@ -333,6 +333,61 @@ export async function exportGif(meme, texts, stickers) {
           renderCtx.restore();
         }
 
+        // --- DEEP FRY EFFECT (Frame by Frame) ---
+        const deepFryLevel = meme.filters?.deepFry || 0;
+        if (deepFryLevel > 0) {
+            // 1. Pixel Destruction
+            const imageData = renderCtx.getImageData(0, 0, exportWidth, exportHeight);
+            const data = imageData.data;
+
+            const contrastFactor = 1 + (deepFryLevel / 20); 
+            const noiseAmount = deepFryLevel * 1.5;
+            const satBoost = 1 + (deepFryLevel / 50);
+
+            for (let p = 0; p < data.length; p += 4) {
+                let r = data[p];
+                let g = data[p + 1];
+                let b = data[p + 2];
+
+                // Noise (Random per frame = Animated Static!)
+                const noise = (Math.random() - 0.5) * noiseAmount;
+                r += noise;
+                g += noise + (deepFryLevel * 0.2); // Yellow/Green tint
+                b += noise;
+
+                // Contrast
+                r = (r - 128) * contrastFactor + 128;
+                g = (g - 128) * contrastFactor + 128;
+                b = (b - 128) * contrastFactor + 128;
+
+                // Saturation
+                const gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
+                r = gray + (r - gray) * satBoost;
+                g = gray + (g - gray) * satBoost;
+                b = gray + (b - gray) * satBoost;
+
+                // Clamp
+                data[p] = Math.max(0, Math.min(255, r));
+                data[p + 1] = Math.max(0, Math.min(255, g));
+                data[p + 2] = Math.max(0, Math.min(255, b));
+            }
+            renderCtx.putImageData(imageData, 0, 0);
+
+            // 2. JPEG Artifacts (The "Crunch")
+            // We must go async here to load the degraded image
+            const quality = Math.max(0.01, 0.9 - (deepFryLevel / 110)); 
+            const jpegUrl = renderCanvas.toDataURL('image/jpeg', quality);
+            
+            await new Promise((resolveFrame) => {
+                const crunchImg = new Image();
+                crunchImg.onload = () => {
+                    renderCtx.drawImage(crunchImg, 0, 0);
+                    resolveFrame();
+                };
+                crunchImg.src = jpegUrl;
+            });
+        }
+
         // Add to GIF
         // info.delay is in 1/100ths of a second. Math.max(20, ...) ensures we don't have 0ms frames.
         const delay = Math.max(20, (info.delay || 10) * 10);

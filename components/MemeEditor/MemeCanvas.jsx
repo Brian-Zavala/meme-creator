@@ -1,11 +1,15 @@
 import { forwardRef, useRef, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
-const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, activeTool, onDrawCommit, onFineTune, onFineTuneCommit, onCenterText, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
+const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, selectedId, activeTool, onDrawCommit, onFineTune, onFineTuneCommit, onCenterText, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
   const description = `Meme preview of ${meme.name || "Custom Image"} with ${meme.texts.length} text captions and ${meme.stickers?.length || 0} stickers`;
   const drawCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const currentPathRef = useRef([]);
+  
+  const displayUrl = overrideImageUrl || meme.imageUrl;
+  const isVideo = meme.isVideo && !overrideImageUrl;
+
 
   // Render Drawings
   useEffect(() => {
@@ -124,10 +128,10 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, activeToo
             onPointerUp={handleDrawEnd}
             onPointerLeave={handleDrawEnd}
         />
-        {meme.isVideo ? (
+        {isVideo ? (
             <video
-                key={meme.imageUrl}
-                src={meme.imageUrl}
+                key={displayUrl}
+                src={displayUrl}
                 className="w-full max-h-[70vh] object-contain block pointer-events-none select-none"
                 draggable="false"
                 loop
@@ -150,7 +154,7 @@ const MemeCanvas = forwardRef(({ meme, loading, draggedId, selectedId, activeToo
             />
         ) : (
             <img
-            src={meme.imageUrl}
+            src={displayUrl}
             className="w-full max-h-[70vh] object-contain block pointer-events-none select-none"
             alt={`Template: ${meme.name}`}
             draggable="false"

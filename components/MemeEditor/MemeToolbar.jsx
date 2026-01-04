@@ -18,6 +18,7 @@ import {
   Pencil,
   Eraser,
   Trash2,
+  Flame,
 } from "lucide-react";
 
 const ColorControls = lazy(() => import("./ColorControls"));
@@ -498,6 +499,38 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="w-full h-px bg-slate-800 shrink-0 my-2" aria-hidden="true" />
+
+                {/* Deep Fry Control */}
+                <div className="flex flex-col gap-4 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase text-red-500 tracking-wider flex items-center gap-2">
+                            Deep Fry
+                        </span>
+                        {meme.filters?.deepFry > 0 && (
+                            <span className="text-[10px] font-bold text-red-400">{meme.filters.deepFry}%</span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-4 w-full">
+                        <Flame className={`w-5 h-5 transition-colors ${meme.filters?.deepFry > 0 ? 'text-red-500 animate-pulse' : 'text-slate-600'}`} />
+                        <input
+                            type="range" min="0" max="100" name="deepFry"
+                            value={meme.filters?.deepFry ?? 0}
+                            onChange={(e) => {
+                                if (navigator.vibrate) navigator.vibrate(5);
+                                handleFilterChange(e);
+                            }}
+                            onMouseUp={handleStyleCommit} 
+                            onTouchEnd={handleStyleCommit}
+                            className="range-slider w-full cursor-pointer h-2 rounded-full accent-red-500"
+                            style={{
+                                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) 100%)`
+                            }}
+                            title="Deep Fry Level"
+                        />
+                    </div>
                 </div>
               </div>
             )}

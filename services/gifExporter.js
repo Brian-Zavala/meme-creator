@@ -235,6 +235,8 @@ export async function exportGif(meme, texts, stickers) {
           const fontSize = meme.fontSize || 40;
           const stroke = Math.max(1, fontSize / 25);
           const rotation = (textItem.rotation || 0) * (Math.PI / 180);
+          const maxWidth = ((meme.maxWidth || 80) / 100) * exportWidth;
+          const lineHeight = fontSize * 1.2;
 
           renderCtx.save();
           renderCtx.translate(x, y);
@@ -248,44 +250,81 @@ export async function exportGif(meme, texts, stickers) {
           renderCtx.textAlign = 'center';
           renderCtx.textBaseline = 'middle';
           
+          // --- Text Wrapping Logic ---
+          const lines = [];
+          const rawLines = textItem.content.toUpperCase().split('\n');
+
+          for (const rawLine of rawLines) {
+              const words = rawLine.split(' ');
+              let currentLine = words[0];
+
+              for (let i = 1; i < words.length; i++) {
+                  const word = words[i];
+                  const width = renderCtx.measureText(currentLine + " " + word).width;
+                  if (width < maxWidth) {
+                      currentLine += " " + word;
+                  } else {
+                      lines.push(currentLine);
+                      currentLine = word;
+                  }
+              }
+              lines.push(currentLine);
+          }
+
+          // Calculate vertical offset to center the text block
+          const totalHeight = lines.length * lineHeight;
+          const startY = -(totalHeight / 2) + (lineHeight / 2);
+
+          // Draw Text Background (if applicable)
+          if (meme.textBgColor && meme.textBgColor !== 'transparent') {
+             // Calculate bounding box for the whole block
+             let maxLineWidth = 0;
+             lines.forEach(line => {
+                 const w = renderCtx.measureText(line).width;
+                 if (w > maxLineWidth) maxLineWidth = w;
+             });
+
+             // Match CSS padding: 0.25em vertical, 0.5em horizontal
+             const bgWidth = maxLineWidth + (fontSize * 1.0);
+             const bgHeight = totalHeight + (fontSize * 0.5);
+             
+             renderCtx.fillStyle = meme.textBgColor;
+             const radius = fontSize * 0.15;
+             const bx = -bgWidth / 2;
+             const by = -(totalHeight / 2) - (fontSize * 0.25); 
+             
+             renderCtx.beginPath();
+             renderCtx.moveTo(bx + radius, by);
+             renderCtx.lineTo(bx + bgWidth - radius, by);
+             renderCtx.quadraticCurveTo(bx + bgWidth, by, bx + bgWidth, by + radius);
+             renderCtx.lineTo(bx + bgWidth, by + bgHeight - radius);
+             renderCtx.quadraticCurveTo(bx + bgWidth, by + bgHeight, bx + bgWidth - radius, by + bgHeight);
+             renderCtx.lineTo(bx + radius, by + bgHeight);
+             renderCtx.quadraticCurveTo(bx, by + bgHeight, bx, by + bgHeight - radius);
+             renderCtx.lineTo(bx, by + radius);
+             renderCtx.quadraticCurveTo(bx, by, bx + radius, by);
+             renderCtx.closePath();
+             renderCtx.fill();
+          }
+
+          // Draw Each Line
           renderCtx.shadowColor = 'rgba(0,0,0,0.8)';
           renderCtx.shadowBlur = 4;
           renderCtx.shadowOffsetY = 2;
-
-          const content = textItem.content.toUpperCase();
-          const metrics = renderCtx.measureText(content);
-          
-          if (meme.textBgColor && meme.textBgColor !== 'transparent') {
-            const bgWidth = metrics.width + (fontSize * 0.4);
-            const bgHeight = fontSize * 1.2;
-            
-            renderCtx.fillStyle = meme.textBgColor;
-            const radius = fontSize * 0.15;
-            const bx = -bgWidth / 2;
-            const by = -bgHeight / 2;
-            
-            renderCtx.beginPath();
-            renderCtx.moveTo(bx + radius, by);
-            renderCtx.lineTo(bx + bgWidth - radius, by);
-            renderCtx.quadraticCurveTo(bx + bgWidth, by, bx + bgWidth, by + radius);
-            renderCtx.lineTo(bx + bgWidth, by + bgHeight - radius);
-            renderCtx.quadraticCurveTo(bx + bgWidth, by + bgHeight, bx + bgWidth - radius, by + bgHeight);
-            renderCtx.lineTo(bx + radius, by + bgHeight);
-            renderCtx.quadraticCurveTo(bx, by + bgHeight, bx, by + bgHeight - radius);
-            renderCtx.lineTo(bx, by + radius);
-            renderCtx.quadraticCurveTo(bx, by, bx + radius, by);
-            renderCtx.closePath();
-            renderCtx.fill();
-          }
-          
           renderCtx.lineWidth = stroke * 2;
           renderCtx.lineJoin = 'round';
-          
           renderCtx.strokeStyle = meme.textShadow || '#000000';
-          renderCtx.strokeText(content, 0, 0);
-
           renderCtx.fillStyle = meme.textColor || '#ffffff';
-          renderCtx.fillText(content, 0, 0);
+
+          lines.forEach((line, index) => {
+              const lineY = startY + (index * lineHeight);
+              
+              // Stroke
+              renderCtx.strokeText(line, 0, lineY);
+              
+              // Fill
+              renderCtx.fillText(line, 0, lineY);
+          });
 
           renderCtx.shadowColor = 'transparent';
           renderCtx.shadowBlur = 0;

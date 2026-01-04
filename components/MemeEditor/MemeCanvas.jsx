@@ -126,8 +126,8 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             paddingTop: meme.paddingTop ? `${meme.paddingTop}%` : '0',
             alignItems: meme.paddingTop > 0 ? 'flex-start' : 'center',
             aspectRatio: meme.paddingTop > 0 ? undefined : aspectRatio,
-            width: 'auto',
-            height: 'auto',
+            width: meme.paddingTop > 0 ? '100%' : 'auto',
+            height: meme.paddingTop > 0 ? 'auto' : '70vh',
             maxWidth: '100%',
             maxHeight: '70vh'
         }}

@@ -8,8 +8,8 @@ const options = {
   api_host: import.meta.env.DEV 
     ? import.meta.env.VITE_PUBLIC_POSTHOG_HOST 
     : `${window.location.origin}/ingest`,
-  defaults: '2025-11-30',
   ui_host: 'https://us.posthog.com',
+  defaults: '2025-11-30',
 }
 
 createRoot(document.getElementById('root')).render(

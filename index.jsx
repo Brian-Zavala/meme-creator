@@ -7,7 +7,7 @@ import { PostHogProvider } from 'posthog-js/react'
 const options = {
   api_host: import.meta.env.DEV 
     ? import.meta.env.VITE_PUBLIC_POSTHOG_HOST 
-    : `${window.location.origin}/ingest`,
+    : `${window.location.origin}/ph`,
   ui_host: 'https://us.posthog.com',
   defaults: '2025-11-30',
 }

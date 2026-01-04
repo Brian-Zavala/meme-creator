@@ -109,6 +109,11 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
     currentPathRef.current = [];
   };
 
+  let containerAspect = aspectRatio;
+  if (meme.paddingTop > 0 && aspectRatio > 0) {
+       containerAspect = 1 / ((1 / aspectRatio) + (meme.paddingTop / 100));
+  }
+
   return (
     <div 
       onPointerDown={onCanvasPointerDown}
@@ -125,9 +130,9 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             backgroundColor: meme.paddingTop > 0 ? '#ffffff' : '#000000', 
             paddingTop: meme.paddingTop ? `${meme.paddingTop}%` : '0',
             alignItems: meme.paddingTop > 0 ? 'flex-start' : 'center',
-            aspectRatio: meme.paddingTop > 0 ? undefined : aspectRatio,
-            width: meme.paddingTop > 0 ? '100%' : 'auto',
-            height: meme.paddingTop > 0 ? 'auto' : '70vh',
+            aspectRatio: containerAspect,
+            width: 'auto',
+            height: '70vh',
             maxWidth: '100%',
             maxHeight: '70vh'
         }}

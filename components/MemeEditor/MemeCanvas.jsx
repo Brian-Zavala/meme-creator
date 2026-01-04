@@ -5,11 +5,18 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
   const description = `Meme preview of ${meme.name || "Custom Image"} with ${meme.texts.length} text captions and ${meme.stickers?.length || 0} stickers`;
   const drawCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState(1);
   const currentPathRef = useRef([]);
   
   const displayUrl = overrideImageUrl || meme.imageUrl;
   const isVideo = meme.isVideo && !overrideImageUrl;
 
+  const handleMediaLoad = (e) => {
+    const { naturalWidth, naturalHeight, videoWidth, videoHeight } = e.target;
+    const w = naturalWidth || videoWidth || 1;
+    const h = naturalHeight || videoHeight || 1;
+    setAspectRatio(w / h);
+  };
 
   // Render Drawings
   useEffect(() => {
@@ -113,11 +120,16 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
       <div
         ref={ref}
         onPointerDown={onCanvasPointerDown}
-        className="relative w-full flex items-center justify-center overflow-hidden"
+        className="relative flex items-center justify-center overflow-hidden shadow-2xl mx-auto"
         style={{ 
             backgroundColor: meme.paddingTop > 0 ? '#ffffff' : '#000000', 
             paddingTop: meme.paddingTop ? `${meme.paddingTop}%` : '0',
-            alignItems: meme.paddingTop > 0 ? 'flex-start' : 'center'
+            alignItems: meme.paddingTop > 0 ? 'flex-start' : 'center',
+            aspectRatio: meme.paddingTop > 0 ? undefined : aspectRatio,
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '100%',
+            maxHeight: '70vh'
         }}
       >
         <canvas 
@@ -132,12 +144,13 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             <video
                 key={displayUrl}
                 src={displayUrl}
-                className="w-full max-h-[70vh] object-contain block pointer-events-none select-none"
+                className="w-full h-full object-contain block pointer-events-none select-none"
                 draggable="false"
                 loop
                 autoPlay
                 playsInline
                 crossOrigin="anonymous"
+                onLoadedMetadata={handleMediaLoad}
                 style={{
                     WebkitTouchCallout: "none",
                     filter: `
@@ -155,10 +168,11 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
         ) : (
             <img
             src={displayUrl}
-            className="w-full max-h-[70vh] object-contain block pointer-events-none select-none"
+            className="w-full h-full object-contain block pointer-events-none select-none"
             alt={`Template: ${meme.name}`}
             draggable="false"
             crossOrigin="anonymous"
+            onLoad={handleMediaLoad}
             style={{
                 WebkitTouchCallout: "none",
                 filter: `

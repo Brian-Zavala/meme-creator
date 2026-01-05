@@ -4,6 +4,7 @@ import { Loader2, Plus, Image as ImageIcon, Video, Upload, X } from "lucide-reac
 const MemeCanvas = forwardRef(({ 
     meme, 
     loading, 
+    isProcessing,
     draggedId, 
     selectedId, 
     activeTool, 
@@ -328,7 +329,7 @@ const MemeCanvas = forwardRef(({
                         }}
                     >
                         {showUrl ? (
-                            (panel.isVideo && !showUrl.includes('.gif')) ? (
+                            (panel.isVideo && !panel.processedImage && !showUrl.includes('.gif')) ? (
                                 <video
                                     src={showUrl}
                                     className="w-full h-full block pointer-events-none select-none"
@@ -542,6 +543,13 @@ const MemeCanvas = forwardRef(({
         <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center z-50 backdrop-blur-sm gap-4">
           <Loader2 className="w-10 h-10 text-brand animate-spin" />
           <p className="text-slate-400 font-medium animate-pulse">Fetching templates...</p>
+        </div>
+      )}
+
+      {isProcessing && !loading && (
+        <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-center z-[60] backdrop-blur-[1px] gap-2">
+          <Loader2 className="w-8 h-8 text-brand animate-spin" />
+          <p className="text-[10px] font-bold text-brand uppercase tracking-widest animate-pulse">Processing Effect...</p>
         </div>
       )}
     </div>

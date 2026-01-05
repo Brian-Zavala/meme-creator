@@ -143,6 +143,7 @@ export default function Main() {
   const [allGifs, setAllGifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
   const [activeTool, setActiveTool] = useState("move"); 
   const [flashColor, setFlashColor] = useState(null);
@@ -260,12 +261,17 @@ export default function Main() {
   const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
   const deferredDeepFry = useDeferredValue(activePanel?.filters?.deepFry);
 
+  // ------------------------------------------------------
+  // ✅ FIXED: Deep Fry Effect with Debounce & Safety Checks
+  // ------------------------------------------------------
   useEffect(() => {
     const level = parseInt(deferredDeepFry || 0, 10);
     const controller = new AbortController();
+    const signal = controller.signal;
 
     if (!activePanel) return;
 
+    // 1. If level is 0, show original image and stop
     if (level === 0) {
       if (activePanel.processedImage) {
         startTransition(() => {
@@ -282,47 +288,67 @@ export default function Main() {
       return;
     }
 
+    // 2. Skip if we already processed this level for this image
     if (activePanel.processedImage && activePanel.processedDeepFryLevel === level) {
       return;
     }
 
-    const timer = setTimeout(async () => {
-      if (activePanel.isVideo) {
-        toast("GIF freezes for performance, but export stays animated!", {
-          id: "fry-warning",
-          icon: (
-            <picture>
-              <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.webp" type="image/webp" />
-              <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.gif" alt="🚨" width="32" height="32" />
-            </picture>
-          ),
-        });
-      }
-
+    const processDeepFry = async () => {
       try {
-        const fried = await deepFryImage(activePanel.url, level, controller.signal);
-        startTransition(() => {
-          updateState((prev) => {
-            return {
-              ...prev,
-              panels: prev.panels.map((p) =>
-                p.id === activePanel.id
-                  ? { ...p, processedImage: fried, processedDeepFryLevel: level }
-                  : p
-              ),
-            };
+        setIsProcessing(true); // Start loading spinner
+
+        if (activePanel.isVideo) {
+          toast("GIF freezes for performance, but export stays animated!", {
+            id: "fry-warning",
+            icon: (
+              <picture>
+                <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.webp" type="image/webp" />
+                <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.gif" alt="🚨" width="32" height="32" />
+              </picture>
+            ),
           });
-        });
-      } catch (e) {
-        if (e.message !== "Aborted") {
-          console.error("Deep Fry Failed", e);
         }
+
+        // Call your service
+        const fried = await deepFryImage(activePanel.url, level, signal);
+
+        // 3. CRITICAL CHECK: If user moved slider again, STOP here.
+        if (signal.aborted) return;
+
+        // 4. Success! Update the image
+        startTransition(() => {
+          updateState((prev) => ({
+            ...prev,
+            panels: prev.panels.map((p) =>
+              p.id === activePanel.id
+                ? { ...p, processedImage: fried, processedDeepFryLevel: level }
+                : p
+            ),
+          }));
+        });
+
+      } catch (error) {
+        // 5. SILENTLY FAIL if it was just an abort (this fixes your error log)
+        if (error.name === 'AbortError' || error.message === 'Aborted' || error.message?.includes('aborted')) {
+          return; 
+        }
+
+        console.error("Deep Fry Error:", error);
+        toast.error("Effect failed"); 
+      } finally {
+        if (!signal.aborted) setIsProcessing(false);
       }
+    };
+
+    // 6. DEBOUNCE: Wait 100ms before processing. 
+    const timerId = setTimeout(() => {
+      processDeepFry();
     }, 100);
 
+    // Cleanup function
     return () => {
-      clearTimeout(timer);
-      controller.abort();
+      clearTimeout(timerId); // Cancel the timer
+      controller.abort();    // Cancel any running process
     };
   }, [deferredDeepFry, activePanel?.url, activePanel?.id]);
 
@@ -1260,6 +1286,7 @@ export default function Main() {
             ref={memeRef}
             meme={meme}
             loading={loading}
+            isProcessing={isProcessing}
             draggedId={draggedId}
             selectedId={meme.selectedId}
             activeTool={activeTool}

@@ -47,6 +47,8 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
     e.target.value = ''; // Reset input
     if (onClose) onClose();
 
+    const isGif = file.type === 'image/gif';
+
     toast((t) => (
       <div className="flex flex-col gap-3 min-w-[200px]">
         <div className="flex items-center gap-2">
@@ -61,13 +63,13 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
               try {
                   const blob = await removeImageBackground(file);
                   const url = URL.createObjectURL(blob);
-                  onAddSticker(url, 'image');
+                  onAddSticker(url, 'image', false);
                   toast.success("Background removed!", { id: toastId });
               } catch (err) {
                   console.error(err);
                   toast.error("Failed. Using original.", { id: toastId });
                   const url = URL.createObjectURL(file);
-                  onAddSticker(url, 'image');
+                  onAddSticker(url, 'image', isGif);
               }
             }}
             className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
@@ -78,7 +80,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
             onClick={() => {
               toast.dismiss(t.id);
               const url = URL.createObjectURL(file);
-              onAddSticker(url, 'image');
+              onAddSticker(url, 'image', isGif);
             }}
             className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
           >
@@ -173,7 +175,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                 {tenorStickers.map((sticker) => (
                   <button
                     key={sticker.id}
-                    onClick={() => { onAddSticker(sticker.url, 'image'); if(onClose) onClose(); }}
+                    onClick={() => { onAddSticker(sticker.url, 'image', true); if(onClose) onClose(); }}
                     className="aspect-square relative bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-brand transition-all active:scale-95 group"
                   >
                     <img 

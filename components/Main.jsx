@@ -859,10 +859,10 @@ export default function Main() {
     });
   }
 
-  function addSticker(emoji, type = "emoji") {
+  function addSticker(urlOrEmoji, type = "emoji", isAnimated = false) {
     updateState((prev) => ({
       ...prev,
-      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: emoji, type, x: 50, y: 50 }],
+      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: urlOrEmoji, type, x: 50, y: 50, isAnimated }],
     }));
   }
 
@@ -978,10 +978,10 @@ export default function Main() {
   async function handleDownload() {
     if (!memeRef.current) return;
     
-    const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
-    // Support GIF export if we have at least one video/gif panel
-    const hasVideo = meme.panels.some(p => p.isVideo);
-    const canExportGif = meme.mode === "video" && hasVideo;
+    // Support GIF export if we have at least one video/gif panel OR a gif sticker
+    const hasVideoPanel = meme.panels.some(p => p.isVideo || (p.url && p.url.includes('.gif')));
+    const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
+    const canExportGif = hasVideoPanel || hasGifSticker;
 
     if (canExportGif) {
       // Check if ANY panel is deep frying

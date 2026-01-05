@@ -145,7 +145,7 @@ const MemeCanvas = forwardRef(({
   useEffect(() => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     
     const rect = canvas.getBoundingClientRect();
     if (canvas.width !== rect.width || canvas.height !== rect.height) {
@@ -194,7 +194,7 @@ const MemeCanvas = forwardRef(({
     const y = (e.clientY - rect.top) / rect.height;
     currentPathRef.current.push({x, y});
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = (meme.drawWidth || 5) * (rect.width / 800);

@@ -61,7 +61,7 @@ export default function Main() {
       id: null,
       name: "Meme Name",
       mode: "image",
-      
+
       // Global Styles
       textColor: "#ffffff",
       textBgColor: "transparent",
@@ -73,25 +73,25 @@ export default function Main() {
       drawColor: "#ff0000",
       drawWidth: 5,
       maxWidth: 100,
-      
-                // Layout State
-            layout: "single",
-            activePanelId: "p1",
-            panels: [
-              { 
-                id: "p1", 
-                url: "http://i.imgflip.com/1bij.jpg", 
-                sourceUrl: null,
-                isVideo: false,
-                objectFit: "cover",
-                posX: 50,
-                posY: 50,
-                filters: { ...DEFAULT_FILTERS }
-              }
-            ],
-      
-            texts: [        { id: "top", content: "", x: 50, y: 5, rotation: 0 },
-        { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
+
+      // Layout State
+      layout: "single",
+      activePanelId: "p1",
+      panels: [
+        {
+          id: "p1",
+          url: "http://i.imgflip.com/1bij.jpg",
+          sourceUrl: null,
+          isVideo: false,
+          objectFit: "cover",
+          posX: 50,
+          posY: 50,
+          filters: { ...DEFAULT_FILTERS }
+        }
+      ],
+
+      texts: [{ id: "top", content: "", x: 50, y: 5, rotation: 0 },
+      { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
       ],
       stickers: [],
       drawings: [],
@@ -103,29 +103,29 @@ export default function Main() {
         const parsed = JSON.parse(saved);
         // Migration logic
         if (!parsed.panels) {
-            parsed.panels = [{
-                id: "p1",
-                url: parsed.imageUrl || defaultState.panels[0].url,
-                sourceUrl: parsed.sourceUrl || null,
-                isVideo: parsed.isVideo || false,
-                objectFit: "cover",
-                posX: 50,
-                posY: 50,
-                filters: parsed.filters || { ...DEFAULT_FILTERS }
-            }];
-            parsed.activePanelId = "p1";
-            parsed.layout = "single";
-            delete parsed.imageUrl;
-            delete parsed.isVideo;
-            delete parsed.filters;
+          parsed.panels = [{
+            id: "p1",
+            url: parsed.imageUrl || defaultState.panels[0].url,
+            sourceUrl: parsed.sourceUrl || null,
+            isVideo: parsed.isVideo || false,
+            objectFit: "cover",
+            posX: 50,
+            posY: 50,
+            filters: parsed.filters || { ...DEFAULT_FILTERS }
+          }];
+          parsed.activePanelId = "p1";
+          parsed.layout = "single";
+          delete parsed.imageUrl;
+          delete parsed.isVideo;
+          delete parsed.filters;
         }
         // Ensure existing panels have posX/posY
         if (parsed.panels) {
-            parsed.panels = parsed.panels.map(p => ({
-                ...p,
-                posX: p.posX ?? 50,
-                posY: p.posY ?? 50
-            }));
+          parsed.panels = parsed.panels.map(p => ({
+            ...p,
+            posX: p.posX ?? 50,
+            posY: p.posY ?? 50
+          }));
         }
 
         if (parsed.texts) {
@@ -145,7 +145,7 @@ export default function Main() {
   const [generating, setGenerating] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
-  const [activeTool, setActiveTool] = useState("move"); 
+  const [activeTool, setActiveTool] = useState("move");
   const [flashColor, setFlashColor] = useState(null);
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
@@ -225,14 +225,14 @@ export default function Main() {
       const newPanels = prev.panels.map((p) =>
         p.id === prev.activePanelId
           ? {
-              ...p,
-              url: url,
-              isVideo: false,
-              objectFit: "cover",
-              filters: { ...DEFAULT_FILTERS },
-              processedImage: null,
-              processedDeepFryLevel: 0,
-            }
+            ...p,
+            url: url,
+            isVideo: false,
+            objectFit: "cover",
+            filters: { ...DEFAULT_FILTERS },
+            processedImage: null,
+            processedDeepFryLevel: 0,
+          }
           : p
       );
       return {
@@ -330,11 +330,11 @@ export default function Main() {
       } catch (error) {
         // 5. SILENTLY FAIL if it was just an abort (this fixes your error log)
         if (error.name === 'AbortError' || error.message === 'Aborted' || error.message?.includes('aborted')) {
-          return; 
+          return;
         }
 
         console.error("Deep Fry Error:", error);
-        toast.error("Effect failed"); 
+        toast.error("Effect failed");
       } finally {
         if (!signal.aborted) setIsProcessing(false);
       }
@@ -391,9 +391,9 @@ export default function Main() {
     return items[index];
   };
 
-  const calculateSmartFontSize = useCallback(() => {
+  const calculateSmartFontSize = () => {
     return 30;
-  }, []);
+  };
 
   useEffect(() => {
     if (draggedId) {
@@ -511,19 +511,19 @@ export default function Main() {
       setAllGifs(results);
       setVideoDeck([]);
       const first = results[0];
-      
+
       updateState((prev) => {
-        const newPanels = prev.panels.map(p => 
-            p.id === prev.activePanelId 
+        const newPanels = prev.panels.map(p =>
+          p.id === prev.activePanelId
             ? { ...p, url: first.url, sourceUrl: first.shareUrl, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
             : p
         );
         return {
-            ...prev,
-            panels: newPanels,
-            name: first.name.replace(/\s+/g, "-"),
-            mode: "video",
-            fontSize: calculateSmartFontSize(first.width, first.height, prev.texts),
+          ...prev,
+          panels: newPanels,
+          name: first.name.replace(/\s+/g, "-"),
+          mode: "video",
+          fontSize: calculateSmartFontSize(first.width, first.height, prev.texts),
         };
       });
     } else {
@@ -553,39 +553,39 @@ export default function Main() {
         }
         const newMeme = getNextItem(currentGifs, videoDeck, setVideoDeck);
         if (requestId !== requestCounterRef.current) return;
-        
+
         updateState((prev) => {
-            const newPanels = prev.panels.map(p => 
-                p.id === prev.activePanelId 
-                ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: true, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
-                : p
-            );
-            return {
-                ...prev,
-                panels: newPanels,
-                name: newMeme.name.replace(/\s+/g, "-"),
-                fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
-            };
+          const newPanels = prev.panels.map(p =>
+            p.id === prev.activePanelId
+              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: true, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          );
+          return {
+            ...prev,
+            panels: newPanels,
+            name: newMeme.name.replace(/\s+/g, "-"),
+            fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+          };
         });
 
       } else {
         if (allMemes.length === 0) return;
         const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
-        
+
         const updatePanelWithImage = (url) => {
-            updateState((prev) => {
-                const newPanels = prev.panels.map(p => 
-                    p.id === prev.activePanelId 
-                    ? { ...p, url, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
-                    : p
-                );
-                return {
-                    ...prev,
-                    panels: newPanels,
-                    name: newMeme.name.replace(/\s+/g, "-"),
-                    fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
-                };
-            });
+          updateState((prev) => {
+            const newPanels = prev.panels.map(p =>
+              p.id === prev.activePanelId
+                ? { ...p, url, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+                : p
+            );
+            return {
+              ...prev,
+              panels: newPanels,
+              name: newMeme.name.replace(/\s+/g, "-"),
+              fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+            };
+          });
         };
 
         try {
@@ -611,87 +611,85 @@ export default function Main() {
 
   function handleLayoutChange(layoutId) {
     if (layoutId === meme.layout) return;
-    
-    startTransition(() => {
-        updateState(prev => {
-            const newLayoutDef = DEFAULT_LAYOUTS[layoutId];
-            const oldPanels = [...prev.panels];
-            
-            const newPanels = newLayoutDef.map((slot, index) => {
-                const existing = oldPanels[index];
-                if (existing) {
-                    return { ...existing, id: slot.id, x: slot.x, y: slot.y, w: slot.w, h: slot.h };
-                }
-                return { 
-                    id: slot.id, 
-                    x: slot.x, y: slot.y, w: slot.w, h: slot.h,
-                    url: null, 
-                    isVideo: false, 
-                    objectFit: "cover",
-                    posX: 50,
-                    posY: 50,
-                    filters: { ...DEFAULT_FILTERS } 
-                };
-            });
 
-            return {
-                ...prev,
-                layout: layoutId,
-                panels: newPanels,
-                activePanelId: newPanels[0].id
-            };
+    startTransition(() => {
+      updateState(prev => {
+        const newLayoutDef = DEFAULT_LAYOUTS[layoutId];
+        const oldPanels = [...prev.panels];
+
+        const newPanels = newLayoutDef.map((slot, index) => {
+          const existing = oldPanels[index];
+          if (existing) {
+            return { ...existing, id: slot.id, x: slot.x, y: slot.y, w: slot.w, h: slot.h };
+          }
+          return {
+            id: slot.id,
+            x: slot.x, y: slot.y, w: slot.w, h: slot.h,
+            url: null,
+            isVideo: false,
+            objectFit: "cover",
+            posX: 50,
+            posY: 50,
+            filters: { ...DEFAULT_FILTERS }
+          };
         });
+
+        return {
+          ...prev,
+          layout: layoutId,
+          panels: newPanels,
+          activePanelId: newPanels[0].id
+        };
+      });
     });
   }
 
-  const handlePanelPosChange = useCallback((id, x, y, isTransient = false) => {
+  const handlePanelPosChange = (id, x, y, isTransient = false) => {
     const updater = isTransient ? updateTransient : updateState;
     // For transient updates, we use startTransition implicitly if not provided, 
     // but updateTransient usually handles its own scheduling or is fast enough.
     // However, Main.jsx uses startTransition for transient sometimes.
-    
+
     const updateFn = (prev) => ({
-        ...prev,
-        panels: prev.panels.map(p => 
-            p.id === id ? { ...p, posX: x, posY: y } : p
-        )
+      ...prev,
+      panels: prev.panels.map(p =>
+        p.id === id ? { ...p, posX: x, posY: y } : p
+      )
     });
 
     if (isTransient) {
-        updateTransient(updateFn);
+      updateTransient(updateFn);
     } else {
-        updater(updateFn);
+      updater(updateFn);
     }
-  }, [updateState, updateTransient]);
+  };
 
   function handlePanelSelect(id) {
     if (id === meme.activePanelId) return;
     startTransition(() => {
-        updateState(prev => ({ ...prev, activePanelId: id }));
+      updateState(prev => ({ ...prev, activePanelId: id }));
     });
   }
 
   function handleTextChange(id, value) {
-    startTransition(() => {
-      updateState((prev) => {
-        const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
-        const lastText = newTexts[newTexts.length - 1];
+    updateState((prev) => {
+      const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
+      const lastText = newTexts[newTexts.length - 1];
 
-        if (lastText.content.trim().length > 0) {
-          newTexts.push({
-            id: crypto.randomUUID(),
-            content: "",
-            x: 50,
-            y: 50,
-            rotation: 0,
-          });
-        }
+      if (lastText.content.trim().length > 0) {
+        newTexts.push({
+          id: crypto.randomUUID(),
+          content: "",
+          x: 50,
+          y: 50,
+          rotation: 0,
+        });
+      }
 
-        return {
-          ...prev,
-          texts: newTexts,
-        };
-      });
+      return {
+        ...prev,
+        texts: newTexts,
+      };
     });
   }
 
@@ -707,10 +705,10 @@ export default function Main() {
     startTransition(() => {
       updateState((prev) => {
         return {
-            ...prev,
-            panels: prev.panels.map(p => 
-                p.id === prev.activePanelId ? { ...p, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 } : p
-            )
+          ...prev,
+          panels: prev.panels.map(p =>
+            p.id === prev.activePanelId ? { ...p, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 } : p
+          )
         };
       });
     });
@@ -733,8 +731,8 @@ export default function Main() {
     startTransition(() => {
       updateTransient((prev) => ({
         ...prev,
-        panels: prev.panels.map(p => 
-            p.id === prev.activePanelId 
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
             ? { ...p, filters: { ...p.filters, [name]: value } }
             : p
         )
@@ -770,70 +768,70 @@ export default function Main() {
       const isVideo = file.type.startsWith("video/");
 
       updateState((prev) => {
-          const newPanels = prev.panels.map(p => 
-            p.id === prev.activePanelId 
+        const newPanels = prev.panels.map(p =>
+          p.id === prev.activePanelId
             ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
             : p
-          );
-          return {
-            ...prev,
-            panels: newPanels,
-            name: file.name.split(".")[0],
-            mode: isGif || isVideo ? "video" : "image",
-          };
+        );
+        return {
+          ...prev,
+          panels: newPanels,
+          name: file.name.split(".")[0],
+          mode: isGif || isVideo ? "video" : "image",
+        };
       });
     }
   }
 
   const handleCanvasDrop = useCallback((file, panelId) => {
-      const localUrl = URL.createObjectURL(file);
-      const isGif = file.type === "image/gif";
-      const isVideo = file.type.startsWith("video/");
-      
-      startTransition(() => {
-        updateState((prev) => {
-            const newPanels = prev.panels.map(p => 
-                p.id === panelId
-                ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
-                : p
-            );
-            return {
-                ...prev,
-                panels: newPanels,
-                activePanelId: panelId,
-                mode: newPanels.some(p => p.isVideo) ? "video" : "image"
-            };
-        });
+    const localUrl = URL.createObjectURL(file);
+    const isGif = file.type === "image/gif";
+    const isVideo = file.type.startsWith("video/");
+
+    startTransition(() => {
+      updateState((prev) => {
+        const newPanels = prev.panels.map(p =>
+          p.id === panelId
+            ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        );
+        return {
+          ...prev,
+          panels: newPanels,
+          activePanelId: panelId,
+          mode: newPanels.some(p => p.isVideo) ? "video" : "image"
+        };
       });
+    });
   }, [updateState]);
 
   const handleClearPanel = useCallback((panelId) => {
-      startTransition(() => {
-        updateState((prev) => {
-            const newPanels = prev.panels.map(p => 
-                p.id === panelId
-                ? { ...p, url: null, sourceUrl: null, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
-                : p
-            );
-            return {
-                ...prev,
-                panels: newPanels,
-            };
-        });
+    startTransition(() => {
+      updateState((prev) => {
+        const newPanels = prev.panels.map(p =>
+          p.id === panelId
+            ? { ...p, url: null, sourceUrl: null, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        );
+        return {
+          ...prev,
+          panels: newPanels,
+        };
       });
+    });
   }, [updateState]);
 
   const togglePanelFit = useCallback((panelId) => {
-      startTransition(() => {
-        updateState((prev) => {
-            const newPanels = prev.panels.map(p => 
-                p.id === panelId
-                ? { ...p, objectFit: p.objectFit === "contain" ? "cover" : "contain" }
-                : p
-            );
-            return { ...prev, panels: newPanels };
-        });
+    startTransition(() => {
+      updateState((prev) => {
+        const newPanels = prev.panels.map(p =>
+          p.id === panelId
+            ? { ...p, objectFit: p.objectFit === "contain" ? "cover" : "contain" }
+            : p
+        );
+        return { ...prev, panels: newPanels };
       });
+    });
   }, [updateState]);
 
   function handleReset() {
@@ -963,7 +961,7 @@ export default function Main() {
           startTransition(() => {
             updateState((prev) => ({ ...prev, selectedId: id }));
           });
-          setDraggedId(null); 
+          setDraggedId(null);
           if (navigator.vibrate) navigator.vibrate(50);
           toast("Text Selected!", { icon: "✨", duration: 1000 });
         }, 350);
@@ -977,7 +975,7 @@ export default function Main() {
 
   async function handleDownload() {
     if (!memeRef.current) return;
-    
+
     // Support GIF export if we have at least one video/gif panel OR a gif sticker
     const hasVideoPanel = meme.panels.some(p => p.isVideo || (p.url && p.url.includes('.gif')));
     const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
@@ -1018,7 +1016,7 @@ export default function Main() {
         // Deep fry logic is visual-only here.
         const finalDataUrl = canvas.toDataURL("image/png");
         const link = document.createElement("a");
-        link.download = `${meme.name}-${Date.now()}.png`; 
+        link.download = `${meme.name}-${Date.now()}.png`;
         link.href = finalDataUrl;
         link.click();
         triggerFireworks();
@@ -1036,23 +1034,23 @@ export default function Main() {
 
   async function handleShare() {
     if (!memeRef.current) return;
-    
+
     try {
-        const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-        const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
-        const file = new File([blob], `meme.png`, { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file] });
-            toast.success("Shared!");
-        } else {
-            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-            toast.success("Copied!");
-        }
+      const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
+      const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+      const file = new File([blob], `meme.png`, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        toast.success("Shared!");
+      } else {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast.success("Copied!");
+      }
     } catch (e) {
-        if (e.name !== "AbortError") {
-            console.error("Share Error:", e);
-            toast.error("Share failed");
-        }
+      if (e.name !== "AbortError") {
+        console.error("Share Error:", e);
+        toast.error("Share failed");
+      }
     }
   }
 
@@ -1099,27 +1097,27 @@ export default function Main() {
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+          <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
             <ModeSelector
-                mode={meme.mode}
-                onModeChange={(e) => {
+              mode={meme.mode}
+              onModeChange={(e) => {
                 const m = e.target.value;
                 startTransition(() => {
-                    updateState((prev) => ({ ...prev, mode: m }));
-                    if (m === "image") clearSearch();
-                    getMemeImage(m);
+                  updateState((prev) => ({ ...prev, mode: m }));
+                  if (m === "image") clearSearch();
+                  getMemeImage(m);
                 });
-                }}
+              }}
             />
-            </Suspense>
-            <LayoutSelector 
-                layout={meme.layout}
-                onLayoutChange={handleLayoutChange}
-            />
+          </Suspense>
+          <LayoutSelector
+            layout={meme.layout}
+            onLayoutChange={handleLayoutChange}
+          />
         </div>
 
         {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}
-        
+
         {/* CASE 1: VIDEO MODE (Existing Tenor Search) */}
         {meme.mode === "video" && (
           <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
@@ -1229,8 +1227,8 @@ export default function Main() {
                     {hoveredMeme && (
                       <div className="fixed left-[calc(100%+1rem)] top-0 w-64 p-3 bg-slate-900 border-2 border-brand rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 hidden xl:block z-[70] pointer-events-none">
                         <div className="relative aspect-auto rounded-lg overflow-hidden border border-slate-800">
-                          <img 
-                            src={`https://wsrv.nl/?url=${encodeURIComponent(hoveredMeme.url)}&w=600`} 
+                          <img
+                            src={`https://wsrv.nl/?url=${encodeURIComponent(hoveredMeme.url)}&w=600`}
                             className="w-full h-auto max-h-[400px] object-contain"
                             alt="Preview"
                             crossOrigin="anonymous"
@@ -1297,7 +1295,7 @@ export default function Main() {
             onPointerDown={handlePointerDown}
             onRemoveSticker={removeSticker}
             onCanvasPointerDown={handleCanvasPointerDown}
-            
+
             // New Props
             activePanelId={meme.activePanelId}
             onPanelSelect={handlePanelSelect}

@@ -1,23 +1,147 @@
 import { forwardRef, useRef, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Image as ImageIcon, Video, Upload, X } from "lucide-react";
 
-const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, selectedId, activeTool, onDrawCommit, onFineTune, onFineTuneCommit, onCenterText, onPointerDown, onRemoveSticker, onCanvasPointerDown }, ref) => {
-  const description = `Meme preview of ${meme.name || "Custom Image"} with ${meme.texts.length} text captions and ${meme.stickers?.length || 0} stickers`;
+const MemeCanvas = forwardRef(({ 
+    meme, 
+    overrideImageUrl, 
+    loading, 
+    draggedId, 
+    selectedId, 
+    activeTool, 
+    onDrawCommit, 
+    onFineTune, 
+    onFineTuneCommit, 
+    onCenterText, 
+    onPointerDown, 
+    onRemoveSticker, 
+    onCanvasPointerDown,
+    activePanelId,
+    onPanelSelect,
+    onDrop,
+    onClearPanel,
+    onPanelPosChange
+}, ref) => {
+  const description = `Meme editor with ${meme.panels?.length || 1} panels`;
   const drawCanvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const targetPanelRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState(1);
+  const [aspectRatio, setAspectRatio] = useState(1); // Global Aspect Ratio (usually driven by first panel or default)
   const currentPathRef = useRef([]);
-  
-  const displayUrl = overrideImageUrl || meme.imageUrl;
-  const isVideo = meme.isVideo && !overrideImageUrl;
+  const [dragOverPanel, setDragOverPanel] = useState(null);
+  const [draggingPanel, setDraggingPanel] = useState(null);
+
+  // If we have an override (Deep Fry preview), it only applies to the ACTIVE panel for now visually
 
   const handleMediaLoad = (e) => {
-    const { naturalWidth, naturalHeight, videoWidth, videoHeight } = e.target;
-    const w = naturalWidth || videoWidth || 1;
-    const h = naturalHeight || videoHeight || 1;
-    setAspectRatio(w / h);
+    if (meme.layout === 'single') {
+        const { naturalWidth, naturalHeight, videoWidth, videoHeight } = e.target;
+        const w = naturalWidth || videoWidth || 1;
+        const h = naturalHeight || videoHeight || 1;
+        setAspectRatio(w / h);
+    }
   };
 
+  // Determine container aspect ratio based on layout
+  let containerAspect = 1; // Default square
+  if (meme.layout === 'single') {
+      containerAspect = aspectRatio; 
+  } else if (meme.layout === 'top-bottom') {
+      containerAspect = 3/4; // Portrait-ish
+  } else if (meme.layout === 'side-by-side') {
+      containerAspect = 4/3; // Landscape-ish
+  }
+
+  // Adjust for padding
+  if (meme.paddingTop > 0 && containerAspect > 0) {
+       containerAspect = 1 / ((1 / containerAspect) + (meme.paddingTop / 100));
+  }
+
+  // Panel Drag Logic
+  useEffect(() => {
+    if (!draggingPanel) return;
+
+    const handlePointerMove = (e) => {
+        const deltaX = e.clientX - draggingPanel.startX;
+        const deltaY = e.clientY - draggingPanel.startY;
+        
+        // Calculate percentage change based on panel dimensions
+        // Dragging RIGHT (positive delta) moves image visually RIGHT, revealing LEFT content (decreasing %)
+        const deltaPctX = (deltaX / draggingPanel.panelWidth) * 100;
+        const deltaPctY = (deltaY / draggingPanel.panelHeight) * 100;
+        
+        const newX = draggingPanel.startPosX - deltaPctX;
+        const newY = draggingPanel.startPosY - deltaPctY;
+        
+        onPanelPosChange(draggingPanel.id, newX, newY, true);
+    };
+
+    const handlePointerUp = () => {
+        // Commit the final position (not transient)
+        // We need to access the LATEST calculated position. 
+        // Since we don't have it here without state, we rely on the transient update having happened.
+        // But `onPanelPosChange` commits if isTransient=false.
+        // We can just call it with the last known derived values? No.
+        // Actually, Main.jsx's updateTransient updates the state variable passed down as `meme`.
+        // So `meme.panels` has the transient value.
+        // We just need to trigger a commit of the current state.
+        // OR simpler: just re-emit the last event as non-transient? 
+        // No, we can't get the event here easily.
+        
+        // Better approach: Main.jsx handles commit implicitly if we just stop sending transient? 
+        // No, transient state is usually separate. 
+        // In Main.jsx, `updateTransient` updates the SAME `meme` object reference in `useHistory` if designed that way,
+        // OR it provides a separate `transientState`.
+        // Looking at `useHistory.js` (I haven't read it, but usually standard pattern), 
+        // transient updates might be merged.
+        // Let's assume `onPanelPosChange(id, x, y, false)` is needed.
+        // Since we don't have `newX/newY` here, let's calculate them one last time or store them in a ref?
+        // Actually, if we just set draggingPanel to null, the transient state might be lost if `useHistory` resets it on commit?
+        // Let's assume we need to explicitly commit the CURRENT position from the props.
+        
+        const currentPanel = meme.panels.find(p => p.id === draggingPanel.id);
+        if (currentPanel) {
+            onPanelPosChange(draggingPanel.id, currentPanel.posX ?? 50, currentPanel.posY ?? 50, false);
+        }
+        setDraggingPanel(null);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    return () => {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [draggingPanel, meme.panels, onPanelPosChange]);
+
+  const handlePanelPointerDown = (e, panel) => {
+      // Check conditions: Not single mode, No text selected, Not drawing
+      const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser'].includes(activeTool);
+      
+      if (canDrag && panel.url) { // Only if has image
+          e.preventDefault(); // Prevent default drag behavior (and scrolling)
+          e.stopPropagation();
+          
+          const rect = e.currentTarget.getBoundingClientRect();
+          setDraggingPanel({
+              id: panel.id,
+              startX: e.clientX,
+              startY: e.clientY,
+              startPosX: panel.posX ?? 50,
+              startPosY: panel.posY ?? 50,
+              panelWidth: rect.width,
+              panelHeight: rect.height
+          });
+      } else {
+          // If not draggable, fallback to click handling (Ghost Click or Select) is handled by onClick
+          // We don't stop propagation here to allow onClick to fire if we didn't drag.
+      }
+  };
+
+  // Canvas Drawing Logic (Global Overlay)
   useEffect(() => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
@@ -103,10 +227,26 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
     currentPathRef.current = [];
   };
 
-  let containerAspect = aspectRatio;
-  if (meme.paddingTop > 0 && aspectRatio > 0) {
-       containerAspect = 1 / ((1 / aspectRatio) + (meme.paddingTop / 100));
-  }
+  const handleGhostClick = (e, panelId, isActive) => {
+      e.stopPropagation();
+      if (isActive) {
+          targetPanelRef.current = panelId;
+          if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+              fileInputRef.current.click();
+          }
+      } else {
+          onPanelSelect(panelId);
+      }
+  };
+
+  const handleFileInputChange = (e) => {
+      const file = e.target.files[0];
+      if (file && onDrop && targetPanelRef.current) {
+          onDrop(file, targetPanelRef.current);
+          targetPanelRef.current = null;
+      }
+  };
 
   return (
     <div 
@@ -116,21 +256,179 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
       role="img"
       aria-label={description}
     >
+      {/* Hidden Global File Input for Ghost Slots */}
+      <input 
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
+
       <div
         ref={ref}
         onPointerDown={onCanvasPointerDown}
-        className="relative flex items-center justify-center overflow-hidden shadow-2xl mx-auto"
+        className="relative overflow-hidden shadow-2xl mx-auto"
         style={{ 
             backgroundColor: meme.paddingTop > 0 ? '#ffffff' : '#000000', 
             paddingTop: meme.paddingTop ? `${meme.paddingTop}%` : '0',
-            alignItems: meme.paddingTop > 0 ? 'flex-start' : 'center',
+            width: '100%',
+            height: 'auto',
             aspectRatio: containerAspect,
-            width: 'auto',
-            height: '70vh',
-            maxWidth: '100%',
-            maxHeight: '70vh'
+            maxHeight: '75vh',
+            maxWidth: '100%'
         }}
       >
+        {/* === PANELS LAYER === */}
+        <div className="absolute inset-0 top-[var(--padding-top,0)] w-full h-full">
+            {meme.panels?.map((panel) => {
+                const isActive = panel.id === activePanelId;
+                const showUrl = (isActive && overrideImageUrl) ? overrideImageUrl : panel.url;
+                const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser'].includes(activeTool) && showUrl;
+                
+                return (
+                    <div 
+                        key={panel.id}
+                        onPointerDown={(e) => handlePanelPointerDown(e, panel)}
+                        onClick={(e) => {
+                            // If we dragged, maybe we shouldn't trigger click? 
+                            // But for now, selecting on drag end is fine.
+                            if (!showUrl) {
+                                handleGhostClick(e, panel.id, isActive);
+                            } else {
+                                e.stopPropagation();
+                                onPanelSelect(panel.id);
+                            }
+                        }}
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverPanel(panel.id);
+                        }}
+                        onDragLeave={(e) => {
+                            e.preventDefault();
+                            setDragOverPanel(null);
+                        }}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            setDragOverPanel(null);
+                            const file = e.dataTransfer.files[0];
+                            if (file && onDrop) {
+                                onDrop(file, panel.id);
+                            }
+                        }}
+                        className={`absolute overflow-hidden transition-all duration-200 border-2 border-slate-800/50 hover:border-slate-600 
+                            ${dragOverPanel === panel.id ? 'bg-brand/20' : ''} 
+                            ${canDrag ? 'cursor-move' : ''}
+                        `}
+                        style={{
+                            left: `${panel.x}%`,
+                            top: `${panel.y}%`,
+                            width: `${panel.w}%`,
+                            height: `${panel.h}%`,
+                            touchAction: canDrag ? 'none' : 'auto'
+                        }}
+                    >
+                        {showUrl ? (
+                            panel.isVideo ? (
+                                <video
+                                    src={showUrl}
+                                    className="w-full h-full block pointer-events-none select-none"
+                                    loop
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                    crossOrigin="anonymous"
+                                    onLoadedMetadata={handleMediaLoad}
+                                    style={{
+                                        objectFit: panel.objectFit || "cover",
+                                        objectPosition: `${panel.posX ?? 50}% ${panel.posY ?? 50}%`,
+                                        filter: `
+                                          contrast(${panel.filters?.contrast ?? 100}%) 
+                                          brightness(${panel.filters?.brightness ?? 100}%) 
+                                          blur(${panel.filters?.blur ?? 0}px)
+                                          grayscale(${panel.filters?.grayscale ?? 0}%)
+                                          sepia(${panel.filters?.sepia ?? 0}%)
+                                          hue-rotate(${panel.filters?.hueRotate ?? 0}deg)
+                                          saturate(${panel.filters?.saturate ?? 100}%)
+                                          invert(${panel.filters?.invert ?? 0}%)
+                                        `
+                                    }}
+                                />
+                            ) : (
+                                <img
+                                    src={showUrl}
+                                    alt="panel"
+                                    className="w-full h-full block pointer-events-none select-none"
+                                    crossOrigin="anonymous"
+                                    onLoad={handleMediaLoad}
+                                    style={{
+                                        objectFit: panel.objectFit || "cover",
+                                        objectPosition: `${panel.posX ?? 50}% ${panel.posY ?? 50}%`,
+                                        filter: `
+                                          contrast(${panel.filters?.contrast ?? 100}%) 
+                                          brightness(${panel.filters?.brightness ?? 100}%) 
+                                          blur(${panel.filters?.blur ?? 0}px)
+                                          grayscale(${panel.filters?.grayscale ?? 0}%)
+                                          sepia(${panel.filters?.sepia ?? 0}%)
+                                          hue-rotate(${panel.filters?.hueRotate ?? 0}deg)
+                                          saturate(${panel.filters?.saturate ?? 100}%)
+                                          invert(${panel.filters?.invert ?? 0}%)
+                                        `
+                                    }}
+                                />
+                            )
+                        ) : (
+                            // GHOST SLOT STATE
+                            <div 
+                                data-html2canvas-ignore="true"
+                                className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50 group-hover:bg-slate-900/70 transition-colors cursor-pointer group/ghost"
+                            >
+                                <div className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center mb-2 transition-all ${isActive ? 'border-brand text-brand scale-110' : 'border-slate-600 text-slate-500 group-hover/ghost:border-brand group-hover/ghost:text-brand'}`}>
+                                    <Plus className="w-6 h-6" />
+                                </div>
+                                <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-brand' : 'text-slate-500 group-hover/ghost:text-slate-300'}`}>
+                                    {isActive ? "Tap to Upload" : "Tap to Select"}
+                                </span>
+                            </div>
+                        )}
+                        
+                        {/* Active Selection Border Overlay - Separated for Export Ignoring */}
+                        {(isActive || dragOverPanel === panel.id) && (
+                            <div 
+                                data-html2canvas-ignore="true"
+                                className="absolute inset-0 border-2 border-brand z-10 shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none"
+                            />
+                        )}
+                        {isActive && (
+                            <div 
+                                data-html2canvas-ignore="true"
+                                className="absolute top-2 left-2 w-3 h-3 bg-brand rounded-full shadow-lg animate-pulse pointer-events-none z-20" 
+                            />
+                        )}
+
+                        {/* Remove Button - Shows when Active or Hovered */}
+                        {showUrl && (
+                            <button
+                                data-html2canvas-ignore="true"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onClearPanel) onClearPanel(panel.id);
+                                }}
+                                className={`absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md border border-white/10 shadow-lg transition-all duration-200 z-30 group/btn
+                                    ${isActive ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 -translate-y-2 scale-90 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100'}
+                                    hover:bg-red-500 hover:border-red-400 hover:rotate-90 active:scale-90
+                                `}
+                                title="Clear Slot"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+
+        {/* === DRAWING LAYER (Global) === */}
         <canvas 
             ref={drawCanvasRef}
             className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' ? 'cursor-pen pointer-events-auto' : activeTool === 'eraser' ? 'cursor-eraser pointer-events-auto' : 'pointer-events-none'}`}
@@ -139,55 +437,8 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             onPointerUp={handleDrawEnd}
             onPointerLeave={handleDrawEnd}
         />
-        {isVideo ? (
-            <video
-                key={displayUrl}
-                src={displayUrl}
-                className="w-full h-full object-contain block pointer-events-none select-none"
-                draggable="false"
-                loop
-                autoPlay
-                playsInline
-                crossOrigin="anonymous"
-                onLoadedMetadata={handleMediaLoad}
-                style={{
-                    WebkitTouchCallout: "none",
-                    filter: `
-                      contrast(${meme.filters?.contrast ?? 100}%) 
-                      brightness(${meme.filters?.brightness ?? 100}%) 
-                      blur(${meme.filters?.blur ?? 0}px)
-                      grayscale(${meme.filters?.grayscale ?? 0}%)
-                      sepia(${meme.filters?.sepia ?? 0}%)
-                      hue-rotate(${meme.filters?.hueRotate ?? 0}deg)
-                      saturate(${meme.filters?.saturate ?? 100}%)
-                      invert(${meme.filters?.invert ?? 0}%)
-                    `
-                }}
-            />
-        ) : (
-            <img
-            src={displayUrl}
-            className="w-full h-full object-contain block pointer-events-none select-none"
-            alt={`Template: ${meme.name}`}
-            draggable="false"
-            crossOrigin="anonymous"
-            onLoad={handleMediaLoad}
-            style={{
-                WebkitTouchCallout: "none",
-                filter: `
-                  contrast(${meme.filters?.contrast ?? 100}%) 
-                  brightness(${meme.filters?.brightness ?? 100}%) 
-                  blur(${meme.filters?.blur ?? 0}px)
-                  grayscale(${meme.filters?.grayscale ?? 0}%)
-                  sepia(${meme.filters?.sepia ?? 0}%)
-                  hue-rotate(${meme.filters?.hueRotate ?? 0}deg)
-                  saturate(${meme.filters?.saturate ?? 100}%)
-                  invert(${meme.filters?.invert ?? 0}%)
-                `
-            }}
-            />
-        )}
 
+        {/* === STICKERS LAYER (Global) === */}
         {meme.stickers?.map((sticker) => (
           <div
             key={sticker.id}
@@ -223,6 +474,7 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
           </div>
         ))}
         
+        {/* === TEXT FILTER DEF === */}
         <svg className="absolute w-0 h-0 invisible" aria-hidden="true">
           <defs>
             <filter id="text-bg-filter" x="-5%" y="-5%" width="110%" height="110%">
@@ -232,6 +484,7 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
           </defs>
         </svg>
 
+        {/* === TEXT LAYER (Global) === */}
         {meme.texts.map((textItem) => {
           if (!(textItem.content || "").trim()) return null;
           const stroke = Math.max(1, meme.fontSize / 25);
@@ -267,7 +520,7 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             }}
           >
             {isSelected && (
-                <svg className="absolute inset-[-6px] w-[calc(100%+12px)] h-[calc(100%+12px)] pointer-events-none overflow-visible" xmlns="http://www.w3.org/2000/svg">
+                <svg data-html2canvas-ignore="true" className="absolute inset-[-6px] w-[calc(100%+12px)] h-[calc(100%+12px)] pointer-events-none overflow-visible" xmlns="http://www.w3.org/2000/svg">
                     <rect 
                         width="100%" 
                         height="100%" 

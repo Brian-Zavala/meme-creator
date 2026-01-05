@@ -12,6 +12,7 @@ import { MEME_QUOTES } from "../constants/memeQuotes";
 import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
+import { LayoutSelector } from "./MemeEditor/LayoutSelector";
 
 const MemeActions = lazy(() => import("./MemeEditor/MemeActions").then((module) => ({ default: module.MemeActions })));
 const GifSearch = lazy(() => import("./MemeEditor/GifSearch").then((module) => ({ default: module.GifSearch })));
@@ -20,6 +21,28 @@ const ModeSelector = lazy(() =>
 );
 const ColorControls = lazy(() => import("./MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("./MemeEditor/MemeFineTune"));
+
+const DEFAULT_FILTERS = {
+  contrast: 100,
+  brightness: 100,
+  blur: 0,
+  grayscale: 0,
+  sepia: 0,
+  hueRotate: 0,
+  saturate: 100,
+  invert: 0,
+  deepFry: 0,
+};
+
+const DEFAULT_LAYOUTS = {
+  "single": [{ id: "p1", x: 0, y: 0, w: 100, h: 100, posX: 50, posY: 50 }],
+  "top-bottom": [{ id: "p1", x: 0, y: 0, w: 100, h: 50, posX: 50, posY: 50 }, { id: "p2", x: 0, y: 50, w: 100, h: 50, posX: 50, posY: 50 }],
+  "side-by-side": [{ id: "p1", x: 0, y: 0, w: 50, h: 100, posX: 50, posY: 50 }, { id: "p2", x: 50, y: 0, w: 50, h: 100, posX: 50, posY: 50 }],
+  "grid-4": [
+    { id: "p1", x: 0, y: 0, w: 50, h: 50, posX: 50, posY: 50 }, { id: "p2", x: 50, y: 0, w: 50, h: 50, posX: 50, posY: 50 },
+    { id: "p3", x: 0, y: 50, w: 50, h: 50, posX: 50, posY: 50 }, { id: "p4", x: 50, y: 50, w: 50, h: 50, posX: 50, posY: 50 }
+  ]
+};
 
 export default function Main() {
   const [isPending, startTransition] = useTransition();
@@ -36,10 +59,10 @@ export default function Main() {
     const saved = localStorage.getItem("meme-generator-state");
     const defaultState = {
       id: null,
-      imageUrl: "http://i.imgflip.com/1bij.jpg",
-      sourceUrl: null,
       name: "Meme Name",
       mode: "image",
+      
+      // Global Styles
       textColor: "#ffffff",
       textBgColor: "transparent",
       textShadow: "#000000",
@@ -50,37 +73,61 @@ export default function Main() {
       drawColor: "#ff0000",
       drawWidth: 5,
       maxWidth: 100,
-      filters: {
-        contrast: 100,
-        brightness: 100,
-        blur: 0,
-        grayscale: 0,
-        sepia: 0,
-        hueRotate: 0,
-        saturate: 100,
-        invert: 0,
-        deepFry: 0,
-      },
-      texts: [
-        { id: "top", content: "", x: 50, y: 5, rotation: 0 },
+      
+                // Layout State
+            layout: "single",
+            activePanelId: "p1",
+            panels: [
+              { 
+                id: "p1", 
+                url: "http://i.imgflip.com/1bij.jpg", 
+                sourceUrl: null,
+                isVideo: false,
+                objectFit: "cover",
+                posX: 50,
+                posY: 50,
+                filters: { ...DEFAULT_FILTERS }
+              }
+            ],
+      
+            texts: [        { id: "top", content: "", x: 50, y: 5, rotation: 0 },
         { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
       ],
       stickers: [],
       drawings: [],
-      isVideo: false,
       selectedId: null,
     };
 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.imageUrl && parsed.imageUrl.startsWith("blob:")) {
-          parsed.imageUrl = defaultState.imageUrl;
-          parsed.name = defaultState.name;
-          parsed.isVideo = defaultState.isVideo;
-          parsed.mode = defaultState.mode;
+        // Migration logic
+        if (!parsed.panels) {
+            parsed.panels = [{
+                id: "p1",
+                url: parsed.imageUrl || defaultState.panels[0].url,
+                sourceUrl: parsed.sourceUrl || null,
+                isVideo: parsed.isVideo || false,
+                objectFit: "cover",
+                posX: 50,
+                posY: 50,
+                filters: parsed.filters || { ...DEFAULT_FILTERS }
+            }];
+            parsed.activePanelId = "p1";
+            parsed.layout = "single";
+            delete parsed.imageUrl;
+            delete parsed.isVideo;
+            delete parsed.filters;
         }
-        
+        // Ensure existing panels have posX/posY
+        if (parsed.panels) {
+            parsed.panels = parsed.panels.map(p => ({
+                ...p,
+                posX: p.posX ?? 50,
+                posY: p.posY ?? 50
+            }));
+        }
+
         if (parsed.texts) {
           parsed.texts = parsed.texts.map((t) => ({ ...t, rotation: t.rotation ?? 0 }));
         }
@@ -123,7 +170,9 @@ export default function Main() {
   const fineTuneRef = useRef(null);
 
   const [processedImage, setProcessedImage] = useState(null);
-  const deferredDeepFry = useDeferredValue(meme.filters?.deepFry);
+  
+  const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
+  const deferredDeepFry = useDeferredValue(activePanel?.filters?.deepFry);
 
   useEffect(() => {
     const level = parseInt(deferredDeepFry || 0, 10);
@@ -133,13 +182,13 @@ export default function Main() {
       URL.revokeObjectURL(processedImage);
     }
 
-    if (level === 0) {
+    if (level === 0 || !activePanel) {
       setProcessedImage(null);
       return;
     }
 
     const timer = setTimeout(async () => {
-      if (meme.mode === "video") {
+      if (activePanel.isVideo) {
         toast("GIF freezes for performance, but export stays animated!", {
           id: "fry-warning",
           icon: (
@@ -152,7 +201,7 @@ export default function Main() {
       }
 
       try {
-        const fried = await deepFryImage(meme.imageUrl, level, controller.signal);
+        const fried = await deepFryImage(activePanel.url, level, controller.signal);
         startTransition(() => {
           setProcessedImage(fried);
         });
@@ -167,7 +216,7 @@ export default function Main() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [deferredDeepFry, meme.imageUrl]);
+  }, [deferredDeepFry, activePanel?.url]);
 
   useEffect(() => {
     if (meme.selectedId && fineTuneRef.current) {
@@ -334,16 +383,21 @@ export default function Main() {
       setAllGifs(results);
       setVideoDeck([]);
       const first = results[0];
-      updateState((prev) => ({
-        ...prev,
-        imageUrl: first.url,
-        sourceUrl: first.shareUrl,
-        name: first.name.replace(/\s+/g, "-"),
-        mode: "video",
-        isVideo: false,
-        id: first.id,
-        fontSize: calculateSmartFontSize(first.width, first.height, prev.texts),
-      }));
+      
+      updateState((prev) => {
+        const newPanels = prev.panels.map(p => 
+            p.id === prev.activePanelId 
+            ? { ...p, url: first.url, sourceUrl: first.shareUrl, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+            : p
+        );
+        return {
+            ...prev,
+            panels: newPanels,
+            name: first.name.replace(/\s+/g, "-"),
+            mode: "video",
+            fontSize: calculateSmartFontSize(first.width, first.height, prev.texts),
+        };
+      });
     } else {
       toast.error("No GIFs found");
     }
@@ -371,19 +425,41 @@ export default function Main() {
         }
         const newMeme = getNextItem(currentGifs, videoDeck, setVideoDeck);
         if (requestId !== requestCounterRef.current) return;
-        updateState((prev) => ({
-          ...prev,
-          imageUrl: newMeme.url,
-          sourceUrl: newMeme.shareUrl,
-          name: newMeme.name.replace(/\s+/g, "-"),
-          mode: "video",
-          isVideo: false,
-          id: newMeme.id,
-          fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
-        }));
+        
+        updateState((prev) => {
+            const newPanels = prev.panels.map(p => 
+                p.id === prev.activePanelId 
+                ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+                : p
+            );
+            return {
+                ...prev,
+                panels: newPanels,
+                name: newMeme.name.replace(/\s+/g, "-"),
+                fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+            };
+        });
+
       } else {
         if (allMemes.length === 0) return;
         const newMeme = getNextItem(allMemes, imageDeck, setImageDeck);
+        
+        const updatePanelWithImage = (url) => {
+            updateState((prev) => {
+                const newPanels = prev.panels.map(p => 
+                    p.id === prev.activePanelId 
+                    ? { ...p, url, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+                    : p
+                );
+                return {
+                    ...prev,
+                    panels: newPanels,
+                    name: newMeme.name.replace(/\s+/g, "-"),
+                    fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
+                };
+            });
+        };
+
         try {
           const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
           if (!response.ok) throw new Error();
@@ -394,29 +470,77 @@ export default function Main() {
             reader.readAsDataURL(blob);
           });
           if (requestId !== requestCounterRef.current) return;
-          updateState((prev) => ({
-            ...prev,
-            imageUrl: dataUrl,
-            name: newMeme.name.replace(/\s+/g, "-"),
-            fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
-            mode: "image",
-            isVideo: false,
-          }));
+          updatePanelWithImage(dataUrl);
         } catch {
           if (requestId !== requestCounterRef.current) return;
-          updateState((prev) => ({
-            ...prev,
-            imageUrl: newMeme.url,
-            name: newMeme.name.replace(/\s+/g, "-"),
-            fontSize: calculateSmartFontSize(newMeme.width, newMeme.height, prev.texts),
-            mode: "image",
-            isVideo: false,
-          }));
+          updatePanelWithImage(newMeme.url);
         }
       }
     } finally {
       if (requestId === requestCounterRef.current) setGenerating(false);
     }
+  }
+
+  function handleLayoutChange(layoutId) {
+    if (layoutId === meme.layout) return;
+    
+    startTransition(() => {
+        updateState(prev => {
+            const newLayoutDef = DEFAULT_LAYOUTS[layoutId];
+            const oldPanels = [...prev.panels];
+            
+            const newPanels = newLayoutDef.map((slot, index) => {
+                const existing = oldPanels[index];
+                if (existing) {
+                    return { ...existing, id: slot.id, x: slot.x, y: slot.y, w: slot.w, h: slot.h };
+                }
+                return { 
+                    id: slot.id, 
+                    x: slot.x, y: slot.y, w: slot.w, h: slot.h,
+                    url: null, 
+                    isVideo: false, 
+                    objectFit: "cover",
+                    posX: 50,
+                    posY: 50,
+                    filters: { ...DEFAULT_FILTERS } 
+                };
+            });
+
+            return {
+                ...prev,
+                layout: layoutId,
+                panels: newPanels,
+                activePanelId: newPanels[0].id
+            };
+        });
+    });
+  }
+
+  const handlePanelPosChange = useCallback((id, x, y, isTransient = false) => {
+    const updater = isTransient ? updateTransient : updateState;
+    // For transient updates, we use startTransition implicitly if not provided, 
+    // but updateTransient usually handles its own scheduling or is fast enough.
+    // However, Main.jsx uses startTransition for transient sometimes.
+    
+    const updateFn = (prev) => ({
+        ...prev,
+        panels: prev.panels.map(p => 
+            p.id === id ? { ...p, posX: x, posY: y } : p
+        )
+    });
+
+    if (isTransient) {
+        updateTransient(updateFn);
+    } else {
+        updater(updateFn);
+    }
+  }, [updateState, updateTransient]);
+
+  function handlePanelSelect(id) {
+    if (id === meme.activePanelId) return;
+    startTransition(() => {
+        updateState(prev => ({ ...prev, activePanelId: id }));
+    });
   }
 
   function handleTextChange(id, value) {
@@ -455,17 +579,9 @@ export default function Main() {
     startTransition(() => {
       updateState((prev) => ({
         ...prev,
-        filters: {
-          contrast: 100,
-          brightness: 100,
-          blur: 0,
-          grayscale: 0,
-          sepia: 0,
-          hueRotate: 0,
-          saturate: 100,
-          invert: 0,
-          deepFry: 0,
-        },
+        panels: prev.panels.map(p => 
+            p.id === prev.activePanelId ? { ...p, filters: { ...DEFAULT_FILTERS } } : p
+        )
       }));
     });
     toast("Filters reset", { icon: "🎨" });
@@ -487,7 +603,11 @@ export default function Main() {
     startTransition(() => {
       updateTransient((prev) => ({
         ...prev,
-        filters: { ...prev.filters, [name]: value },
+        panels: prev.panels.map(p => 
+            p.id === prev.activePanelId 
+            ? { ...p, filters: { ...p.filters, [name]: value } }
+            : p
+        )
       }));
     });
   }
@@ -519,15 +639,72 @@ export default function Main() {
       const isGif = file.type === "image/gif";
       const isVideo = file.type.startsWith("video/");
 
-      updateState((prev) => ({
-        ...prev,
-        imageUrl: localUrl,
-        name: file.name.split(".")[0],
-        mode: isGif || isVideo ? "video" : "image",
-        isVideo: isVideo,
-      }));
+      updateState((prev) => {
+          const newPanels = prev.panels.map(p => 
+            p.id === prev.activePanelId 
+            ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+            : p
+          );
+          return {
+            ...prev,
+            panels: newPanels,
+            name: file.name.split(".")[0],
+            mode: isGif || isVideo ? "video" : "image",
+          };
+      });
     }
   }
+
+  const handleCanvasDrop = useCallback((file, panelId) => {
+      const localUrl = URL.createObjectURL(file);
+      const isGif = file.type === "image/gif";
+      const isVideo = file.type.startsWith("video/");
+      
+      startTransition(() => {
+        updateState((prev) => {
+            const newPanels = prev.panels.map(p => 
+                p.id === panelId
+                ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+                : p
+            );
+            return {
+                ...prev,
+                panels: newPanels,
+                activePanelId: panelId,
+                mode: isGif || isVideo ? "video" : "image"
+            };
+        });
+      });
+  }, [updateState]);
+
+  const handleClearPanel = useCallback((panelId) => {
+      startTransition(() => {
+        updateState((prev) => {
+            const newPanels = prev.panels.map(p => 
+                p.id === panelId
+                ? { ...p, url: null, sourceUrl: null, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+                : p
+            );
+            return {
+                ...prev,
+                panels: newPanels,
+            };
+        });
+      });
+  }, [updateState]);
+
+  const togglePanelFit = useCallback((panelId) => {
+      startTransition(() => {
+        updateState((prev) => {
+            const newPanels = prev.panels.map(p => 
+                p.id === panelId
+                ? { ...p, objectFit: p.objectFit === "contain" ? "cover" : "contain" }
+                : p
+            );
+            return { ...prev, panels: newPanels };
+        });
+      });
+  }, [updateState]);
 
   function handleReset() {
     triggerFlash("red");
@@ -547,17 +724,7 @@ export default function Main() {
         drawWidth: 5,
         textColor: "#ffffff",
         textBgColor: "transparent",
-        filters: {
-          contrast: 100,
-          brightness: 100,
-          blur: 0,
-          grayscale: 0,
-          sepia: 0,
-          hueRotate: 0,
-          saturate: 100,
-          invert: 0,
-          deepFry: 0,
-        },
+        panels: prev.panels.map(p => ({ ...p, filters: { ...DEFAULT_FILTERS } }))
       }));
     });
   }
@@ -579,7 +746,6 @@ export default function Main() {
   }
 
   function handleCanvasPointerDown() {
-    // Clear selection on background click
     startTransition(() => {
       updateState((prev) => ({ ...prev, selectedId: null }));
     });
@@ -604,7 +770,6 @@ export default function Main() {
   function generateMagicCaption() {
     setIsMagicGenerating(true);
 
-    // Simulate AI thinking time
     setTimeout(() => {
       const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
       const randomIndex = Math.floor(Math.random() * category.length);
@@ -682,12 +847,25 @@ export default function Main() {
 
   async function handleDownload() {
     if (!memeRef.current) return;
-    if (meme.mode === "video") {
-      const isDeepFrying = (meme.filters?.deepFry || 0) > 0;
+    
+    const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
+    // Only support true GIF export if we are in single mode and have a video
+    const canExportGif = meme.mode === "video" && meme.layout === "single" && activePanel.isVideo;
+
+    if (canExportGif) {
+      const isDeepFrying = (activePanel.filters?.deepFry || 0) > 0;
       const loadingMsg = isDeepFrying ? "Deep frying every frame... (this takes longer) 🍟" : "Encoding GIF...";
 
       const promise = (async () => {
-        const blob = await exportGif(meme, meme.texts, meme.stickers);
+        // Construct a legacy-compatible meme object for the exporter
+        const exportMeme = {
+            ...meme,
+            imageUrl: activePanel.url,
+            isVideo: true,
+            filters: activePanel.filters || DEFAULT_FILTERS
+        };
+
+        const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
         if (meme.id) registerShare(meme.id, searchQuery);
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -707,16 +885,16 @@ export default function Main() {
         },
       });
     } else {
+      // Fallback for multi-panel or static export
+      if (meme.mode === "video" && meme.layout !== "single") {
+          toast("Multi-panel GIF export not supported yet. Saving as PNG.", { icon: "🖼️", duration: 4000 });
+      }
+
       const promise = (async () => {
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-        let finalDataUrl = canvas.toDataURL("image/png");
-
-        if ((meme.filters?.deepFry || 0) > 0) {
-            const friedBlobUrl = await deepFryImage(finalDataUrl, meme.filters.deepFry);
-            
-            finalDataUrl = friedBlobUrl;
-        }
-
+        // Note: html2canvas captures the visual state of the DOM, including CSS filters on video elements.
+        // Deep fry logic is visual-only here.
+        const finalDataUrl = canvas.toDataURL("image/png");
         const link = document.createElement("a");
         link.download = `${meme.name}-${Date.now()}.png`; 
         link.href = finalDataUrl;
@@ -736,80 +914,29 @@ export default function Main() {
 
   async function handleShare() {
     if (!memeRef.current) return;
-    if (meme.mode === "video") {
-      const hasContent = meme.texts.some((t) => t.content?.trim()) || meme.stickers.length > 0;
-      if (hasContent) {
-        toast("Generating high-quality file for manual sharing...", { duration: 4000 });
-        handleDownload();
-        return;
-      }
-      const shareUrl = meme.sourceUrl || meme.imageUrl;
-      try {
-        const response = await fetch(shareUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `meme-${Date.now()}.gif`, { type: "image/gif" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file] });
-          if (meme.id) registerShare(meme.id, searchQuery);
-          triggerFireworks();
-          toast.success("Shared!");
-        } else {
-          await navigator.share({ url: shareUrl });
-          toast.success("Shared!");
-        }
-      } catch (e) {
-        if (e.name !== "AbortError") {
-          console.error("Share Error:", e);
-          try {
-            const htmlBlob = new Blob([`<img src="${shareUrl}" alt="GIF" />`], { type: "text/html" });
-            const textBlob = new Blob([shareUrl], { type: "text/plain" });
-            await navigator.clipboard.write([
-              new ClipboardItem({
-                "text/html": htmlBlob,
-                "text/plain": textBlob,
-              }),
-            ]);
-            toast.success("GIF copied to clipboard!");
-          } catch (err) {
-            await navigator.clipboard.writeText(shareUrl);
-            toast.success("Link copied!");
-          }
-        }
-      }
-    } else {
-      try {
+    
+    try {
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-        let blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
-
-        if ((meme.filters?.deepFry || 0) > 0) {
-           const initialUrl = URL.createObjectURL(blob);
-           const friedBlobUrl = await deepFryImage(initialUrl, meme.filters.deepFry);
-           const friedResponse = await fetch(friedBlobUrl);
-           blob = await friedResponse.blob();
-           URL.revokeObjectURL(initialUrl);
-        }
-
+        const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
         const file = new File([blob], `meme.png`, { type: "image/png" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file] });
-          toast.success("Shared!");
+            await navigator.share({ files: [file] });
+            toast.success("Shared!");
         } else {
-          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          toast.success("Copied!");
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+            toast.success("Copied!");
         }
-      } catch (e) {
+    } catch (e) {
         if (e.name !== "AbortError") {
-          console.error("Share Error:", e);
-          toast.error("Share failed");
+            console.error("Share Error:", e);
+            toast.error("Share failed");
         }
-      }
     }
   }
 
   function clearSearch() {
     setSearchQuery("");
     setSuggestions([]);
-    // Removed: updateState((prev) => ({ ...prev, mode: "image" }));
     if (allMemes.length === 0) {
       setLoading(true);
       fetch("https://api.imgflip.com/get_memes")
@@ -849,19 +976,25 @@ export default function Main() {
       </div>
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
-        <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-          <ModeSelector
-            mode={meme.mode}
-            onModeChange={(e) => {
-              const m = e.target.value;
-              startTransition(() => {
-                updateState((prev) => ({ ...prev, mode: m }));
-                if (m === "image") clearSearch();
-                getMemeImage(m);
-              });
-            }}
-          />
-        </Suspense>
+        <div className="grid grid-cols-2 gap-4">
+            <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+            <ModeSelector
+                mode={meme.mode}
+                onModeChange={(e) => {
+                const m = e.target.value;
+                startTransition(() => {
+                    updateState((prev) => ({ ...prev, mode: m }));
+                    if (m === "image") clearSearch();
+                    getMemeImage(m);
+                });
+                }}
+            />
+            </Suspense>
+            <LayoutSelector 
+                layout={meme.layout}
+                onLayoutChange={handleLayoutChange}
+            />
+        </div>
 
         {meme.mode === "video" && (
           <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
@@ -886,7 +1019,7 @@ export default function Main() {
         )}
         <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
           <MemeToolbar
-            meme={meme}
+            meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
             activeTool={activeTool}
             setActiveTool={setActiveTool}
             handleStyleChange={handleStyleChange}
@@ -933,6 +1066,15 @@ export default function Main() {
             onPointerDown={handlePointerDown}
             onRemoveSticker={removeSticker}
             onCanvasPointerDown={handleCanvasPointerDown}
+            
+            // New Props
+            activePanelId={meme.activePanelId}
+            onPanelSelect={handlePanelSelect}
+            layouts={DEFAULT_LAYOUTS}
+            onDrop={handleCanvasDrop}
+            onClearPanel={handleClearPanel}
+            onToggleFit={togglePanelFit}
+            onPanelPosChange={handlePanelPosChange}
           />
           {selectedText && (
             <Suspense fallback={null}>

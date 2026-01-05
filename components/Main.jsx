@@ -181,9 +181,6 @@ export default function Main() {
 
     if (level === 0) {
       if (activePanel.processedImage) {
-        if (activePanel.processedImage.startsWith("blob:")) {
-          URL.revokeObjectURL(activePanel.processedImage);
-        }
         startTransition(() => {
           updateState((prev) => ({
             ...prev,
@@ -219,15 +216,6 @@ export default function Main() {
         const fried = await deepFryImage(activePanel.url, level, controller.signal);
         startTransition(() => {
           updateState((prev) => {
-            const currentPanel = prev.panels.find((p) => p.id === activePanel.id);
-            if (
-              currentPanel?.processedImage &&
-              currentPanel.processedImage.startsWith("blob:") &&
-              currentPanel.processedImage !== fried
-            ) {
-              URL.revokeObjectURL(currentPanel.processedImage);
-            }
-
             return {
               ...prev,
               panels: prev.panels.map((p) =>
@@ -460,11 +448,6 @@ export default function Main() {
         if (requestId !== requestCounterRef.current) return;
         
         updateState((prev) => {
-            const oldP = prev.panels.find(p => p.id === prev.activePanelId);
-            if (oldP?.processedImage && oldP.processedImage.startsWith("blob:")) {
-                URL.revokeObjectURL(oldP.processedImage);
-            }
-
             const newPanels = prev.panels.map(p => 
                 p.id === prev.activePanelId 
                 ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: true, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
@@ -484,11 +467,6 @@ export default function Main() {
         
         const updatePanelWithImage = (url) => {
             updateState((prev) => {
-                const oldP = prev.panels.find(p => p.id === prev.activePanelId);
-                if (oldP?.processedImage && oldP.processedImage.startsWith("blob:")) {
-                    URL.revokeObjectURL(oldP.processedImage);
-                }
-
                 const newPanels = prev.panels.map(p => 
                     p.id === prev.activePanelId 
                     ? { ...p, url, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
@@ -621,11 +599,6 @@ export default function Main() {
   function resetFilters() {
     startTransition(() => {
       updateState((prev) => {
-        const panel = prev.panels.find(p => p.id === prev.activePanelId);
-        if (panel?.processedImage && panel.processedImage.startsWith("blob:")) {
-            URL.revokeObjectURL(panel.processedImage);
-        }
-
         return {
             ...prev,
             panels: prev.panels.map(p => 
@@ -712,11 +685,6 @@ export default function Main() {
       
       startTransition(() => {
         updateState((prev) => {
-            const oldP = prev.panels.find(p => p.id === panelId);
-            if (oldP?.processedImage && oldP.processedImage.startsWith("blob:")) {
-                URL.revokeObjectURL(oldP.processedImage);
-            }
-
             const newPanels = prev.panels.map(p => 
                 p.id === panelId
                 ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
@@ -735,11 +703,6 @@ export default function Main() {
   const handleClearPanel = useCallback((panelId) => {
       startTransition(() => {
         updateState((prev) => {
-            const panel = prev.panels.find(p => p.id === panelId);
-            if (panel?.processedImage && panel.processedImage.startsWith("blob:")) {
-                URL.revokeObjectURL(panel.processedImage);
-            }
-
             const newPanels = prev.panels.map(p => 
                 p.id === panelId
                 ? { ...p, url: null, sourceUrl: null, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Type, Smile, Plus, ChevronDown, HelpCircle, Sparkles, Loader2, Upload } from "lucide-react";
+import { Type, Smile, ChevronDown, HelpCircle, Sparkles, Loader2, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import { removeImageBackground } from "../../services/backgroundRemover";
 
@@ -37,6 +37,68 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
         icon: "💡",
         style: { borderRadius: '10px', background: '#333', color: '#fff' },
         duration: 3000
+    });
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Clear the input so the same file can be selected again if needed
+    e.target.value = ''; 
+    setIsOpen(false);
+
+    toast((t) => (
+      <div className="flex flex-col gap-3 min-w-[200px]">
+        <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-brand" />
+            <span className="font-bold text-sm">Remove background?</span>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t.id);
+              // Loading toast with ID to update later
+              const toastId = toast.loading("Processing image... (Downloading AI Model)", { style: { minWidth: '250px' } });
+              
+              try {
+                  const blob = await removeImageBackground(file, (progress) => {
+                      // Optional: You could update toast text with progress here if desired
+                  });
+                  const url = URL.createObjectURL(blob);
+                  
+                  // Pass the URL and 'image' type to your sticker handler
+                  onAddSticker(url, 'image');
+                  toast.success("Background removed!", { id: toastId });
+              } catch (err) {
+                  console.error(err);
+                  toast.error("Failed to remove background. Using original.", { id: toastId });
+                  
+                  // Fallback to original
+                  const url = URL.createObjectURL(file);
+                  onAddSticker(url, 'image');
+              }
+            }}
+            className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
+          >
+            Yes, Magic
+          </button>
+          <button 
+            onClick={() => {
+              toast.dismiss(t.id);
+              const url = URL.createObjectURL(file);
+              onAddSticker(url, 'image');
+            }}
+            className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
+          >
+            No, Original
+          </button>
+        </div>
+      </div>
+    ), { 
+        duration: 8000, 
+        position: 'top-center', 
+        style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' } 
     });
   };
 
@@ -146,53 +208,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                               type="file" 
                               accept="image/png,image/jpeg,image/webp,image/gif"
                               className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files[0];
-                                if (!file) return;
-                                e.target.value = ''; // Reset
-                                setIsOpen(false);
-
-                                toast((t) => (
-                                  <div className="flex flex-col gap-3 min-w-[200px]">
-                                    <div className="flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-brand" />
-                                        <span className="font-bold text-sm">Remove background?</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <button 
-                                        onClick={async () => {
-                                          toast.dismiss(t.id);
-                                          const toastId = toast.loading("Removing background... (AI Model loading ~40MB)", { style: { minWidth: '300px' } });
-                                          try {
-                                              const blob = await removeImageBackground(file);
-                                              const url = URL.createObjectURL(blob);
-                                              onAddSticker(url, 'image');
-                                              toast.success("Background removed!", { id: toastId });
-                                          } catch (err) {
-                                              console.error(err);
-                                              toast.error("Failed. Using original.", { id: toastId });
-                                              const url = URL.createObjectURL(file);
-                                              onAddSticker(url, 'image');
-                                          }
-                                        }}
-                                        className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
-                                      >
-                                        Yes, Magic
-                                      </button>
-                                      <button 
-                                        onClick={() => {
-                                          toast.dismiss(t.id);
-                                          const url = URL.createObjectURL(file);
-                                          onAddSticker(url, 'image');
-                                        }}
-                                        className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
-                                      >
-                                        No, Original
-                                      </button>
-                                    </div>
-                                  </div>
-                                ), { duration: 8000, position: 'top-center', style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' } });
-                              }}
+                              onChange={handleFileUpload}
                             />
                           </label>
                         </div>

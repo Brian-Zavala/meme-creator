@@ -17,6 +17,10 @@ export async function removeImageBackground(imageSource, onProgress) {
     }
 
     const config = {
+      model: 'isnet', // Use highest accuracy model (float32)
+      output: {
+        quality: 1.0
+      },
       progress: (key, current, total) => {
         if (onProgress) {
             const pct = (current / total);

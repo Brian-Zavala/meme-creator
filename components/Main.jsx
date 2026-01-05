@@ -976,7 +976,7 @@ export default function Main() {
       </div>
 
       <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
             <ModeSelector
                 mode={meme.mode}

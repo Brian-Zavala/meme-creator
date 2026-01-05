@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Type, Smile, Plus, ChevronDown, HelpCircle, Sparkles, Loader2, Upload } from "lucide-react";
 import toast from "react-hot-toast";
+import { removeImageBackground } from "../../services/backgroundRemover";
 
 const STICKER_CATEGORIES = {
   "Reactions": ["😂", "💀", "😭", "🤡", "😎", "😡", "😱", "🤔", "🤫", "😴"],
@@ -147,12 +148,50 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files[0];
-                                if (file) {
-                                  const url = URL.createObjectURL(file);
-                                  selectSticker(url);
-                                  onAddSticker(url, 'image');
-                                  setIsOpen(false);
-                                }
+                                if (!file) return;
+                                e.target.value = ''; // Reset
+                                setIsOpen(false);
+
+                                toast((t) => (
+                                  <div className="flex flex-col gap-3 min-w-[200px]">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4 text-brand" />
+                                        <span className="font-bold text-sm">Remove background?</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button 
+                                        onClick={async () => {
+                                          toast.dismiss(t.id);
+                                          const toastId = toast.loading("Removing background... (AI Model loading)", { style: { minWidth: '250px' } });
+                                          try {
+                                              const blob = await removeImageBackground(file);
+                                              const url = URL.createObjectURL(blob);
+                                              onAddSticker(url, 'image');
+                                              toast.success("Background removed!", { id: toastId });
+                                          } catch (err) {
+                                              console.error(err);
+                                              toast.error("Failed. Using original.", { id: toastId });
+                                              const url = URL.createObjectURL(file);
+                                              onAddSticker(url, 'image');
+                                          }
+                                        }}
+                                        className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
+                                      >
+                                        Yes, Magic ✨
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          toast.dismiss(t.id);
+                                          const url = URL.createObjectURL(file);
+                                          onAddSticker(url, 'image');
+                                        }}
+                                        className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
+                                      >
+                                        No, Original
+                                      </button>
+                                    </div>
+                                  </div>
+                                ), { duration: 8000, position: 'top-center', style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' } });
                               }}
                             />
                           </label>

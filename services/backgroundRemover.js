@@ -31,7 +31,7 @@ export async function removeImageBackground(imageSource, onProgress) {
 
     const config = {
       model: 'isnet_quint8', 
-      publicPath: 'https://unpkg.com/@imgly/background-removal-data@1.7.0/dist/',
+      publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal-data@1.7.0/',
       device: 'gpu',
       output: {
         quality: 1.0,

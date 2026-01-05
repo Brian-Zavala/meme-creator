@@ -1,39 +1,22 @@
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 
-export const useLockBodyScroll = () => {
-    const ref = useRef(null);
-
+export const useLockBodyScroll = (lock = true) => {
     useEffect(() => {
-        const element = ref.current;
-        if (!element) return;
+        if (!lock) return;
 
-        // 1. Function to LOCK scrolling
-        const lockScroll = () => {
-            document.body.style.overflow = 'hidden';
-            // Mobile Safari sometimes ignores overflow: hidden without this:
-            document.body.style.touchAction = 'none'; 
-        };
+        // Get original body overflow
+        const originalStyle = window.getComputedStyle(document.body).overflow;
+        const originalTouchAction = window.getComputedStyle(document.body).touchAction;
 
-        // 2. Function to UNLOCK scrolling
-        const unlockScroll = () => {
-            document.body.style.overflow = '';
-            document.body.style.touchAction = '';
-        };
+        // Prevent scrolling on mount
+        document.body.style.overflow = 'hidden';
+        // Mobile Safari sometimes ignores overflow: hidden without this:
+        document.body.style.touchAction = 'none'; 
 
-        // 3. Attach listeners
-        // We use passive: false just in case, though for this technique it matters less
-        element.addEventListener('touchstart', lockScroll, { passive: false });
-        element.addEventListener('touchend', unlockScroll);
-        element.addEventListener('touchcancel', unlockScroll); // Handle gesture cancellation
-
+        // Re-enable scrolling when component unmounts or lock changes
         return () => {
-            // Cleanup: Always unlock if the component dies
-            unlockScroll();
-            element.removeEventListener('touchstart', lockScroll);
-            element.removeEventListener('touchend', unlockScroll);
-            element.removeEventListener('touchcancel', unlockScroll);
+            document.body.style.overflow = originalStyle;
+            document.body.style.touchAction = originalTouchAction;
         };
-    }, []);
-
-    return ref;
+    }, [lock]); 
 };

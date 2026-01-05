@@ -1,6 +1,9 @@
 import { Move, Type, Layers, Image as ImageIcon, Film } from "lucide-react";
+import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 
 export function InstructionModal({ isOpen, onClose }) {
+  useLockBodyScroll(isOpen);
+
   if (!isOpen) return null;
 
   return (

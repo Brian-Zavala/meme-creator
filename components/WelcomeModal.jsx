@@ -1,6 +1,9 @@
 import { Sparkles } from "lucide-react";
+import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 
 export function WelcomeModal({ isOpen, onClose }) {
+  useLockBodyScroll(isOpen);
+  
   if (!isOpen) return null;
 
   return (

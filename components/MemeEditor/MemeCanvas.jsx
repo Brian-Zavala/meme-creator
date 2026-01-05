@@ -3,7 +3,6 @@ import { Loader2, Plus, Image as ImageIcon, Video, Upload, X } from "lucide-reac
 
 const MemeCanvas = forwardRef(({ 
     meme, 
-    overrideImageUrl, 
     loading, 
     draggedId, 
     selectedId, 
@@ -283,7 +282,7 @@ const MemeCanvas = forwardRef(({
         <div className="absolute inset-0 top-[var(--padding-top,0)] w-full h-full">
             {meme.panels?.map((panel) => {
                 const isActive = panel.id === activePanelId;
-                const showUrl = (isActive && overrideImageUrl) ? overrideImageUrl : panel.url;
+                const showUrl = panel.processedImage || panel.url;
                 const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser'].includes(activeTool) && showUrl;
                 
                 return (

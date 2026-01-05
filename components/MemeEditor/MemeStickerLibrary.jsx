@@ -174,9 +174,19 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                   <button
                     key={sticker.id}
                     onClick={() => { onAddSticker(sticker.url, 'image'); if(onClose) onClose(); }}
-                    className="aspect-square relative bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-brand transition-all active:scale-95"
+                    className="aspect-square relative bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-brand transition-all active:scale-95 group"
                   >
-                    <img src={sticker.url} alt={sticker.name} className="w-full h-full object-contain p-1" loading="lazy" />
+                    <img 
+                      src={`https://wsrv.nl/?url=${encodeURIComponent(sticker.url)}&w=150&h=150&fit=contain`} 
+                      alt={sticker.name} 
+                      className="w-full h-full object-contain p-1 transition-transform group-hover:scale-110" 
+                      loading="lazy" 
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = sticker.url;
+                      }}
+                    />
                   </button>
                 ))}
               </div>

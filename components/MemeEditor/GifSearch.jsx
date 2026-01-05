@@ -43,8 +43,16 @@ export function GifSearch({
             ) : categories.length > 0 && !searchQuery ? (
                 <div className="p-2 grid grid-cols-2 gap-2">{categories.map((c, i) => (
                     <button key={i} onClick={() => onSelectSuggestion(c.searchterm)} className="relative h-16 rounded-lg overflow-hidden group">
-                        <img src={c.image} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100" />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="text-white font-bold text-xs">{c.name}</span></div>
+                        <img 
+                          src={`https://wsrv.nl/?url=${encodeURIComponent(c.image)}&w=200&h=100&fit=cover`} 
+                          className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
+                          crossOrigin="anonymous"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = c.image;
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-colors"><span className="text-white font-bold text-xs uppercase tracking-wider">{c.name}</span></div>
                     </button>
                 ))}
                 </div>

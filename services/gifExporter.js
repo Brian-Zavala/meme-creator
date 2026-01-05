@@ -82,6 +82,9 @@ export async function exportGif(meme, texts, stickers) {
 
       // 4. Process each frame
       for (let i = 0; i < numFrames; i++) {
+        // Yield to main thread every 5 frames to prevent UI freeze
+        if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
+
         const info = reader.frameInfo(i);
         
         // --- Disposal Handling (Cleanup from PREVIOUS frame) ---

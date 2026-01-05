@@ -2,12 +2,15 @@
 const API_KEY = import.meta.env.VITE_TENOR_KEY;
 const CLIENT_KEY = "meme-creator-app";
 
-export async function searchTenor(query) {
+export async function searchTenor(query, type = 'gif') {
   // If no query, we use the 'featured' endpoint to get trending GIFs
   const endpoint = query ? 'search' : 'featured';
   const queryParam = query ? `&q=${encodeURIComponent(query)}` : '';
   
-  const url = `https://tenor.googleapis.com/v2/${endpoint}?key=${API_KEY}&client_key=${CLIENT_KEY}&limit=50&media_filter=gif,mediumgif${queryParam}`;
+  // ADD search filter for stickers based on documentation
+  const searchFilter = type === 'sticker' ? '&searchfilter=sticker' : '';
+
+  const url = `https://tenor.googleapis.com/v2/${endpoint}?key=${API_KEY}&client_key=${CLIENT_KEY}&limit=50&media_filter=gif,mediumgif${queryParam}${searchFilter}`;
 
   try {
     const response = await fetch(url);

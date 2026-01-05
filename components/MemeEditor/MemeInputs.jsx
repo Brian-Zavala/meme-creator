@@ -1,16 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Type, Smile, ChevronDown, HelpCircle, Sparkles, Loader2, Upload } from "lucide-react";
+import { Type, Smile, ChevronDown, HelpCircle, Sparkles, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { removeImageBackground } from "../../services/backgroundRemover";
-
-const STICKER_CATEGORIES = {
-  "Reactions": ["😂", "💀", "😭", "🤡", "😎", "😡", "😱", "🤔", "🤫", "😴"],
-  "Hands": ["👍", "👎", "👌", "✌️", "🤞", "🤟", "👊", "👏", "🙌", "🙏"],
-  "Love": ["❤️", "💔", "💕", "💖", "😍", "😘", "🥰", "💌", "💘", "💝"],
-  "Animals": ["🐈", "🐕", "🐸", "🙈", "🙉", "🙊", "🐵", "🦄", "🐔", "🐧"],
-  "Objects": ["🔥", "💯", "✨", "🎉", "🍆", "🍑", "💩", "💣", "💎", "💰"],
-  "Symbols": ["⚠️", "🚫", "✅", "❌", "❓", "❗️", "💯", "💢", "💤", "💨"]
-};
+import MemeStickerLibrary from "./MemeStickerLibrary";
 
 export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,79 +17,12 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectSticker = (sticker) => {
-    onAddSticker(sticker);
-    setIsOpen(false);
-  };
-
   const showStickerHelp = (e) => {
     e.stopPropagation();
     toast("Tip: Double-tap or Long-press a sticker to remove it!", {
         icon: "💡",
         style: { borderRadius: '10px', background: '#333', color: '#fff' },
         duration: 3000
-    });
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Clear the input so the same file can be selected again if needed
-    e.target.value = ''; 
-    setIsOpen(false);
-
-    toast((t) => (
-      <div className="flex flex-col gap-3 min-w-[200px]">
-        <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-brand" />
-            <span className="font-bold text-sm">Remove background?</span>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={async () => {
-              toast.dismiss(t.id);
-              // Loading toast with ID to update later
-              const toastId = toast.loading("Processing image... (Downloading AI Model)", { style: { minWidth: '250px' } });
-              
-              try {
-                  const blob = await removeImageBackground(file, (progress) => {
-                      // Optional: You could update toast text with progress here if desired
-                  });
-                  const url = URL.createObjectURL(blob);
-                  
-                  // Pass the URL and 'image' type to your sticker handler
-                  onAddSticker(url, 'image');
-                  toast.success("Background removed!", { id: toastId });
-              } catch (err) {
-                  console.error(err);
-                  toast.error("Failed to remove background. Using original.", { id: toastId });
-                  
-                  // Fallback to original
-                  const url = URL.createObjectURL(file);
-                  onAddSticker(url, 'image');
-              }
-            }}
-            className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
-          >
-            Yes, Magic
-          </button>
-          <button 
-            onClick={() => {
-              toast.dismiss(t.id);
-              const url = URL.createObjectURL(file);
-              onAddSticker(url, 'image');
-            }}
-            className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
-          >
-            No, Original
-          </button>
-        </div>
-      </div>
-    ), { 
-        duration: 8000, 
-        position: 'top-center', 
-        style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' } 
     });
   };
 
@@ -189,55 +113,17 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                 <HelpCircle className="w-5 h-5" />
             </button>
 
-            {/* Floating Menu */}
+            {/* Floating Menu - USING THE NEW LIBRARY COMPONENT */}
             {isOpen && (
                 <div 
-                    className="absolute left-6 right-6 top-full mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in zoom-in-95 fade-in duration-200 origin-top"
+                    className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in zoom-in-95 fade-in duration-200 origin-top h-[400px]"
                     role="menu"
                     aria-label="Sticker Categories"
                 >
-                    <div className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin">
-                        {/* Custom Upload Button */}
-                        <div className="mb-2">
-                          <label className="flex items-center justify-center gap-2 w-full py-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 hover:text-white text-slate-400 rounded-xl cursor-pointer transition-all active:scale-95 group border-dashed">
-                            <Upload className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-                            <span className="text-xs font-bold uppercase tracking-wide">Upload Custom Sticker</span>
-                            <input 
-                              id="sticker-upload"
-                              name="sticker-upload"
-                              type="file" 
-                              accept="image/png,image/jpeg,image/webp,image/gif"
-                              className="hidden"
-                              onChange={handleFileUpload}
-                            />
-                          </label>
-                        </div>
-
-                        {Object.entries(STICKER_CATEGORIES).map(([category, stickers]) => (
-                            <div key={category} className="mb-4 last:mb-0" role="group" aria-label={category}>
-                                <div className="px-3 py-2 flex items-center gap-2" aria-hidden="true">
-                                    <span className="h-px flex-1 bg-slate-800"></span>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 whitespace-nowrap">
-                                        {category}
-                                    </span>
-                                    <span className="h-px flex-1 bg-slate-800"></span>
-                                </div>
-                                <div className="grid grid-cols-5 gap-1">
-                                    {stickers.map(sticker => (
-                                        <button 
-                                            key={sticker}
-                                            onClick={() => selectSticker(sticker)}
-                                            role="menuitem"
-                                            className="h-12 flex items-center justify-center text-2xl hover:bg-slate-800 rounded-lg transition-all active:scale-75 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                                            aria-label={`Add ${sticker} sticker`}
-                                        >
-                                            {sticker}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <MemeStickerLibrary 
+                        onAddSticker={onAddSticker} 
+                        onClose={() => setIsOpen(false)} 
+                    />
                 </div>
             )}
         </div>

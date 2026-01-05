@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo } from "react";
 import html2canvas from "html2canvas-pro";
-import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X } from "lucide-react";
+import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
@@ -173,7 +173,7 @@ export default function Main() {
 
   // Filter the ~100 memes locally. Instant.
   const filteredMemes = useMemo(() => {
-    if (!memeSearchQuery) return [];
+    if (!memeSearchQuery) return allMemes.slice(0, 100);
     const lower = memeSearchQuery.toLowerCase();
     return allMemes.filter((m) => m.name.toLowerCase().includes(lower));
   }, [allMemes, memeSearchQuery]);
@@ -1147,8 +1147,22 @@ export default function Main() {
             </div>
 
             {/* Dropdown Results */}
-            {showMemeSuggestions && memeSearchQuery && (
+            {showMemeSuggestions && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border-2 border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-[60]">
+                {!memeSearchQuery && (
+                  <div className="px-4 py-3 border-b border-slate-800 bg-slate-800/30 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-brand" />
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Popular Images</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium italic">Scroll to browse</span>
+                  </div>
+                )}
+                {memeSearchQuery && filteredMemes.length > 0 && (
+                  <div className="px-4 py-2 border-b border-slate-800 bg-brand/5">
+                    <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Search Results</span>
+                  </div>
+                )}
                 {filteredMemes.length === 0 ? (
                   <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
                     <Search className="w-10 h-10 opacity-20" />

@@ -39,7 +39,7 @@ const FONTS = [
 ];
 
 export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings }) {
-  const [activeTab, setActiveTab] = useState("text"); // 'text' | 'image' | 'draw'
+  const [activeTab, setActiveTab] = useState("text"); 
   const [isPending, startTransition] = useTransition();
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
@@ -57,7 +57,6 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
   const isCollapsed = activeTab === 'text' && !hasText && !hasStickers;
 
-  // Helper for range slider background
   const getSliderStyle = (value, min, max) => {
     const val = ((value - min) / (max - min)) * 100;
     const color = 'var(--color-brand)'; 
@@ -150,11 +149,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         
                         setTimeout(() => {
                             if (!isModern) {
-                                // Turning ON: Black text, no shadow
                                 handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
                                 handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
                             } else {
-                                // Turning OFF: White text, black shadow (Classic)
                                 handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
                                 handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
                             }

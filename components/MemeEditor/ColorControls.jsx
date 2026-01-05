@@ -3,7 +3,6 @@ import { Palette, Paintbrush as Brush } from "lucide-react";
 export default function ColorControls({ meme, handleStyleChange, handleStyleCommit }) {
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
 
-  // Helper to extract opacity (0-100) from hex color
   const getOpacity = (color) => {
     if (!color || color === 'transparent') return 0;
     if (color.startsWith('#') && color.length === 9) {
@@ -12,12 +11,10 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
     return 100;
   };
 
-  // Helper to update opacity
   const changeOpacity = (name, opacity, commit = false) => {
     let baseColor = meme[name];
-    if (baseColor === 'transparent') baseColor = '#000000'; // Default to black base if transparent
+    if (baseColor === 'transparent') baseColor = '#000000';
     
-    // Ensure we have #RRGGBB
     const hex = baseColor.startsWith('#') ? baseColor.substring(0, 7) : '#000000';
     
     const alphaInt = Math.round((opacity / 100) * 255);
@@ -27,18 +24,15 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
     handleStyleChange({ currentTarget: { name, value: finalColor } }, commit);
   };
 
-  // Helper to ensure valid hex for color input
   const toSafeHex = (color) => {
     if (!color || color === 'transparent') return '#000000';
     if (color.startsWith('#') && color.length >= 7) return color.substring(0, 7);
     return '#000000';
   };
 
-  // Helper to handle color picker change (preserving opacity)
   const onColorPick = (name, newHex) => {
     let currentOpacity = getOpacity(meme[name]);
     
-    // Auto-max opacity if it was transparent (0) when picking a new color
     if (currentOpacity === 0) currentOpacity = 100;
 
     const alphaInt = Math.round((currentOpacity / 100) * 255);
@@ -47,21 +41,18 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
     handleStyleChange({ currentTarget: { name, value: finalColor } }, false);
   };
 
-  // Dynamic slider style to fix desktop display bug where track color was inverted
   const getSliderStyle = (opacity) => {
     const val = parseInt(opacity, 10) || 0;
-    const color = 'var(--color-brand)'; // McDonald's Red/Orange
-    const track = 'rgba(255, 255, 255, 0.2)'; // Semi-transparent white track
+    const color = 'var(--color-brand)';
+    const track = 'rgba(255, 255, 255, 0.2)';
     return {
       background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
     };
   };
 
-  // Helper for vertical slider background (Mobile)
   const getVerticalSliderBg = (value) => {
     const color = 'var(--color-brand)';
-    const empty = 'rgb(30 41 59)'; // slate-800
-    // For vertical sliders, the "top" in linear-gradient actually corresponds to the "end" of the slider
+    const empty = 'rgb(30 41 59)';
     return {
       background: `linear-gradient(to top, ${color} 0%, ${color} ${value}%, ${empty} ${value}%, ${empty} 100%)`
     };

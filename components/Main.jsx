@@ -713,7 +713,7 @@ export default function Main() {
           content: line,
           x: 50,
           y: idx === 0 ? 10 : 90,
-          rotation: (Math.random() - 0.5) * 24, // ±12°
+          rotation: 0,
         }));
 
         // Add empty text input to enable conditional rendering for additional inputs

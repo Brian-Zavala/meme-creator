@@ -67,7 +67,6 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
       {/* Scrolling Text Inputs area */}
       <div className="px-6 space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin mb-4" role="group" aria-label="Text Inputs">
         {(() => {
-            // Find the index of the last input that has content (manual loop for safety)
             let lastFilledIndex = -1;
             for (let i = texts.length - 1; i >= 0; i--) {
                 if ((texts[i].content || "").trim().length > 0) {
@@ -76,8 +75,6 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                 }
             }
             
-            // Show up to that index + 1 (the next empty one), but at least show 2 (Top/Bottom)
-            // and never more than the total available in state.
             const visibleCount = Math.min(Math.max(lastFilledIndex + 2, 2), texts.length);
             
             return texts.slice(0, visibleCount).map((textItem, index) => (
@@ -152,8 +149,8 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                                 const file = e.target.files[0];
                                 if (file) {
                                   const url = URL.createObjectURL(file);
-                                  selectSticker(url); // We need to pass type='image' but selectSticker only takes one arg currently
-                                  onAddSticker(url, 'image'); // Call prop directly
+                                  selectSticker(url);
+                                  onAddSticker(url, 'image');
                                   setIsOpen(false);
                                 }
                               }}

@@ -9,7 +9,6 @@ import { exportGif } from "../services/gifExporter";
 import { deepFryImage } from "../services/imageProcessor";
 import { MEME_QUOTES } from "../constants/memeQuotes";
 
-// Sub-components
 import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
@@ -25,7 +24,6 @@ const MemeFineTune = lazy(() => import("./MemeEditor/MemeFineTune"));
 export default function Main() {
   const [isPending, startTransition] = useTransition();
 
-  // --- State with History ---
   const {
     state: meme,
     updateState,
@@ -82,7 +80,7 @@ export default function Main() {
           parsed.isVideo = defaultState.isVideo;
           parsed.mode = defaultState.mode;
         }
-        // Ensure legacy texts have rotation
+        
         if (parsed.texts) {
           parsed.texts = parsed.texts.map((t) => ({ ...t, rotation: t.rotation ?? 0 }));
         }
@@ -99,7 +97,7 @@ export default function Main() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
-  const [activeTool, setActiveTool] = useState("move"); // move | pen | eraser
+  const [activeTool, setActiveTool] = useState("move"); 
   const [flashColor, setFlashColor] = useState(null);
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
@@ -124,7 +122,6 @@ export default function Main() {
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
   const fineTuneRef = useRef(null);
 
-  // Deep Fry State
   const [processedImage, setProcessedImage] = useState(null);
   const deferredDeepFry = useDeferredValue(meme.filters?.deepFry);
 
@@ -132,7 +129,6 @@ export default function Main() {
     const level = parseInt(deferredDeepFry || 0, 10);
     const controller = new AbortController();
 
-    // Cleanup old URL to prevent memory leaks
     if (processedImage && processedImage.startsWith("blob:")) {
       URL.revokeObjectURL(processedImage);
     }
@@ -142,8 +138,6 @@ export default function Main() {
       return;
     }
 
-    // No need for heavy debounce here because the Worker + DeferredValue handles the load.
-    // A small delay ensures we don't spam threads if user is scrubbing insanely fast.
     const timer = setTimeout(async () => {
       if (meme.mode === "video") {
         toast("GIF freezes for performance, but export stays animated!", {
@@ -183,7 +177,6 @@ export default function Main() {
         const elementHeight = elementRect.height;
         const windowHeight = window.innerHeight;
 
-        // On mobile, scroll so fine-tune is at bottom, keeping canvas above in view
         const isMobile = window.innerWidth < 768;
         const targetScroll = isMobile ? elementTop - (windowHeight - elementHeight - 20) : elementTop - 150;
 
@@ -229,7 +222,6 @@ export default function Main() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Restore Global Dragging Logic
   useEffect(() => {
     if (draggedId) {
       const handleGlobalMove = (e) => {
@@ -433,7 +425,6 @@ export default function Main() {
         const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
         const lastText = newTexts[newTexts.length - 1];
 
-        // If the last text field is not empty, add a new one
         if (lastText.content.trim().length > 0) {
           newTexts.push({
             id: crypto.randomUUID(),
@@ -625,7 +616,6 @@ export default function Main() {
           content: captions[i] || "",
         }));
 
-        // Logic to add new field if last one is filled (same as handleTextChange)
         const lastText = newTexts[newTexts.length - 1];
         if (lastText && lastText.content.trim().length > 0) {
           newTexts.push({
@@ -674,12 +664,11 @@ export default function Main() {
           if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
         }, 600);
       } else if (isText) {
-        // Long Press to Select Text
         longPressTimerRef.current = setTimeout(() => {
           startTransition(() => {
             updateState((prev) => ({ ...prev, selectedId: id }));
           });
-          setDraggedId(null); // Stop dragging if selection triggers
+          setDraggedId(null); 
           if (navigator.vibrate) navigator.vibrate(50);
           toast("Text Selected!", { icon: "✨", duration: 1000 });
         }, 350);
@@ -719,22 +708,17 @@ export default function Main() {
       });
     } else {
       const promise = (async () => {
-        // 1. Capture the current view (Fried BG + Clean Text)
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
         let finalDataUrl = canvas.toDataURL("image/png");
 
-        // 2. If Deep Fry is active, fry the WHOLE thing (Text included)
-        // This results in "Double Fried BG + Single Fried Text" which adds to the chaotic aesthetic.
         if ((meme.filters?.deepFry || 0) > 0) {
             const friedBlobUrl = await deepFryImage(finalDataUrl, meme.filters.deepFry);
             
-            // Convert Blob URL back to Data URL for consistency with existing link logic
-            // (Or just use the blob url directly)
             finalDataUrl = friedBlobUrl;
         }
 
         const link = document.createElement("a");
-        link.download = `${meme.name}-${Date.now()}.png`; // PNG acts as container, but deepFry returns JPEG blob usually. Browser handles it.
+        link.download = `${meme.name}-${Date.now()}.png`; 
         link.href = finalDataUrl;
         link.click();
         triggerFireworks();
@@ -794,11 +778,9 @@ export default function Main() {
       }
     } else {
       try {
-        // 1. Capture
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
         let blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
 
-        // 2. Deep Fry Override
         if ((meme.filters?.deepFry || 0) > 0) {
            const initialUrl = URL.createObjectURL(blob);
            const friedBlobUrl = await deepFryImage(initialUrl, meme.filters.deepFry);

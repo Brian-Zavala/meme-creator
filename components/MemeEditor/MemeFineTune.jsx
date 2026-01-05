@@ -3,11 +3,10 @@ import { RefreshCcw, RotateCw } from "lucide-react";
 export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommit, onCenterText }) {
   if (!selectedText) return null;
 
-  // Helper for range slider background
   const getSliderStyle = (value, min, max) => {
     const val = ((value - min) / (max - min)) * 100;
-    const color = 'var(--color-brand)'; // McDonald's Red/Orange
-    const track = 'rgb(30 41 59)'; // slate-800
+    const color = 'var(--color-brand)';
+    const track = 'rgb(30 41 59)';
     return {
       background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
     };

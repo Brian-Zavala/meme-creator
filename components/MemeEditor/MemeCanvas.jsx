@@ -18,13 +18,11 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
     setAspectRatio(w / h);
   };
 
-  // Render Drawings
   useEffect(() => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // Handle resizing
     const rect = canvas.getBoundingClientRect();
     if (canvas.width !== rect.width || canvas.height !== rect.height) {
         canvas.width = rect.width;
@@ -39,7 +37,7 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
         if (d.points.length < 2) return;
         ctx.beginPath();
         ctx.strokeStyle = d.color;
-        ctx.lineWidth = d.width * (canvas.width / 800); // Scale relative to generic width
+        ctx.lineWidth = d.width * (canvas.width / 800);
         ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
         
         ctx.moveTo(d.points[0].x * canvas.width, d.points[0].y * canvas.height);
@@ -47,12 +45,12 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
         ctx.stroke();
     });
     
-    ctx.globalCompositeOperation = 'source-over'; // Reset
-  }, [meme.drawings, meme.paddingTop]); // Re-render on layout change too
+    ctx.globalCompositeOperation = 'source-over';
+  }, [meme.drawings, meme.paddingTop]);
 
   const handleDrawStart = (e) => {
     if (activeTool !== 'pen' && activeTool !== 'eraser') return;
-    e.stopPropagation(); // Stop drag/select
+    e.stopPropagation();
     setIsDrawing(true);
     
     const canvas = drawCanvasRef.current;
@@ -72,15 +70,11 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
     const y = (e.clientY - rect.top) / rect.height;
     currentPathRef.current.push({x, y});
 
-    // Live Draw
     const ctx = canvas.getContext('2d');
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = (meme.drawWidth || 5) * (rect.width / 800);
     ctx.strokeStyle = activeTool === 'eraser' ? 'rgba(255,255,255,0.5)' : (meme.drawColor || '#ff0000');
-    
-    // Eraser preview: difficult on same canvas. Just draw color or white?
-    // We'll draw color.
     
     const pts = currentPathRef.current;
     if (pts.length >= 2) {
@@ -103,7 +97,7 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             points: currentPathRef.current,
             color: meme.drawColor || '#ff0000',
             width: meme.drawWidth || 5,
-            mode: activeTool // pen or eraser
+            mode: activeTool
         });
     }
     currentPathRef.current = [];
@@ -194,7 +188,6 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             />
         )}
 
-        {/* Render Stickers */}
         {meme.stickers?.map((sticker) => (
           <div
             key={sticker.id}
@@ -206,13 +199,13 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
             style={{
               left: `${sticker.x}%`,
               top: `${sticker.y}%`,
-              fontSize: `${meme.stickerSize || 60}px`, // Independent sticker size
+              fontSize: `${meme.stickerSize || 60}px`, 
               width: sticker.type === 'image' ? `${meme.stickerSize || 60}px` : 'auto',
               transform: "translate(-50%, -50%)",
             }}
             role="img"
             aria-label={`Sticker: ${sticker.url}`}
-            tabIndex={0} // Make focusable
+            tabIndex={0}
             onKeyDown={(e) => {
                 if(e.key === 'Delete' || e.key === 'Backspace') onRemoveSticker(sticker.id);
             }}
@@ -230,7 +223,6 @@ const MemeCanvas = forwardRef(({ meme, overrideImageUrl, loading, draggedId, sel
           </div>
         ))}
         
-        {/* SVG Filter for Text Background Alignment */}
         <svg className="absolute w-0 h-0 invisible" aria-hidden="true">
           <defs>
             <filter id="text-bg-filter" x="-5%" y="-5%" width="110%" height="110%">

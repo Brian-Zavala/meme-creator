@@ -7,7 +7,14 @@ import { GifReader } from 'omggif';
  */
 async function createGifProcessor(url) {
     try {
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const arrayBuffer = await response.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         const reader = new GifReader(uint8Array);
@@ -26,7 +33,7 @@ async function createGifProcessor(url) {
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = width;
         tempCanvas.height = height;
-        const tempCtx = tempCanvas.getContext('2d');
+        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
         const rawFrameData = new Uint8ClampedArray(width * height * 4);
 
         let previousInfo = null;
@@ -37,6 +44,7 @@ async function createGifProcessor(url) {
             width,
             height,
             numFrames,
+            getDelay: (index = 0) => reader.frameInfo(index).delay,
             // Renders the specific frame index to the internal canvas and returns it
             renderFrame: (frameIndex) => {
                 // If we are asking for the next frame sequentially, great.
@@ -121,6 +129,7 @@ export async function exportGif(meme, texts, stickers) {
       // 2. Load Assets (GIFs and Images)
       const gifProcessors = {}; // Map<panelId, processor>
       const staticImages = {};  // Map<panelId, Image>
+      const stickerProcessors = {}; // Map<stickerId, processor>
       const stickerImages = {}; // Map<stickerId, Image>
 
       console.log("Loading assets for export...");
@@ -131,7 +140,6 @@ export async function exportGif(meme, texts, stickers) {
           
           let processor = null;
           // Explicitly check for GIF extension OR isVideo flag
-          // Note: Some URLs might not end in .gif if proxied, so we trust the flag + content sniffing if needed.
           if (panel.isVideo || panel.url.includes('.gif')) { 
               processor = await createGifProcessor(panel.url);
               if (processor) {
@@ -154,13 +162,26 @@ export async function exportGif(meme, texts, stickers) {
       }));
 
       // Load Stickers
-      await Promise.all((stickers || []).filter(s => s.type === 'image').map(s => new Promise((resolve) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => { stickerImages[s.id] = img; resolve(); };
-          img.onerror = () => resolve(); 
-          img.src = s.url;
-      })));
+      await Promise.all((stickers || []).filter(s => s.type === 'image').map(async (s) => {
+          let processor = null;
+          // Most tenor stickers are gifs
+          if (s.isAnimated || s.url.includes('.gif')) {
+              processor = await createGifProcessor(s.url);
+              if (processor) {
+                  stickerProcessors[s.id] = processor;
+              }
+          }
+
+          if (!processor) {
+              await new Promise((resolve) => {
+                  const img = new Image();
+                  img.crossOrigin = "anonymous";
+                  img.onload = () => { stickerImages[s.id] = img; resolve(); };
+                  img.onerror = () => resolve(); 
+                  img.src = s.url;
+              });
+          }
+      }));
 
       // 3. Finalize Output Dimensions
       let exportWidth = 800; // Default base resolution
@@ -189,36 +210,57 @@ export async function exportGif(meme, texts, stickers) {
       exportHeight = contentHeight + contentOffsetY; // Final total height
 
 
-      // 4. Initialize Encoder
+      // 4. Initialize Encoder with ROBUST Worker Loading
+      const base = import.meta.env.BASE_URL || '/';
+      const workerPath = `${base}gif.worker.js`.replace(/\/+/g, '/');
+      
+      let workerBlobUrl = null;
+      try {
+          const response = await fetch(workerPath);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const workerScriptText = await response.text();
+          const blob = new Blob([workerScriptText], { type: 'application/javascript' });
+          workerBlobUrl = URL.createObjectURL(blob);
+      } catch (err) {
+          console.error("Worker load failed:", err);
+          // Fallback to path
+          workerBlobUrl = workerPath;
+      }
+
       const gif = new GIF({
         workers: 4,
-        quality: 1,
+        quality: 10,
         width: exportWidth,
         height: exportHeight,
-        workerScript: '/gif.worker.js',
+        workerScript: workerBlobUrl,
         background: '#000000',
         repeat: 0 // Loop forever
       });
 
       // 5. Determine Loop Length
-      // Find the max frame count among all GIF panels
+      // Find the max frame count among all GIF panels and GIF stickers
       let maxFrames = 1;
-      let masterDelay = 100; // Default 10fps
+      let masterDelay = 10; // Default 10fps (100ms)
 
-      const activeGifPanels = Object.values(gifProcessors);
-      if (activeGifPanels.length > 0) {
-          maxFrames = Math.max(...activeGifPanels.map(p => p.numFrames));
-          // Try to find a representative delay from the first GIF
-          const p1 = activeGifPanels[0];
-          // We can't easily get the average delay without iterating,
-          // but we can sample frame 0's delay after first render.
+      const activeProcessors = [
+          ...Object.values(gifProcessors),
+          ...Object.values(stickerProcessors)
+      ];
+
+      if (activeProcessors.length > 0) {
+          maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
+          // Take delay from the first active processor found
+          masterDelay = activeProcessors[0].getDelay(0) || 10;
       } else {
           // No GIFs? Just one frame (static export)
           maxFrames = 1;
       }
       
-      // Limit frames to prevent massive exports (e.g., 200 frames)
-      if (maxFrames > 150) maxFrames = 150; 
+      // Limit frames to prevent massive exports (e.g., 300 frames)
+      if (maxFrames > 300) {
+          console.warn(`Clamping GIF frames from ${maxFrames} to 300`);
+          maxFrames = 300;
+      }
 
       console.log(`Exporting ${maxFrames} frames...`);
 
@@ -246,7 +288,7 @@ export async function exportGif(meme, texts, stickers) {
             const ph = (panel.h / 100) * contentHeight;
 
             let sourceCanvas = null;
-            let srcX=0, srcY=0, srcW=0, srcH=0;
+            let srcW = 0, srcH = 0;
 
             if (gifProcessors[panel.id]) {
                 const proc = gifProcessors[panel.id];
@@ -256,7 +298,6 @@ export async function exportGif(meme, texts, stickers) {
                 sourceCanvas = result.canvas;
                 srcW = proc.width;
                 srcH = proc.height;
-                if (i === 0 && activeGifPanels[0] === proc) masterDelay = result.delay;
             } else if (staticImages[panel.id]) {
                 sourceCanvas = staticImages[panel.id];
                 srcW = sourceCanvas.width;
@@ -295,28 +336,10 @@ export async function exportGif(meme, texts, stickers) {
                 const offX = px + (pw - newW) / 2; // Center
                 const offY = py + (ph - newH) / 2;
 
-                // Adjust for Position (Pan)
-                // panel.posX/Y are 0-100% relative to the image
-                // Default is 50%
-                const panX = (panel.posX ?? 50) / 100;
-                const panY = (panel.posY ?? 50) / 100;
-                
-                // If larger, we can pan. 
-                // Simple centering is 50%.
-                const deltaX = (pw - newW) * (panX - 0.5) * 2; // This is a bit rough, standard centering is easier
-                // Let's stick to simple center for now to avoid complexity, or try:
-                // When 'cover', image is larger. 
-                // offX centers it. 
-                // We want to shift it based on panX.
-                
-                // Let's simplify: Standard center draw
                 ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
                 
                 // Deep Fry (Per Panel)
                 if ((f.deepFry || 0) > 0) {
-                    // We need to apply this to the pixels we just drew.
-                    // But we only want to affect THIS panel's area.
-                    // We are clipped, so `getImageData(px, py, pw, ph)` works!
                     applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
                 }
 
@@ -350,15 +373,30 @@ export async function exportGif(meme, texts, stickers) {
         for (const sticker of (stickers || [])) {
           const x = (sticker.x / 100) * exportWidth;
           const y = (sticker.y / 100) * exportHeight;
-          const size = meme.stickerSize || 60;
+          const size = (meme.stickerSize || 60) * (exportWidth / 800);
 
           if (sticker.type === 'image') {
-              const img = stickerImages[sticker.id];
-              if (img) {
-                  const aspect = img.height / img.width;
+              let drawCanvas = null;
+              let sw = 0, sh = 0;
+
+              if (stickerProcessors[sticker.id]) {
+                  const proc = stickerProcessors[sticker.id];
+                  const frameIdx = i % proc.numFrames;
+                  const result = proc.renderFrame(frameIdx);
+                  drawCanvas = result.canvas;
+                  sw = proc.width;
+                  sh = proc.height;
+              } else if (stickerImages[sticker.id]) {
+                  drawCanvas = stickerImages[sticker.id];
+                  sw = drawCanvas.width;
+                  sh = drawCanvas.height;
+              }
+
+              if (drawCanvas) {
+                  const aspect = sh / sw;
                   const drawWidth = size;
                   const drawHeight = size * aspect;
-                  ctx.drawImage(img, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+                  ctx.drawImage(drawCanvas, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
               }
           } else {
               ctx.font = `${size}px sans-serif`;
@@ -372,12 +410,29 @@ export async function exportGif(meme, texts, stickers) {
         drawText(ctx, texts, meme, exportWidth, exportHeight, 0);
 
         // F. Add Frame
-        // 10ms * 10 = 100ms default delay if not gathered from GIF
-        const delay = Math.max(2, Math.round((masterDelay || 10) / 10) * 10); 
-        gif.addFrame(ctx, { delay: masterDelay * 10, copy: true });
+        // masterDelay is in centiseconds (e.g. 10 = 100ms)
+        // GIF.js takes milliseconds
+        gif.addFrame(canvas, { delay: masterDelay * 10, copy: true });
       }
 
-      gif.on('finished', (blob) => resolve(blob));
+      // FIX: Add a timeout to detect hangs (e.g. worker 404)
+      const timeoutId = setTimeout(() => {
+          try { gif.abort(); } catch(e) {}
+          if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
+          reject(new Error("Encoding timed out. Worker likely failed to start."));
+      }, 60000); // 60 second timeout
+
+      gif.on('finished', (blob) => {
+          clearTimeout(timeoutId);
+          if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
+          resolve(blob);
+      });
+      
+      gif.on('progress', (p) => {
+          // You could pass this up to a callback if needed, but for now we'll just log
+          console.log(`Encoding progress: ${Math.round(p * 100)}%`);
+      });
+
       gif.render();
 
     } catch (e) {

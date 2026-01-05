@@ -13,6 +13,7 @@ import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
 import { LayoutSelector } from "./MemeEditor/LayoutSelector";
+import FireBackground from "./ui/FireBackground";
 
 const MemeActions = lazy(() => import("./MemeEditor/MemeActions").then((module) => ({ default: module.MemeActions })));
 const GifSearch = lazy(() => import("./MemeEditor/GifSearch").then((module) => ({ default: module.GifSearch })));
@@ -609,6 +610,103 @@ export default function Main() {
     }
   }
 
+  async function handleChaos() {
+    // Safety check for memes
+    if (!allMemes || allMemes.length === 0) {
+      toast.error("Memes are still loading...");
+      return;
+    }
+
+    try {
+      // 1. DECIDE: Static Image or GIF? (30% chance of GIF)
+      const isGifChaos = Math.random() > 0.7;
+
+      let selectedMedia = null;
+      let isVideo = false;
+      let sourceUrl = null;
+
+      if (isGifChaos) {
+        // Fetch a random GIF from a chaos keyword
+        const chaosKeywords = ["funny", "cat", "fail", "chaos", "reaction", "coding"]; // Context7 memories?
+        const keyword = chaosKeywords[Math.floor(Math.random() * chaosKeywords.length)];
+        const results = await searchTenor(keyword);
+
+        if (results && results.length > 0) {
+          const randomGif = results[Math.floor(Math.random() * results.length)];
+          selectedMedia = randomGif.url;
+          sourceUrl = randomGif.shareUrl;
+          isVideo = true;
+        }
+      }
+
+      // Fallback to Image if GIF failed or wasn't chosen
+      if (!selectedMedia) {
+        const randomMeme = allMemes[Math.floor(Math.random() * allMemes.length)];
+        selectedMedia = randomMeme.url;
+        isVideo = false;
+        // For images, we try to use the CORS proxy if needed, similar to getMemeImage logic
+        // But for Chaos speed, direct URL is often fine unless we Deep Fry. 
+        // We'll let the standard update handle it. 
+      }
+
+      // 2. Pick Random Quote
+      const categories = Object.keys(MEME_QUOTES);
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+      const quotes = MEME_QUOTES[randomCategory];
+      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+      // 3. Update State with Random Filters
+      triggerFlash("red");
+      updateState((prev) => {
+        const newPanels = prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? {
+              ...p,
+              url: selectedMedia,
+              sourceUrl: sourceUrl,
+              isVideo: isVideo,
+              objectFit: "cover",
+              filters: {
+                ...DEFAULT_FILTERS,
+                // 30% chance of deep fry, max level 15 (was 30)
+                deepFry: Math.random() > 0.7 ? Math.floor(Math.random() * 15) : 0,
+                // Random subtle color adjustments
+                hueRotate: Math.random() > 0.85 ? Math.floor(Math.random() * 45) : 0,
+                brightness: Math.random() > 0.5 ? 100 + Math.floor(Math.random() * 20) : 100, // Slightly brighter?
+                contrast: Math.random() > 0.5 ? 100 + Math.floor(Math.random() * 20) : 100, // Slightly punchier
+                saturate: Math.random() > 0.8 ? 150 : 100 // Occasional deep saturation
+              },
+              processedImage: null,
+              processedDeepFryLevel: 0
+            }
+            : p
+        );
+
+        const newTexts = randomQuote.map((line, idx) => ({
+          id: crypto.randomUUID(),
+          content: line,
+          x: 50,
+          y: idx === 0 ? 10 : 90,
+          rotation: (Math.random() - 0.5) * 8,
+        }));
+
+        return {
+          ...prev,
+          panels: newPanels,
+          mode: isVideo ? "video" : "image",
+          texts: newTexts,
+          // Basic heuristic for font size, can be improved
+          fontSize: 30,
+        };
+      });
+
+      toast("CHAOS MODE ACTIVATED!", { icon: "🎲" });
+    } catch (e) {
+      console.error("Chaos failed", e);
+      toast.error("Chaos missed!");
+    }
+  }
+
   function handleLayoutChange(layoutId) {
     if (layoutId === meme.layout) return;
 
@@ -1084,6 +1182,7 @@ export default function Main() {
           onAddSticker={addSticker}
           onMagicCaption={generateMagicCaption}
           isMagicGenerating={isMagicGenerating}
+          onChaos={handleChaos}
         />
         <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
           <MemeActions
@@ -1318,6 +1417,20 @@ export default function Main() {
             </Suspense>
           )}
         </div>
+
+        {/* Chaos Mode Button */}
+        <button
+          onClick={handleChaos}
+          className="w-full relative overflow-hidden group bg-black hover:bg-black/90 border-2 border-red-500/50 hover:border-orange-500 text-white font-bold tracking-widest py-4 px-4 rounded-xl transition-all active:scale-[0.98] shadow-lg hover:shadow-orange-500/30 mb-3"
+        >
+          <FireBackground />
+          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300 z-10" />
+          <div className="relative z-20 flex items-center justify-center gap-3">
+            <span className="text-lg font-black uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)] tracking-[0.2em]">
+              Chaos Mode
+            </span>
+          </div>
+        </button>
 
         {/* Undo / Redo Controls */}
         <div className="grid grid-cols-[1fr_1fr_auto] gap-3">

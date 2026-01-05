@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react({ babel: { plugins: ["babel-plugin-react-compiler"] } }), tailwindcss()],
-  
+
   // 1. PREVENT VITE FROM BREAKING THE LIBRARY
   optimizeDeps: {
     exclude: ['@imgly/background-removal']
@@ -16,6 +16,11 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",
     }
+  },
+
+  // 3. ENABLE WORKER MODULES
+  worker: {
+    format: 'es',
   },
 
   build: {

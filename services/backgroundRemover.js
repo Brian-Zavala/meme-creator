@@ -30,15 +30,15 @@ export async function removeImageBackground(imageSource, onProgress) {
     }
 
     const config = {
-      model: 'isnet_quint8', // Faster (~40MB) and more robust for diverse environments
+      model: 'isnet_quint8', 
       publicPath: 'https://unpkg.com/@imgly/background-removal-data@1.7.0/dist/',
       device: 'gpu',
       output: {
-        quality: 1.0,      // Maximize output quality
+        quality: 1.0,
         type: 'foreground',
         format: 'image/png'
       },
-      debug: true,         // Enable logging for troubleshooting
+      debug: true,
       progress: (key, current, total) => {
         if (onProgress) {
             const pct = (current / total);

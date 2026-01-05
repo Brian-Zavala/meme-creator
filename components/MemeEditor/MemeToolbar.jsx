@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useTransition, useEffect } from "react";
+import { useState, lazy, Suspense, useTransition, useEffect, useRef } from "react";
 import {
   Type,
   MoveHorizontal,
@@ -56,13 +56,16 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
   };
 
   const isCollapsed = activeTab === 'text' && !hasText && !hasStickers;
+  const wasCollapsedRef = useRef(isCollapsed);
 
-  // Notify parent when drawer expands so it can scroll canvas into view
+  // Notify parent when drawer TRANSITIONS from collapsed to expanded
   useEffect(() => {
-    if (!isCollapsed && onDrawerExpand) {
-      const timer = setTimeout(() => onDrawerExpand(), 100);
+    if (wasCollapsedRef.current && !isCollapsed && onDrawerExpand) {
+      const timer = setTimeout(() => onDrawerExpand(), 150);
+      wasCollapsedRef.current = isCollapsed;
       return () => clearTimeout(timer);
     }
+    wasCollapsedRef.current = isCollapsed;
   }, [isCollapsed, onDrawerExpand]);
 
   const getSliderStyle = (value, min, max) => {

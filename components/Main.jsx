@@ -1394,7 +1394,7 @@ export default function Main() {
             )}
           </div>
         )}
-        <div ref={canvasContainerRef} className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden scroll-mt-4">
+        <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
           <MemeToolbar
             meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
             activeTool={activeTool}
@@ -1429,31 +1429,33 @@ export default function Main() {
               </span>
             </div>
           </button>
-          <MemeCanvas
-            ref={memeRef}
-            meme={meme}
-            loading={loading}
-            isProcessing={isProcessing}
-            draggedId={draggedId}
-            selectedId={meme.selectedId}
-            activeTool={activeTool}
-            onDrawCommit={handleDrawCommit}
-            onFineTune={handleFineTune}
-            onFineTuneCommit={handleFineTuneCommit}
-            onCenterText={handleCenterText}
-            onPointerDown={handlePointerDown}
-            onRemoveSticker={removeSticker}
-            onCanvasPointerDown={handleCanvasPointerDown}
+          <div ref={canvasContainerRef} className="scroll-mt-4">
+            <MemeCanvas
+              ref={memeRef}
+              meme={meme}
+              loading={loading}
+              isProcessing={isProcessing}
+              draggedId={draggedId}
+              selectedId={meme.selectedId}
+              activeTool={activeTool}
+              onDrawCommit={handleDrawCommit}
+              onFineTune={handleFineTune}
+              onFineTuneCommit={handleFineTuneCommit}
+              onCenterText={handleCenterText}
+              onPointerDown={handlePointerDown}
+              onRemoveSticker={removeSticker}
+              onCanvasPointerDown={handleCanvasPointerDown}
 
-            // New Props
-            activePanelId={meme.activePanelId}
-            onPanelSelect={handlePanelSelect}
-            layouts={DEFAULT_LAYOUTS}
-            onDrop={handleCanvasDrop}
-            onClearPanel={handleClearPanel}
-            onToggleFit={togglePanelFit}
-            onPanelPosChange={handlePanelPosChange}
-          />
+              // New Props
+              activePanelId={meme.activePanelId}
+              onPanelSelect={handlePanelSelect}
+              layouts={DEFAULT_LAYOUTS}
+              onDrop={handleCanvasDrop}
+              onClearPanel={handleClearPanel}
+              onToggleFit={togglePanelFit}
+              onPanelPosChange={handlePanelPosChange}
+            />
+          </div>
           {selectedText && (
             <Suspense fallback={null}>
               <div ref={fineTuneRef}>

@@ -42,6 +42,23 @@ const MemeCanvas = forwardRef(({
     }
   };
 
+  const [containerWidth, setContainerWidth] = useState(800);
+  const containerRef = useRef(null);
+
+  // Sync container width for scaling
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  const scaleFactor = containerWidth / 800;
+
   // Determine container aspect ratio based on layout
   let containerAspect = 1; // Default square
   if (meme.layout === 'single') {
@@ -66,7 +83,6 @@ const MemeCanvas = forwardRef(({
         const deltaY = e.clientY - draggingPanel.startY;
         
         // Calculate percentage change based on panel dimensions
-        // Dragging RIGHT (positive delta) moves image visually RIGHT, revealing LEFT content (decreasing %)
         const deltaPctX = (deltaX / draggingPanel.panelWidth) * 100;
         const deltaPctY = (deltaY / draggingPanel.panelHeight) * 100;
         
@@ -77,28 +93,6 @@ const MemeCanvas = forwardRef(({
     };
 
     const handlePointerUp = () => {
-        // Commit the final position (not transient)
-        // We need to access the LATEST calculated position. 
-        // Since we don't have it here without state, we rely on the transient update having happened.
-        // But `onPanelPosChange` commits if isTransient=false.
-        // We can just call it with the last known derived values? No.
-        // Actually, Main.jsx's updateTransient updates the state variable passed down as `meme`.
-        // So `meme.panels` has the transient value.
-        // We just need to trigger a commit of the current state.
-        // OR simpler: just re-emit the last event as non-transient? 
-        // No, we can't get the event here easily.
-        
-        // Better approach: Main.jsx handles commit implicitly if we just stop sending transient? 
-        // No, transient state is usually separate. 
-        // In Main.jsx, `updateTransient` updates the SAME `meme` object reference in `useHistory` if designed that way,
-        // OR it provides a separate `transientState`.
-        // Looking at `useHistory.js` (I haven't read it, but usually standard pattern), 
-        // transient updates might be merged.
-        // Let's assume `onPanelPosChange(id, x, y, false)` is needed.
-        // Since we don't have `newX/newY` here, let's calculate them one last time or store them in a ref?
-        // Actually, if we just set draggingPanel to null, the transient state might be lost if `useHistory` resets it on commit?
-        // Let's assume we need to explicitly commit the CURRENT position from the props.
-        
         const currentPanel = meme.panels.find(p => p.id === draggingPanel.id);
         if (currentPanel) {
             onPanelPosChange(draggingPanel.id, currentPanel.posX ?? 50, currentPanel.posY ?? 50, false);
@@ -135,9 +129,6 @@ const MemeCanvas = forwardRef(({
               panelWidth: rect.width,
               panelHeight: rect.height
           });
-      } else {
-          // If not draggable, fallback to click handling (Ghost Click or Select) is handled by onClick
-          // We don't stop propagation here to allow onClick to fire if we didn't drag.
       }
   };
 
@@ -170,7 +161,7 @@ const MemeCanvas = forwardRef(({
     });
     
     ctx.globalCompositeOperation = 'source-over';
-  }, [meme.drawings, meme.paddingTop]);
+  }, [meme.drawings, meme.paddingTop, containerWidth]);
 
   const handleDrawStart = (e) => {
     if (activeTool !== 'pen' && activeTool !== 'eraser') return;
@@ -250,6 +241,7 @@ const MemeCanvas = forwardRef(({
 
   return (
     <div 
+      ref={containerRef}
       onPointerDown={onCanvasPointerDown}
       onContextMenu={(e) => e.preventDefault()}
       className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950 border-2 border-dashed border-slate-800/60 w-full select-none"
@@ -293,8 +285,6 @@ const MemeCanvas = forwardRef(({
                         key={panel.id}
                         onPointerDown={(e) => handlePanelPointerDown(e, panel)}
                         onClick={(e) => {
-                            // If we dragged, maybe we shouldn't trigger click? 
-                            // But for now, selecting on drag end is fine.
                             if (!showUrl) {
                                 handleGhostClick(e, panel.id, isActive);
                             } else {
@@ -452,8 +442,8 @@ const MemeCanvas = forwardRef(({
             style={{
               left: `${sticker.x}%`,
               top: `${sticker.y}%`,
-              fontSize: `${meme.stickerSize || 60}px`, 
-              width: sticker.type === 'image' ? `${meme.stickerSize || 60}px` : 'auto',
+              fontSize: `${(meme.stickerSize || 60) * scaleFactor}px`, 
+              width: sticker.type === 'image' ? `${(meme.stickerSize || 60) * scaleFactor}px` : 'auto',
               transform: "translate(-50%, -50%)",
             }}
             role="img"
@@ -489,7 +479,7 @@ const MemeCanvas = forwardRef(({
         {/* === TEXT LAYER (Global) === */}
         {meme.texts.map((textItem) => {
           if (!(textItem.content || "").trim()) return null;
-          const stroke = Math.max(1, meme.fontSize / 25);
+          const stroke = Math.max(1, (meme.fontSize * scaleFactor) / 25);
           const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
           const isSelected = selectedId === textItem.id;
           
@@ -510,8 +500,8 @@ const MemeCanvas = forwardRef(({
               textAlign: "center",
               padding: hasBg ? '0.25em 0.5em' : '0',
               lineHeight: 1.2,
-              fontSize: `${meme.fontSize}px`,
-              letterSpacing: `${meme.letterSpacing || 0}px`,
+              fontSize: `${meme.fontSize * scaleFactor}px`,
+              letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
               maxWidth: `${meme.maxWidth}%`,
               fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
               WebkitTextStroke: `${stroke * 2}px ${meme.textShadow}`,

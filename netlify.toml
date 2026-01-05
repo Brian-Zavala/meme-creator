@@ -14,3 +14,10 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# ⬇️ ADD THIS FOR SELF-HOSTED AI PERFORMANCE
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"

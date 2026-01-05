@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { preload } from 'react-dom';
 import { Toaster } from 'react-hot-toast';
 import Header from "./components/Header"
 import Main from "./components/Main"
@@ -10,6 +11,10 @@ export default function App() {
     const [showInstructions, setShowInstructions] = useState(false);
 
     useEffect(() => {
+        // Preload cursor images for Draw tool
+        preload('/images/canvas/marker-pen_32.png', { as: 'image' });
+        preload('/images/canvas/eraser_32.png', { as: 'image' });
+
         const welcomeSeen = localStorage.getItem("meme-creator-welcome-seen");
         if (!welcomeSeen) {
             setShowWelcome(true);

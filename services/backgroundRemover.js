@@ -8,8 +8,21 @@ import * as imgly from "@imgly/background-removal";
  */
 export async function removeImageBackground(imageSource, onProgress) {
   try {
-    // Some environments might wrap the module in a default export (Vite pre-bundling)
-    // while others provide named exports directly (Production build)
+    // 1. Resolve onnxruntime-web environment to disable multi-threading.
+    // Multi-threading requires 'crossOriginIsolated' mode (headers COOP/COEP) 
+    // which is not always available or configured.
+    try {
+        // imgly exports the 'ort' instance it uses internaly or we can use the peer dependency
+        // We set it to 1 to force single-threading and avoid the 'Failed to fetch' worker errors.
+        const ort = imgly.ort || (await import('onnxruntime-web'));
+        if (ort && ort.env && ort.env.wasm) {
+            ort.env.wasm.numThreads = 1;
+        }
+    } catch (e) {
+        console.warn("Could not configure ONNX threading, falling back to default.", e);
+    }
+
+    // 2. Resolve the removal function
     const removeFn = imgly.removeBackground || (imgly.default && imgly.default.removeBackground);
 
     if (!removeFn) {

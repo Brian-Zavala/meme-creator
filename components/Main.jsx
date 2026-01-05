@@ -130,6 +130,7 @@ export default function Main() {
 
   useEffect(() => {
     const level = parseInt(deferredDeepFry || 0, 10);
+    const controller = new AbortController();
 
     // Cleanup old URL to prevent memory leaks
     if (processedImage && processedImage.startsWith("blob:")) {
@@ -157,16 +158,21 @@ export default function Main() {
       }
 
       try {
-        const fried = await deepFryImage(meme.imageUrl, level);
+        const fried = await deepFryImage(meme.imageUrl, level, controller.signal);
         startTransition(() => {
           setProcessedImage(fried);
         });
       } catch (e) {
-        console.error("Deep Fry Failed", e);
+        if (e.message !== "Aborted") {
+          console.error("Deep Fry Failed", e);
+        }
       }
     }, 100);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [deferredDeepFry, meme.imageUrl]);
 
   useEffect(() => {

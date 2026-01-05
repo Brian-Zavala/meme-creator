@@ -10,7 +10,8 @@ export function GifSearch({
   categories,
   onSelectSuggestion,
   onKeyDown,
-  containerRef
+  containerRef,
+  placeholder = "Search GIFs..."
 }) {
   return (
     <div className="relative z-50 mb-2" ref={containerRef}>
@@ -21,8 +22,8 @@ export function GifSearch({
           onFocus={onFocus} 
           onChange={onSearchInput}
           onKeyDown={onKeyDown} 
-          placeholder="Search GIFs..." 
-          className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:ring-2 focus:ring-yellow-500 outline-none" 
+          placeholder={placeholder} 
+          className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:ring-2 focus:ring-yellow-500 outline-none placeholder:text-xs md:placeholder:text-sm" 
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         {searchQuery && (

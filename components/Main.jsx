@@ -247,6 +247,15 @@ export default function Main() {
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
   const fineTuneRef = useRef(null);
 
+  const [isMobileScreen, setIsMobileScreen] = useState(false);
+
+  useEffect(() => {
+    const checkSize = () => setIsMobileScreen(window.innerWidth < 1024);
+    checkSize();
+    window.addEventListener("resize", checkSize);
+    return () => window.removeEventListener("resize", checkSize);
+  }, []);
+
 
   const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
   const deferredDeepFry = useDeferredValue(activePanel?.filters?.deepFry);
@@ -1104,6 +1113,7 @@ export default function Main() {
                 }
               }}
               containerRef={searchContainerRef}
+              placeholder={isMobileScreen ? "Search GIFs..." : "Search GIFs (e.g. funny cat, dancing)..."}
             />
           </Suspense>
         )}
@@ -1117,14 +1127,14 @@ export default function Main() {
               </div>
               <input
                 type="text"
-                placeholder="Search templates (e.g., Drake, Distracted Boyfriend)..."
+                placeholder={isMobileScreen ? "Search images..." : "Search images (e.g. Drake, Distracted Boyfriend)..."}
                 value={memeSearchQuery}
                 onChange={(e) => {
                   setMemeSearchQuery(e.target.value);
                   setShowMemeSuggestions(true);
                 }}
                 onFocus={() => setShowMemeSuggestions(true)}
-                className="w-full bg-slate-900/50 border-2 border-slate-800 text-white pl-10 pr-10 py-3 rounded-xl focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-slate-500"
+                className="w-full bg-slate-900/50 border-2 border-slate-800 text-white pl-10 pr-10 py-3 rounded-xl focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm"
               />
               {memeSearchQuery && (
                 <button
@@ -1142,7 +1152,7 @@ export default function Main() {
                 {filteredMemes.length === 0 ? (
                   <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
                     <Search className="w-10 h-10 opacity-20" />
-                    <p>No templates found for "{memeSearchQuery}"</p>
+                    <p>No images found for "{memeSearchQuery}"</p>
                   </div>
                 ) : (
                   <div className="max-h-96 overflow-y-auto p-3 custom-scrollbar relative">
@@ -1188,7 +1198,7 @@ export default function Main() {
                         </div>
                         <div className="mt-3 space-y-1">
                           <p className="text-sm font-bold text-white truncate">{hoveredMeme.name}</p>
-                          <p className="text-[10px] text-brand font-black uppercase tracking-widest opacity-80">Click to load Template</p>
+                          <p className="text-[10px] text-brand font-black uppercase tracking-widest opacity-80">Click to load Image</p>
                         </div>
                       </div>
                     )}

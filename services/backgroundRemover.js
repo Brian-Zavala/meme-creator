@@ -1,4 +1,4 @@
-import { removeBackground } from "@imgly/background-removal";
+import * as imgly from "@imgly/background-removal";
 
 /**
  * Removes the background from an image URL or Blob
@@ -8,23 +8,25 @@ import { removeBackground } from "@imgly/background-removal";
  */
 export async function removeImageBackground(imageSource, onProgress) {
   try {
+    // Some environments might wrap the module in a default export (Vite pre-bundling)
+    // while others provide named exports directly (Production build)
+    const removeFn = imgly.removeBackground || (imgly.default && imgly.default.removeBackground);
+
+    if (!removeFn) {
+        throw new Error("Background removal module (removeBackground) not found in exports.");
+    }
+
     const config = {
       progress: (key, current, total) => {
         if (onProgress) {
-            // Map the various stages to a 0-100% progress roughly
-            // fetch: 0-20%, compute: 20-100%
             const pct = (current / total);
             onProgress(pct); 
         }
       },
-      // Ensure we use the public assets (need to copy them to public folder usually, 
-      // but imgly defaults to fetching from CDN if not found)
-      // We will let it fetch from unpkg/cdn for now to avoid massive local asset copying logic
-      // unless we configure vite to copy them.
       publicPath: "https://static.img.ly/background-removal-data/1.0.0/" 
     };
 
-    const blob = await removeBackground(imageSource, config);
+    const blob = await removeFn(imageSource, config);
     return blob;
   } catch (error) {
     console.error("Background Removal Error:", error);

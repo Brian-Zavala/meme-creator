@@ -909,21 +909,18 @@ export default function Main() {
     if (!memeRef.current) return;
     
     const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
-    // Only support true GIF export if we are in single mode and have a video
-    const canExportGif = meme.mode === "video" && meme.layout === "single" && activePanel.isVideo;
+    // Support GIF export if we have at least one video/gif panel
+    const hasVideo = meme.panels.some(p => p.isVideo);
+    const canExportGif = meme.mode === "video" && hasVideo;
 
     if (canExportGif) {
-      const isDeepFrying = (activePanel.filters?.deepFry || 0) > 0;
-      const loadingMsg = isDeepFrying ? "Deep frying every frame... (this takes longer) 🍟" : "Encoding GIF...";
+      // Check if ANY panel is deep frying
+      const isDeepFrying = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
+      const loadingMsg = isDeepFrying ? "Deep frying frames... (this takes longer) 🍟" : "Encoding GIF...";
 
       const promise = (async () => {
-        // Construct a legacy-compatible meme object for the exporter
-        const exportMeme = {
-            ...meme,
-            imageUrl: activePanel.url,
-            isVideo: true,
-            filters: activePanel.filters || DEFAULT_FILTERS
-        };
+        // Construct a export meme object (we pass the whole meme now)
+        const exportMeme = { ...meme };
 
         const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
         if (meme.id) registerShare(meme.id, searchQuery);
@@ -945,11 +942,6 @@ export default function Main() {
         },
       });
     } else {
-      // Fallback for multi-panel or static export
-      if (meme.mode === "video" && meme.layout !== "single") {
-          toast("Multi-panel GIF export not supported yet. Saving as PNG.", { icon: "🖼️", duration: 4000 });
-      }
-
       const promise = (async () => {
         const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
         // Note: html2canvas captures the visual state of the DOM, including CSS filters on video elements.

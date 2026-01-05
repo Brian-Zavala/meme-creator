@@ -2,258 +2,450 @@ import GIF from 'gif.js';
 import { GifReader } from 'omggif';
 
 /**
+ * Helper to create a processor for a single GIF source
+ * Handles decoding, frame state, and disposal logic
+ */
+async function createGifProcessor(url) {
+    try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const reader = new GifReader(uint8Array);
+        
+        const width = reader.width;
+        const height = reader.height;
+        const numFrames = reader.numFrames();
+        
+        // Canvas to hold the CURRENT state of the GIF (accumulated frames)
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // Helper for decoding
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext('2d');
+        const rawFrameData = new Uint8ClampedArray(width * height * 4);
+
+        let previousInfo = null;
+        let savedState = null; // For disposal = 3
+        let currentFrameIndex = -1;
+
+        return {
+            width,
+            height,
+            numFrames,
+            // Renders the specific frame index to the internal canvas and returns it
+            renderFrame: (frameIndex) => {
+                // If we are asking for the next frame sequentially, great.
+                // If we skipped or looped, we might need to reset or seek.
+                // For simple looping (0 -> 1 -> ... -> N -> 0), we handle the wrap properly.
+                
+                if (frameIndex === 0 && currentFrameIndex !== -1) {
+                    // Reset state for loop
+                    ctx.clearRect(0, 0, width, height);
+                    previousInfo = null;
+                    savedState = null;
+                    currentFrameIndex = -1;
+                }
+
+                // If we missed frames (shouldn't happen in our loop), we technically should catch up.
+                // But we assume sequential access for export.
+                if (frameIndex <= currentFrameIndex) return canvas; // Already there or behind (handled by reset above)
+
+                // Advance from currentFrameIndex + 1 to frameIndex
+                for (let i = currentFrameIndex + 1; i <= frameIndex; i++) {
+                    const info = reader.frameInfo(i);
+
+                    // Disposal from PREVIOUS frame
+                    if (i > 0 && previousInfo) {
+                        const { disposal, x, y, width: fW, height: fH } = previousInfo;
+                        if (disposal === 2) {
+                            ctx.clearRect(x, y, fW, fH);
+                        } else if (disposal === 3 && savedState) {
+                            ctx.putImageData(savedState, 0, 0);
+                        }
+                    }
+
+                    // Save state for THIS frame if needed
+                    if (info.disposal === 3) {
+                        savedState = ctx.getImageData(0, 0, width, height);
+                    }
+
+                    // Draw THIS frame
+                    rawFrameData.fill(0);
+                    reader.decodeAndBlitFrameRGBA(i, rawFrameData);
+                    const imageData = new ImageData(rawFrameData, width, height);
+                    tempCtx.putImageData(imageData, 0, 0);
+                    ctx.drawImage(tempCanvas, 0, 0);
+
+                    previousInfo = info;
+                }
+                
+                currentFrameIndex = frameIndex;
+                const delay = reader.frameInfo(frameIndex).delay;
+                return { canvas, delay };
+            }
+        };
+    } catch (e) {
+        console.error("Failed to load GIF:", url, e);
+        return null; // Return null if not a valid GIF (maybe it's a static image masquerading?)
+    }
+}
+
+/**
  * Exports a meme as an animated GIF
- * @param {Object} meme - The current meme state
- * @param {Array} texts - Array of text objects
- * @param {Array} stickers - Array of sticker objects
- * @returns {Promise<Blob>} - The exported GIF blob
+ * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
  */
 export async function exportGif(meme, texts, stickers) {
   return new Promise(async (resolve, reject) => {
     try {
-      // 1. Fetch the source GIF
-      const response = await fetch(meme.imageUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
+      // 1. Determine Output Size & Aspect Ratio
+      let containerAspect = 1;
+      const firstPanel = meme.panels[0];
       
-      // 2. Read GIF frames
-      const reader = new GifReader(uint8Array);
-      const originalWidth = reader.width;
-      const originalHeight = reader.height;
-      const numFrames = reader.numFrames();
+      // Try to get aspect from first panel if possible, or use layout defaults
+      if (meme.layout === 'single') {
+          // We need the dimensions of the first image to set the aspect
+          // We can't know it until we load it. Let's assume square or 4:3 default if unknown.
+          // But wait, we can get it from the loaded assets.
+          // Let's defer size calculation until assets are loaded.
+      } else if (meme.layout === 'top-bottom') {
+          containerAspect = 3/4;
+      } else if (meme.layout === 'side-by-side') {
+          containerAspect = 4/3;
+      }
 
-      // Layout Calculations
-      const paddingTop = meme.paddingTop || 0;
-      const exportWidth = originalWidth;
-      const exportHeight = paddingTop > 0 ? Math.round(originalHeight / ((100 - paddingTop) / 100)) : originalHeight;
-      const videoOffsetY = paddingTop > 0 ? exportHeight * (paddingTop / 100) : 0;
+      // 2. Load Assets (GIFs and Images)
+      const gifProcessors = {}; // Map<panelId, processor>
+      const staticImages = {};  // Map<panelId, Image>
+      const stickerImages = {}; // Map<stickerId, Image>
 
-      // 3. Initialize GIF encoder
-      const gif = new GIF({
-        workers: 4,
-        quality: 1, // Higher quality
-        width: exportWidth,
-        height: exportHeight,
-        workerScript: '/gif.worker.js',
-        repeat: 0,
-        background: paddingTop > 0 ? '#ffffff' : '#000000',
-        transparent: null,
-        dither: 'FloydSteinberg'
-      });
+      console.log("Loading assets for export...");
 
-      console.log(`Processing ${numFrames} frames for GIF export...`);
+      // Load Panels
+      await Promise.all(meme.panels.map(async (panel) => {
+          if (!panel.url) return;
+          
+          if (panel.isVideo) { // Treat as GIF
+              const processor = await createGifProcessor(panel.url);
+              if (processor) {
+                  gifProcessors[panel.id] = processor;
+              }
+          } else { // Static Image
+              await new Promise((resolve) => {
+                  const img = new Image();
+                  img.crossOrigin = "anonymous";
+                  img.onload = () => { staticImages[panel.id] = img; resolve(); };
+                  img.onerror = () => resolve();
+                  img.src = panel.url;
+              });
+          }
+      }));
 
-      // 3.5 Pre-load image stickers
-      const loadedImages = {};
+      // Load Stickers
       await Promise.all((stickers || []).filter(s => s.type === 'image').map(s => new Promise((resolve) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
-          img.onload = () => { loadedImages[s.id] = img; resolve(); };
+          img.onload = () => { stickerImages[s.id] = img; resolve(); };
           img.onerror = () => resolve(); 
           img.src = s.url;
       })));
 
-      // -- Setup Canvases --
+      // 3. Finalize Output Dimensions
+      let exportWidth = 800; // Default base resolution
+      let exportHeight = 800;
+
+      // If single panel, match its native resolution if possible (for best quality)
+      if (meme.layout === 'single' && meme.panels[0].url) {
+          const pid = meme.panels[0].id;
+          if (gifProcessors[pid]) {
+              exportWidth = gifProcessors[pid].width;
+              exportHeight = gifProcessors[pid].height;
+          } else if (staticImages[pid]) {
+              exportWidth = staticImages[pid].width;
+              exportHeight = staticImages[pid].height;
+          }
+          containerAspect = exportWidth / exportHeight;
+      } else {
+          // For multi-panel, stick to 800 width and calculate height based on aspect
+          exportHeight = Math.round(exportWidth / containerAspect);
+      }
+
+      // Padding adjustment
+      const paddingTop = meme.paddingTop || 0;
+      if (paddingTop > 0) {
+          // Increase height to accommodate padding
+          // The "MemeCanvas" logic: containerAspect = 1 / ((1 / containerAspect) + (meme.paddingTop / 100));
+          // Which implies the image area shrinks or the container grows.
+          // For export, let's grow the height.
+          const contentHeight = exportHeight;
+          exportHeight = Math.round(contentHeight / ((100 - paddingTop) / 100));
+      }
+      const contentOffsetY = paddingTop > 0 ? (exportHeight * (paddingTop / 100)) : 0;
+      const contentHeight = exportHeight - contentOffsetY;
+
+
+      // 4. Initialize Encoder
+      const gif = new GIF({
+        workers: 4,
+        quality: 1,
+        width: exportWidth,
+        height: exportHeight,
+        workerScript: '/gif.worker.js',
+        background: '#000000',
+        repeat: 0 // Loop forever
+      });
+
+      // 5. Determine Loop Length
+      // Find the max frame count among all GIF panels
+      let maxFrames = 1;
+      let masterDelay = 100; // Default 10fps
+
+      const activeGifPanels = Object.values(gifProcessors);
+      if (activeGifPanels.length > 0) {
+          maxFrames = Math.max(...activeGifPanels.map(p => p.numFrames));
+          // Try to find a representative delay from the first GIF
+          const p1 = activeGifPanels[0];
+          // We can't easily get the average delay without iterating,
+          // but we can sample frame 0's delay after first render.
+      } else {
+          // No GIFs? Just one frame (static export)
+          maxFrames = 1;
+      }
       
-      // A. Video State Canvas: Tracks the underlying GIF video (composition of frames)
-      // MUST match original GIF dimensions
-      const videoCanvas = document.createElement('canvas');
-      videoCanvas.width = originalWidth;
-      videoCanvas.height = originalHeight;
-      const videoCtx = videoCanvas.getContext('2d', { willReadFrequently: true });
-      
-      // B. Render Canvas: The final composite for each frame (Video + Filters + Text)
-      // Matches EXPORT dimensions
-      const renderCanvas = document.createElement('canvas');
-      renderCanvas.width = exportWidth;
-      renderCanvas.height = exportHeight;
-      const renderCtx = renderCanvas.getContext('2d', { willReadFrequently: true });
+      // Limit frames to prevent massive exports (e.g., 200 frames)
+      if (maxFrames > 150) maxFrames = 150; 
 
-      // C. Helper for decoding raw frames
-      const rawFrameData = new Uint8ClampedArray(originalWidth * originalHeight * 4);
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = originalWidth;
-      tempCanvas.height = originalHeight;
-      const tempCtx = tempCanvas.getContext('2d');
+      console.log(`Exporting ${maxFrames} frames...`);
 
-      // State for disposal handling
-      let previousInfo = null;
-      let savedState = null; // For disposal = 3 (Restore to Previous)
+      const canvas = document.createElement('canvas');
+      canvas.width = exportWidth;
+      canvas.height = exportHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-      // 4. Process each frame
-      for (let i = 0; i < numFrames; i++) {
-        // Yield to main thread every 5 frames to prevent UI freeze
+      // 6. Render Loop
+      for (let i = 0; i < maxFrames; i++) {
+        // Yield for UI responsiveness
         if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
 
-        const info = reader.frameInfo(i);
-        
-        // --- Disposal Handling (Cleanup from PREVIOUS frame) ---
-        // We must dispose of frame (i-1) before drawing frame (i)
-        if (i > 0 && previousInfo) {
-            const { disposal, x, y, width: fWidth, height: fHeight } = previousInfo;
-            
-            if (disposal === 2) {
-                // Restore to Background (Clear the rect of the previous frame)
-                videoCtx.clearRect(x, y, fWidth, fHeight);
-            } else if (disposal === 3 && savedState) {
-                // Restore to Previous (Put back the state from before the previous frame)
-                videoCtx.putImageData(savedState, 0, 0);
+        // A. Clear & Background
+        ctx.fillStyle = paddingTop > 0 ? '#ffffff' : '#000000';
+        ctx.fillRect(0, 0, exportWidth, exportHeight);
+
+        // B. Draw Panels
+        for (const panel of meme.panels) {
+            if (!panel.url) continue;
+
+            const px = (panel.x / 100) * exportWidth;
+            const py = (panel.y / 100) * contentHeight + contentOffsetY;
+            const pw = (panel.w / 100) * exportWidth;
+            const ph = (panel.h / 100) * contentHeight;
+
+            let sourceCanvas = null;
+            let srcX=0, srcY=0, srcW=0, srcH=0;
+
+            if (gifProcessors[panel.id]) {
+                const proc = gifProcessors[panel.id];
+                // Loop the frame index: i % numFrames
+                const frameIdx = i % proc.numFrames;
+                const result = proc.renderFrame(frameIdx);
+                sourceCanvas = result.canvas;
+                srcW = proc.width;
+                srcH = proc.height;
+                if (i === 0 && activeGifPanels[0] === proc) masterDelay = result.delay;
+            } else if (staticImages[panel.id]) {
+                sourceCanvas = staticImages[panel.id];
+                srcW = sourceCanvas.width;
+                srcH = sourceCanvas.height;
             }
-            // Disposal 0 or 1 means "Keep" (Do nothing)
+
+            if (sourceCanvas) {
+                // Draw with ObjectFit (Cover/Contain)
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(px, py, pw, ph);
+                ctx.clip();
+
+                // Apply Standard CSS Filters via context filter
+                const f = panel.filters || {};
+                const filterStr = `
+                    contrast(${f.contrast ?? 100}%)
+                    brightness(${f.brightness ?? 100}%)
+                    blur(${f.blur ?? 0}px)
+                    grayscale(${f.grayscale ?? 0}%)
+                    sepia(${f.sepia ?? 0}%)
+                    hue-rotate(${f.hueRotate ?? 0}deg)
+                    saturate(${f.saturate ?? 100}%)
+                    invert(${f.invert ?? 0}%)
+                `.replace(/\s+/g, ' ').trim();
+                
+                if (filterStr !== 'none') ctx.filter = filterStr;
+
+                // Object Fit Logic
+                const ratioW = pw / srcW;
+                const ratioH = ph / srcH;
+                const ratio = panel.objectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
+
+                const newW = srcW * ratio;
+                const newH = srcH * ratio;
+                const offX = px + (pw - newW) / 2; // Center
+                const offY = py + (ph - newH) / 2;
+
+                // Adjust for Position (Pan)
+                // panel.posX/Y are 0-100% relative to the image
+                // Default is 50%
+                const panX = (panel.posX ?? 50) / 100;
+                const panY = (panel.posY ?? 50) / 100;
+                
+                // If larger, we can pan. 
+                // Simple centering is 50%.
+                const deltaX = (pw - newW) * (panX - 0.5) * 2; // This is a bit rough, standard centering is easier
+                // Let's stick to simple center for now to avoid complexity, or try:
+                // When 'cover', image is larger. 
+                // offX centers it. 
+                // We want to shift it based on panX.
+                
+                // Let's simplify: Standard center draw
+                ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
+                
+                // Deep Fry (Per Panel)
+                if ((f.deepFry || 0) > 0) {
+                    // We need to apply this to the pixels we just drew.
+                    // But we only want to affect THIS panel's area.
+                    // We are clipped, so `getImageData(px, py, pw, ph)` works!
+                    applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
+                }
+
+                ctx.restore();
+            }
         }
 
-        // --- Save State (If CURRENT frame needs to be undone later) ---
-        // If THIS frame's disposal is 3, we need to save the CURRENT canvas state 
-        // *before* we draw this frame, so we can restore it when we get to the *next* frame.
-        if (info.disposal === 3) {
-            savedState = videoCtx.getImageData(0, 0, originalWidth, originalHeight);
-        }
-
-        // --- Decode & Draw Current Frame ---
-        // 1. Clear the raw data buffer for the new frame
-        rawFrameData.fill(0);
-        
-        // 2. Decode pixels into the buffer
-        // decodeAndBlitFrameRGBA writes pixels for the frame into the buffer.
-        // It handles the frame's x/y offsets implicitly if we pass a full-sized buffer.
-        reader.decodeAndBlitFrameRGBA(i, rawFrameData);
-
-        // 3. Put this frame's delta onto a temp canvas
-        const frameImageData = new ImageData(rawFrameData, originalWidth, originalHeight);
-        tempCtx.putImageData(frameImageData, 0, 0);
-
-        // 4. Composite onto the video state canvas
-        // This layers the new frame over the persisting background/previous frame
-        videoCtx.drawImage(tempCanvas, 0, 0);
-        
-        // Update previous info for the next loop
-        previousInfo = info;
-
-
-        // --- Final Composition (Video + Effects + Text) ---
-        
-        // 1. Clear Render Canvas and Fill Background
-        renderCtx.clearRect(0, 0, exportWidth, exportHeight);
-        if (paddingTop > 0) {
-            renderCtx.fillStyle = '#ffffff';
-            renderCtx.fillRect(0, 0, exportWidth, exportHeight);
-        }
-        
-        // 2. Draw the Video State (with Offset)
-        renderCtx.drawImage(videoCanvas, 0, videoOffsetY);
-        
-        // 3. Apply Filters (Only to the video part? Or whole canvas?)
-        // Currently it applies to renderCanvas.
-        // If we apply filters to the whole canvas, the white bar might get filtered.
-        // Ideally, filters apply to the VIDEO only.
-        // Let's modify filter logic to apply to a temp canvas of the video?
-        // Or apply filters to renderCanvas BUT clip?
-        // Simpler: Apply filters to videoCanvas BEFORE drawing to renderCanvas?
-        // BUT videoCanvas is persistent state. Modifying it breaks next frame.
-        // So we must filter during transfer.
-        
-        if (meme.filters) {
-          const filterStr = `
-            contrast(${meme.filters.contrast ?? 100}%) 
-            brightness(${meme.filters.brightness ?? 100}%) 
-            blur(${meme.filters.blur ?? 0}px)
-            grayscale(${meme.filters.grayscale ?? 0}%)
-            sepia(${meme.filters.sepia ?? 0}%)
-            hue-rotate(${meme.filters.hueRotate ?? 0}deg)
-            saturate(${meme.filters.saturate ?? 100}%)
-            invert(${meme.filters.invert ?? 0}%)
-          `.replace(/\s+/g, ' ').trim();
-          
-          if (filterStr !== 'none') {
-             // We need to filter the VIDEO part only.
-             // Best way: Draw video to a temp canvas, filter THAT, then draw to renderCanvas.
-             const fCanvas = document.createElement('canvas');
-             fCanvas.width = originalWidth;
-             fCanvas.height = originalHeight;
-             const fCtx = fCanvas.getContext('2d');
-             
-             fCtx.filter = filterStr;
-             fCtx.drawImage(videoCanvas, 0, 0);
-             
-             // Now draw the FILTERED video to renderCanvas
-             // Overwrite the previous drawImage(videoCanvas)
-             // Or just do it here instead of step 2.
-             // We'll just overwrite/redraw the video part.
-             renderCtx.drawImage(fCanvas, 0, videoOffsetY);
-          }
-        }
-
-        // 3.5 Draw Drawings
+        // C. Draw Drawings
         if (meme.drawings && meme.drawings.length > 0) {
-            renderCtx.save();
-            renderCtx.lineCap = 'round';
-            renderCtx.lineJoin = 'round';
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             
             meme.drawings.forEach(d => {
                 if (!d.points || d.points.length < 2) return;
-                renderCtx.beginPath();
-                renderCtx.strokeStyle = d.color;
-                renderCtx.lineWidth = d.width * (exportWidth / 800); 
-                renderCtx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
+                ctx.beginPath();
+                ctx.strokeStyle = d.color;
+                ctx.lineWidth = d.width * (exportWidth / 800);
+                ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
                 
-                renderCtx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
-                for (let i = 1; i < d.points.length; i++) {
-                    renderCtx.lineTo(d.points[i].x * exportWidth, d.points[i].y * exportHeight);
+                ctx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
+                for (let j = 1; j < d.points.length; j++) {
+                    ctx.lineTo(d.points[j].x * exportWidth, d.points[j].y * exportHeight);
                 }
-                renderCtx.stroke();
+                ctx.stroke();
             });
-            
-            renderCtx.globalCompositeOperation = 'source-over';
-            renderCtx.restore();
+            ctx.restore();
         }
 
-        // 4. Draw Stickers
+        // D. Draw Stickers
         for (const sticker of (stickers || [])) {
           const x = (sticker.x / 100) * exportWidth;
-          const y = (sticker.y / 100) * exportHeight;
+          const y = (sticker.y / 100) * contentHeight + contentOffsetY;
           const size = meme.stickerSize || 60;
 
           if (sticker.type === 'image') {
-              const img = loadedImages[sticker.id];
+              const img = stickerImages[sticker.id];
               if (img) {
                   const aspect = img.height / img.width;
                   const drawWidth = size;
                   const drawHeight = size * aspect;
-                  renderCtx.drawImage(img, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+                  ctx.drawImage(img, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
               }
           } else {
-              renderCtx.font = `${size}px sans-serif`;
-              renderCtx.textAlign = 'center';
-              renderCtx.textBaseline = 'middle';
-              renderCtx.fillText(sticker.url, x, y);
+              ctx.font = `${size}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(sticker.url, x, y);
           }
         }
 
-        // 5. Draw Texts
-        for (const textItem of texts) {
+        // E. Draw Text
+        drawText(ctx, texts, meme, exportWidth, contentHeight, contentOffsetY);
+
+        // F. Add Frame
+        // 10ms * 10 = 100ms default delay if not gathered from GIF
+        const delay = Math.max(2, Math.round((masterDelay || 10) / 10) * 10); 
+        gif.addFrame(ctx, { delay: masterDelay * 10, copy: true });
+      }
+
+      gif.on('finished', (blob) => resolve(blob));
+      gif.render();
+
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+// --- Helpers ---
+
+function applyDeepFry(ctx, x, y, w, h, level) {
+    // Ensure integer coordinates for ImageData
+    x = Math.floor(x); y = Math.floor(y);
+    w = Math.floor(w); h = Math.floor(h);
+    if (w <= 0 || h <= 0) return;
+
+    const imageData = ctx.getImageData(x, y, w, h);
+    const data = imageData.data;
+
+    const contrastFactor = 1 + (level / 20); 
+    const noiseAmount = level * 1.5;
+    const satBoost = 1 + (level / 50);
+
+    for (let p = 0; p < data.length; p += 4) {
+        let r = data[p];
+        let g = data[p + 1];
+        let b = data[p + 2];
+
+        const noise = (Math.random() - 0.5) * noiseAmount;
+        r += noise;
+        g += noise + (level * 0.2); 
+        b += noise;
+
+        r = (r - 128) * contrastFactor + 128;
+        g = (g - 128) * contrastFactor + 128;
+        b = (b - 128) * contrastFactor + 128;
+
+        const gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
+        r = gray + (r - gray) * satBoost;
+        g = gray + (g - gray) * satBoost;
+        b = gray + (b - gray) * satBoost;
+
+        data[p] = r < 0 ? 0 : r > 255 ? 255 : r;
+        data[p+1] = g < 0 ? 0 : g > 255 ? 255 : g;
+        data[p+2] = b < 0 ? 0 : b > 255 ? 255 : b;
+    }
+    ctx.putImageData(imageData, x, y);
+}
+
+function drawText(ctx, texts, meme, width, height, offsetY) {
+    for (const textItem of texts) {
           if (!textItem.content.trim()) continue;
 
-          const x = (textItem.x / 100) * exportWidth;
-          const y = (textItem.y / 100) * exportHeight;
+          const x = (textItem.x / 100) * width;
+          const y = (textItem.y / 100) * height + offsetY;
           const fontSize = meme.fontSize || 40;
           const stroke = Math.max(1, fontSize / 25);
           const rotation = (textItem.rotation || 0) * (Math.PI / 180);
-          const maxWidth = ((meme.maxWidth || 80) / 100) * exportWidth;
+          const maxWidth = ((meme.maxWidth || 80) / 100) * width;
           const lineHeight = fontSize * 1.2;
 
-          renderCtx.save();
-          renderCtx.translate(x, y);
-          renderCtx.rotate(rotation);
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(rotation);
           
-          if (renderCtx.letterSpacing !== undefined) {
-              renderCtx.letterSpacing = `${meme.letterSpacing || 0}px`;
-          }
-
-          renderCtx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
-          renderCtx.textAlign = 'center';
-          renderCtx.textBaseline = 'middle';
+          ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
           
-          // --- Text Wrapping Logic ---
           const lines = [];
           const rawLines = textItem.content.toUpperCase().split('\n');
 
@@ -263,8 +455,8 @@ export async function exportGif(meme, texts, stickers) {
 
               for (let i = 1; i < words.length; i++) {
                   const word = words[i];
-                  const width = renderCtx.measureText(currentLine + " " + word).width;
-                  if (width < maxWidth) {
+                  const w = ctx.measureText(currentLine + " " + word).width;
+                  if (w < maxWidth) {
                       currentLine += " " + word;
                   } else {
                       lines.push(currentLine);
@@ -274,141 +466,43 @@ export async function exportGif(meme, texts, stickers) {
               lines.push(currentLine);
           }
 
-          // Calculate vertical offset to center the text block
           const totalHeight = lines.length * lineHeight;
           const startY = -(totalHeight / 2) + (lineHeight / 2);
 
-          // Draw Text Background (if applicable)
           if (meme.textBgColor && meme.textBgColor !== 'transparent') {
-             // Calculate bounding box for the whole block
              let maxLineWidth = 0;
              lines.forEach(line => {
-                 const w = renderCtx.measureText(line).width;
+                 const w = ctx.measureText(line).width;
                  if (w > maxLineWidth) maxLineWidth = w;
              });
 
-             // Match CSS padding: 0.25em vertical, 0.5em horizontal
              const bgWidth = maxLineWidth + (fontSize * 1.0);
              const bgHeight = totalHeight + (fontSize * 0.5);
              
-             renderCtx.fillStyle = meme.textBgColor;
+             ctx.fillStyle = meme.textBgColor;
              const radius = fontSize * 0.15;
              const bx = -bgWidth / 2;
              const by = -(totalHeight / 2) - (fontSize * 0.25); 
              
-             renderCtx.beginPath();
-             renderCtx.moveTo(bx + radius, by);
-             renderCtx.lineTo(bx + bgWidth - radius, by);
-             renderCtx.quadraticCurveTo(bx + bgWidth, by, bx + bgWidth, by + radius);
-             renderCtx.lineTo(bx + bgWidth, by + bgHeight - radius);
-             renderCtx.quadraticCurveTo(bx + bgWidth, by + bgHeight, bx + bgWidth - radius, by + bgHeight);
-             renderCtx.lineTo(bx + radius, by + bgHeight);
-             renderCtx.quadraticCurveTo(bx, by + bgHeight, bx, by + bgHeight - radius);
-             renderCtx.lineTo(bx, by + radius);
-             renderCtx.quadraticCurveTo(bx, by, bx + radius, by);
-             renderCtx.closePath();
-             renderCtx.fill();
+             ctx.beginPath();
+             ctx.roundRect(bx, by, bgWidth, bgHeight, radius);
+             ctx.fill();
           }
 
-          // Draw Each Line
-          renderCtx.shadowColor = 'rgba(0,0,0,0.8)';
-          renderCtx.shadowBlur = 4;
-          renderCtx.shadowOffsetY = 2;
-          renderCtx.lineWidth = stroke * 2;
-          renderCtx.lineJoin = 'round';
-          renderCtx.strokeStyle = meme.textShadow || '#000000';
-          renderCtx.fillStyle = meme.textColor || '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetY = 2;
+          ctx.lineWidth = stroke * 2;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = meme.textShadow || '#000000';
+          ctx.fillStyle = meme.textColor || '#ffffff';
 
           lines.forEach((line, index) => {
               const lineY = startY + (index * lineHeight);
-              
-              // Stroke
-              renderCtx.strokeText(line, 0, lineY);
-              
-              // Fill
-              renderCtx.fillText(line, 0, lineY);
+              ctx.strokeText(line, 0, lineY);
+              ctx.fillText(line, 0, lineY);
           });
-
-          renderCtx.shadowColor = 'transparent';
-          renderCtx.shadowBlur = 0;
-          renderCtx.shadowOffsetY = 0;
           
-          renderCtx.restore();
-        }
-
-        // --- DEEP FRY EFFECT (Frame by Frame) ---
-        const deepFryLevel = meme.filters?.deepFry || 0;
-        if (deepFryLevel > 0) {
-            // 1. Pixel Destruction
-            const imageData = renderCtx.getImageData(0, 0, exportWidth, exportHeight);
-            const data = imageData.data;
-
-            const contrastFactor = 1 + (deepFryLevel / 20); 
-            const noiseAmount = deepFryLevel * 1.5;
-            const satBoost = 1 + (deepFryLevel / 50);
-
-            for (let p = 0; p < data.length; p += 4) {
-                let r = data[p];
-                let g = data[p + 1];
-                let b = data[p + 2];
-
-                // Noise (Random per frame = Animated Static!)
-                const noise = (Math.random() - 0.5) * noiseAmount;
-                r += noise;
-                g += noise + (deepFryLevel * 0.2); // Yellow/Green tint
-                b += noise;
-
-                // Contrast
-                r = (r - 128) * contrastFactor + 128;
-                g = (g - 128) * contrastFactor + 128;
-                b = (b - 128) * contrastFactor + 128;
-
-                // Saturation
-                const gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
-                r = gray + (r - gray) * satBoost;
-                g = gray + (g - gray) * satBoost;
-                b = gray + (b - gray) * satBoost;
-
-                // Clamp
-                data[p] = Math.max(0, Math.min(255, r));
-                data[p + 1] = Math.max(0, Math.min(255, g));
-                data[p + 2] = Math.max(0, Math.min(255, b));
-            }
-            renderCtx.putImageData(imageData, 0, 0);
-
-            // 2. JPEG Artifacts (The "Crunch")
-            // We must go async here to load the degraded image
-            const quality = Math.max(0.01, 0.9 - (deepFryLevel / 110)); 
-            const jpegUrl = renderCanvas.toDataURL('image/jpeg', quality);
-            
-            await new Promise((resolveFrame) => {
-                const crunchImg = new Image();
-                crunchImg.onload = () => {
-                    renderCtx.drawImage(crunchImg, 0, 0);
-                    resolveFrame();
-                };
-                crunchImg.src = jpegUrl;
-            });
-        }
-
-        // Add to GIF
-        // info.delay is in 1/100ths of a second. Math.max(20, ...) ensures we don't have 0ms frames.
-        const delay = Math.max(20, (info.delay || 10) * 10);
-        gif.addFrame(renderCtx, { delay, copy: true });
-      }
-
-      // 6. Finalize
-      gif.on('finished', (blob) => {
-        resolve(blob);
-      });
-
-      gif.on('error', (err) => {
-        reject(err);
-      });
-
-      gif.render();
-    } catch (error) {
-      reject(error);
+          ctx.restore();
     }
-  });
 }

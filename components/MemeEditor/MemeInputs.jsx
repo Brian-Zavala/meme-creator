@@ -162,7 +162,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                                       <button 
                                         onClick={async () => {
                                           toast.dismiss(t.id);
-                                          const toastId = toast.loading("Removing background... (High-Accuracy Model loading ~168MB)", { style: { minWidth: '300px' } });
+                                          const toastId = toast.loading("Removing background... (Optimized AI Model loading ~80MB)", { style: { minWidth: '300px' } });
                                           try {
                                               const blob = await removeImageBackground(file);
                                               const url = URL.createObjectURL(blob);

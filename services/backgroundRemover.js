@@ -17,9 +17,12 @@ export async function removeImageBackground(imageSource, onProgress) {
     }
 
     const config = {
-      model: 'isnet', // Use highest accuracy model (float32)
+      model: 'isnet_fp16', // Sweet spot: High accuracy but half the size/processing time of float32
+      device: 'gpu',       // Use GPU acceleration if available for much faster inference
       output: {
-        quality: 1.0
+        quality: 0.9,
+        type: 'foreground',
+        format: 'image/png'
       },
       progress: (key, current, total) => {
         if (onProgress) {

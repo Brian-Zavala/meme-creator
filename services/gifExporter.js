@@ -184,16 +184,9 @@ export async function exportGif(meme, texts, stickers) {
 
       // Padding adjustment
       const paddingTop = meme.paddingTop || 0;
-      if (paddingTop > 0) {
-          // Increase height to accommodate padding
-          // The "MemeCanvas" logic: containerAspect = 1 / ((1 / containerAspect) + (meme.paddingTop / 100));
-          // Which implies the image area shrinks or the container grows.
-          // For export, let's grow the height.
-          const contentHeight = exportHeight;
-          exportHeight = Math.round(contentHeight / ((100 - paddingTop) / 100));
-      }
-      const contentOffsetY = paddingTop > 0 ? (exportHeight * (paddingTop / 100)) : 0;
-      const contentHeight = exportHeight - contentOffsetY;
+      const contentOffsetY = paddingTop > 0 ? Math.round(exportWidth * (paddingTop / 100)) : 0;
+      const contentHeight = exportHeight; // Keep image height as intended
+      exportHeight = contentHeight + contentOffsetY; // Final total height
 
 
       // 4. Initialize Encoder
@@ -356,7 +349,7 @@ export async function exportGif(meme, texts, stickers) {
         // D. Draw Stickers
         for (const sticker of (stickers || [])) {
           const x = (sticker.x / 100) * exportWidth;
-          const y = (sticker.y / 100) * contentHeight + contentOffsetY;
+          const y = (sticker.y / 100) * exportHeight;
           const size = meme.stickerSize || 60;
 
           if (sticker.type === 'image') {
@@ -376,7 +369,7 @@ export async function exportGif(meme, texts, stickers) {
         }
 
         // E. Draw Text
-        drawText(ctx, texts, meme, exportWidth, contentHeight, contentOffsetY);
+        drawText(ctx, texts, meme, exportWidth, exportHeight, 0);
 
         // F. Add Frame
         // 10ms * 10 = 100ms default delay if not gathered from GIF

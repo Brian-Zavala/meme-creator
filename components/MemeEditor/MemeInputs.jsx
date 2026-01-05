@@ -177,7 +177,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                                         }}
                                         className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
                                       >
-                                        Yes, Magic ✨
+                                        Yes, Magic
                                       </button>
                                       <button 
                                         onClick={() => {

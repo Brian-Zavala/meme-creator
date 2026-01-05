@@ -2,14 +2,15 @@
 const API_KEY = import.meta.env.VITE_TENOR_KEY;
 const CLIENT_KEY = "meme-creator-app";
 
+// ⬇️ UPDATED: Added 'type' parameter (defaults to 'gif')
 export async function searchTenor(query, type = 'gif') {
-  // If no query, we use the 'featured' endpoint to get trending GIFs
   const endpoint = query ? 'search' : 'featured';
   const queryParam = query ? `&q=${encodeURIComponent(query)}` : '';
   
-  // ADD search filter for stickers based on documentation
+  // ⬇️ CRITICAL: This filter tells Tenor to return transparent Stickers
   const searchFilter = type === 'sticker' ? '&searchfilter=sticker' : '';
-
+  
+  // Append searchFilter to the URL
   const url = `https://tenor.googleapis.com/v2/${endpoint}?key=${API_KEY}&client_key=${CLIENT_KEY}&limit=50&media_filter=gif,mediumgif${queryParam}${searchFilter}`;
 
   try {
@@ -21,12 +22,12 @@ export async function searchTenor(query, type = 'gif') {
       return [];
     }
 
-    // Map Tenor results to match the structure your App expects (width/height/url)
     return data.results.map((item) => ({
       id: item.id,
       name: item.content_description || query,
-      url: item.media_formats.gif.url, // High-quality GIF
-      shareUrl: item.media_formats.mediumgif ? item.media_formats.mediumgif.url : item.media_formats.gif.url, // Optimized for sharing
+      // When searchfilter=sticker, this 'gif' url is the transparent one
+      url: item.media_formats.gif.url, 
+      shareUrl: item.media_formats.mediumgif ? item.media_formats.mediumgif.url : item.media_formats.gif.url,
       width: item.media_formats.gif.dims[0],
       height: item.media_formats.gif.dims[1],
     }));
@@ -42,7 +43,6 @@ export async function registerShare(id, query) {
   const url = `https://tenor.googleapis.com/v2/registershare?key=${API_KEY}&client_key=${CLIENT_KEY}&id=${id}${queryParam}`;
 
   try {
-    // Fire and forget - we don't need to wait for the response
     fetch(url); 
   } catch (e) {
     console.warn("Failed to register share event", e);
@@ -83,7 +83,7 @@ export async function getCategories() {
   try {
     const res = await fetch(url);
     const data = await res.json();
-    return data.tags || []; // Returns array of { searchterm, path, image, name }
+    return data.tags || []; 
   } catch (e) {
     console.error("Tenor Categories Error:", e);
     return [];

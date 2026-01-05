@@ -715,6 +715,15 @@ export default function Main() {
           rotation: (Math.random() - 0.5) * 24, // ±12°
         }));
 
+        // Add empty text input to enable conditional rendering for additional inputs
+        newTexts.push({
+          id: crypto.randomUUID(),
+          content: "",
+          x: 50,
+          y: 50,
+          rotation: 0,
+        });
+
         // Random font size between 24-40
         const chaosFontSize = 24 + Math.floor(Math.random() * 16);
 

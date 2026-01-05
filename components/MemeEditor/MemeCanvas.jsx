@@ -271,7 +271,6 @@ const MemeCanvas = forwardRef(({
         className="relative overflow-hidden shadow-2xl mx-auto"
         style={{ 
             backgroundColor: meme.paddingTop > 0 ? '#ffffff' : '#000000', 
-            paddingTop: meme.paddingTop ? `${meme.paddingTop}%` : '0',
             width: '100%',
             height: 'auto',
             aspectRatio: containerAspect,
@@ -280,7 +279,10 @@ const MemeCanvas = forwardRef(({
         }}
       >
         {/* === PANELS LAYER === */}
-        <div className="absolute inset-0 top-[var(--padding-top,0)] w-full h-full">
+        <div 
+          className="absolute inset-x-0 bottom-0"
+          style={{ top: `${(meme.paddingTop || 0) * containerAspect}%` }}
+        >
             {meme.panels?.map((panel) => {
                 const isActive = panel.id === activePanelId;
                 const showUrl = panel.processedImage || panel.url;

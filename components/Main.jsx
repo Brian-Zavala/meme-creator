@@ -827,7 +827,7 @@ export default function Main() {
   function clearSearch() {
     setSearchQuery("");
     setSuggestions([]);
-    updateState((prev) => ({ ...prev, mode: "image" }));
+    // Removed: updateState((prev) => ({ ...prev, mode: "image" }));
     if (allMemes.length === 0) {
       setLoading(true);
       fetch("https://api.imgflip.com/get_memes")

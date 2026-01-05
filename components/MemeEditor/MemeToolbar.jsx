@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useTransition } from "react";
+import { useState, lazy, Suspense, useTransition, useEffect } from "react";
 import {
   Type,
   MoveHorizontal,
@@ -38,8 +38,8 @@ const FONTS = [
   { name: "Pacifico", label: "Script" },
 ];
 
-export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings }) {
-  const [activeTab, setActiveTab] = useState("text"); 
+export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand }) {
+  const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
@@ -48,18 +48,26 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
     startTransition(() => {
       setActiveTab(tab);
       if (tab === 'draw') {
-          setActiveTool('pen');
+        setActiveTool('pen');
       } else {
-          setActiveTool('move');
+        setActiveTool('move');
       }
     });
   };
 
   const isCollapsed = activeTab === 'text' && !hasText && !hasStickers;
 
+  // Notify parent when drawer expands so it can scroll canvas into view
+  useEffect(() => {
+    if (!isCollapsed && onDrawerExpand) {
+      const timer = setTimeout(() => onDrawerExpand(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCollapsed, onDrawerExpand]);
+
   const getSliderStyle = (value, min, max) => {
     const val = ((value - min) / (max - min)) * 100;
-    const color = 'var(--color-brand)'; 
+    const color = 'var(--color-brand)';
     const track = 'rgba(255, 255, 255, 0.2)';
     return {
       background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
@@ -75,39 +83,36 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
       {/* Mode Switcher */}
       <div className="flex border-b border-slate-800 relative" role="tablist">
         {/* Animated Active Tab Indicator */}
-        <div 
-          className={`absolute bottom-0 h-0.5 bg-brand transition-all duration-300 ease-out z-10 w-1/3 ${
-            activeTab === "text" ? "left-0" : activeTab === "image" ? "left-1/3" : "left-2/3"
-          }`}
+        <div
+          className={`absolute bottom-0 h-0.5 bg-brand transition-all duration-300 ease-out z-10 w-1/3 ${activeTab === "text" ? "left-0" : activeTab === "image" ? "left-1/3" : "left-2/3"
+            }`}
         />
-        
+
         <button
           onClick={() => handleTabChange("text")}
           role="tab"
           aria-selected={activeTab === "text"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${
-            activeTab === "text"
-              ? "text-white bg-slate-800"
-              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${activeTab === "text"
+            ? "text-white bg-slate-800"
+            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            }`}
         >
-          <Type className={`w-4 h-4 transition-transform duration-300 ${activeTab === "text" ? "scale-110" : "scale-100"}`} /> 
+          <Type className={`w-4 h-4 transition-transform duration-300 ${activeTab === "text" ? "scale-110" : "scale-100"}`} />
           Text
         </button>
-        
+
         <div className="w-px bg-slate-800 z-0" role="presentation"></div>
-        
+
         <button
           onClick={() => handleTabChange("image")}
           role="tab"
           aria-selected={activeTab === "image"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${
-            activeTab === "image"
-              ? "text-white bg-slate-800"
-              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${activeTab === "image"
+            ? "text-white bg-slate-800"
+            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            }`}
         >
-          <ImageIcon className={`w-4 h-4 transition-transform duration-300 ${activeTab === "image" ? "scale-110" : "scale-100"}`} /> 
+          <ImageIcon className={`w-4 h-4 transition-transform duration-300 ${activeTab === "image" ? "scale-110" : "scale-100"}`} />
           Image
         </button>
 
@@ -117,55 +122,53 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           onClick={() => handleTabChange("draw")}
           role="tab"
           aria-selected={activeTab === "draw"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${
-            activeTab === "draw"
-              ? "text-white bg-slate-800"
-              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${activeTab === "draw"
+            ? "text-white bg-slate-800"
+            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            }`}
         >
-          <Pencil className={`w-4 h-4 transition-transform duration-300 ${activeTab === "draw" ? "scale-110" : "scale-100"}`} /> 
+          <Pencil className={`w-4 h-4 transition-transform duration-300 ${activeTab === "draw" ? "scale-110" : "scale-100"}`} />
           Draw
         </button>
       </div>
 
       {/* Controls Area */}
-      <div 
+      <div
         className={`grid transition-[grid-template-rows] duration-500 ease-out ${isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}
       >
         <div className="overflow-hidden">
           <div className={`flex flex-col justify-center transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100 px-6 py-6 min-h-[80px]'}`}>
-            
+
             {/* TEXT CONTROLS */}
             {activeTab === "text" && (
               <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
-                
+
                 {/* Group -1: Layout (Caption Bar) */}
                 <div className="w-full flex justify-center animate-in fade-in duration-300">
-                   <button
-                     onClick={() => {
-                        if (navigator.vibrate) navigator.vibrate(10);
-                        const isModern = meme.paddingTop > 0;
-                        handleStyleChange({ currentTarget: { name: 'paddingTop', value: isModern ? 0 : 25 } }, true);
-                        
-                        setTimeout(() => {
-                            if (!isModern) {
-                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
-                                handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                            } else {
-                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
-                                handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
-                            }
-                        }, 50);
-                     }}
-                     className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 border text-xs uppercase font-bold tracking-wider ${
-                       meme.paddingTop > 0 
-                       ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20" 
-                       : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
-                     }`}
-                   >
-                     <PanelTop className="w-4 h-4" />
-                     {meme.paddingTop > 0 ? "Caption Bar On" : "Caption Bar Off"}
-                   </button>
+                  <button
+                    onClick={() => {
+                      if (navigator.vibrate) navigator.vibrate(10);
+                      const isModern = meme.paddingTop > 0;
+                      handleStyleChange({ currentTarget: { name: 'paddingTop', value: isModern ? 0 : 25 } }, true);
+
+                      setTimeout(() => {
+                        if (!isModern) {
+                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                          handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                        } else {
+                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                          handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                        }
+                      }, 50);
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 border text-xs uppercase font-bold tracking-wider ${meme.paddingTop > 0
+                      ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20"
+                      : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                      }`}
+                  >
+                    <PanelTop className="w-4 h-4" />
+                    {meme.paddingTop > 0 ? "Caption Bar On" : "Caption Bar Off"}
+                  </button>
                 </div>
 
                 {/* Group 0: Font Selector (Horizontal Scroll) */}
@@ -179,11 +182,10 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             if (navigator.vibrate) navigator.vibrate(10);
                             handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
                           }}
-                          className={`snap-center shrink-0 px-4 py-2 rounded-lg border text-sm transition-all active:scale-95 ${
-                            (meme.fontFamily || "Impact") === font.name
-                              ? "bg-slate-100 text-slate-900 border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-                              : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
-                          }`}
+                          className={`snap-center shrink-0 px-4 py-2 rounded-lg border text-sm transition-all active:scale-95 ${(meme.fontFamily || "Impact") === font.name
+                            ? "bg-slate-100 text-slate-900 border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                            : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                            }`}
                           style={{ fontFamily: `${font.name}, sans-serif` }}
                         >
                           {font.label}
@@ -195,14 +197,14 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
                 {/* Divider */}
                 {hasText && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
-                
+
                 {/* Group 1: Size Controls */}
                 <div className={`flex-1 w-full flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-4'}`}>
                   {hasText && (
                     <div className="flex flex-col w-full gap-2 animate-in fade-in duration-300">
                       <div className="flex items-center justify-between w-full relative">
                         {meme.fontSize != 30 && (
-                          <button 
+                          <button
                             onClick={() => {
                               if (navigator.vibrate) navigator.vibrate(10);
                               handleStyleChange({ currentTarget: { name: 'fontSize', value: 30 } }, true);
@@ -231,7 +233,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       </div>
                     </div>
                   )}
-                  
+
                   {hasStickers && (
                     <div className="flex items-center gap-4 w-full animate-in slide-in-from-top-1 fade-in duration-300">
                       <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
@@ -261,7 +263,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
                       <div className="flex items-center justify-between w-full relative">
                         {meme.maxWidth != 100 && (
-                          <button 
+                          <button
                             onClick={() => {
                               if (navigator.vibrate) navigator.vibrate(10);
                               handleStyleChange({ currentTarget: { name: 'maxWidth', value: 100 } }, true);
@@ -297,7 +299,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
                       <div className="flex items-center justify-between w-full relative">
                         {meme.letterSpacing !== 0 && (
-                          <button 
+                          <button
                             onClick={() => {
                               if (navigator.vibrate) navigator.vibrate(10);
                               handleStyleChange({ currentTarget: { name: 'letterSpacing', value: 0 } }, true);
@@ -334,10 +336,10 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 {/* Group 3: Color Controls */}
                 {hasText && (
                   <Suspense fallback={<div className="w-full md:w-auto h-20 bg-slate-800/20 rounded animate-pulse shrink-0" />}>
-                    <ColorControls 
-                      meme={meme} 
-                      handleStyleChange={handleStyleChange} 
-                      handleStyleCommit={handleStyleCommit} 
+                    <ColorControls
+                      meme={meme}
+                      handleStyleChange={handleStyleChange}
+                      handleStyleCommit={handleStyleCommit}
                     />
                   </Suspense>
                 )}
@@ -368,7 +370,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.contrast ?? 100, 0, 200)}
@@ -383,7 +385,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.brightness ?? 100, 0, 200)}
@@ -403,7 +405,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.blur ?? 0, 0, 10)}
@@ -418,7 +420,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.grayscale ?? 0, 0, 100)}
@@ -438,7 +440,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.sepia ?? 0, 0, 100)}
@@ -453,7 +455,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.saturate ?? 100, 0, 300)}
@@ -473,7 +475,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.hueRotate ?? 0, 0, 360)}
@@ -488,7 +490,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         onChange={(e) => {
                           if (navigator.vibrate) navigator.vibrate(5);
                           handleFilterChange(e);
-                        }} 
+                        }}
                         onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
                         style={getSliderStyle(meme.filters?.invert ?? 0, 0, 100)}
@@ -502,32 +504,32 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
                 {/* Deep Fry Control */}
                 <div className="flex flex-col gap-4 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase text-red-500 tracking-wider flex items-center gap-2">
-                            Deep Fry
-                        </span>
-                        {meme.filters?.deepFry > 0 && (
-                            <span className="text-[10px] font-bold text-red-400">{meme.filters.deepFry}%</span>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-4 w-full">
-                        <Flame className={`w-5 h-5 transition-colors ${meme.filters?.deepFry > 0 ? 'text-red-500 animate-pulse' : 'text-slate-600'}`} />
-                        <input
-                            type="range" min="0" max="100" name="deepFry"
-                            value={meme.filters?.deepFry ?? 0}
-                            onChange={(e) => {
-                                if (navigator.vibrate) navigator.vibrate(5);
-                                handleFilterChange(e);
-                            }}
-                            onMouseUp={handleStyleCommit} 
-                            onTouchEnd={handleStyleCommit}
-                            className="range-slider w-full cursor-pointer h-2 rounded-full accent-red-500"
-                            style={{
-                                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) 100%)`
-                            }}
-                            title="Deep Fry Level"
-                        />
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase text-red-500 tracking-wider flex items-center gap-2">
+                      Deep Fry
+                    </span>
+                    {meme.filters?.deepFry > 0 && (
+                      <span className="text-[10px] font-bold text-red-400">{meme.filters.deepFry}%</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 w-full">
+                    <Flame className={`w-5 h-5 transition-colors ${meme.filters?.deepFry > 0 ? 'text-red-500 animate-pulse' : 'text-slate-600'}`} />
+                    <input
+                      type="range" min="0" max="100" name="deepFry"
+                      value={meme.filters?.deepFry ?? 0}
+                      onChange={(e) => {
+                        if (navigator.vibrate) navigator.vibrate(5);
+                        handleFilterChange(e);
+                      }}
+                      onMouseUp={handleStyleCommit}
+                      onTouchEnd={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full accent-red-500"
+                      style={{
+                        background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) 100%)`
+                      }}
+                      title="Deep Fry Level"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -535,64 +537,64 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
             {/* DRAW CONTROLS */}
             {activeTab === "draw" && (
               <div id="draw-tools-panel" role="tabpanel" className="flex flex-col gap-6 w-full items-center animate-in fade-in duration-300">
-                 {/* Tools */}
-                 <div className="flex gap-4">
-                    <button
-                        onClick={() => setActiveTool('pen')}
-                        className={`p-3 rounded-xl border transition-all ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
-                        title="Pen Tool"
-                    >
-                        <img src="/images/canvas/marker-pen_32.png" className="w-5 h-5 object-contain" alt="Pen" />
-                    </button>
-                    <button
-                        onClick={() => setActiveTool('eraser')}
-                        className={`p-3 rounded-xl border transition-all ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
-                        title="Eraser Tool"
-                    >
-                        <img src="/images/canvas/eraser_32.png" className="w-5 h-5 object-contain" alt="Eraser" />
-                    </button>
-                    <button
-                        onClick={onClearDrawings}
-                        className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all"
-                        title="Clear All"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </button>
-                 </div>
+                {/* Tools */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setActiveTool('pen')}
+                    className={`p-3 rounded-xl border transition-all ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                    title="Pen Tool"
+                  >
+                    <img src="/images/canvas/marker-pen_32.png" className="w-5 h-5 object-contain" alt="Pen" />
+                  </button>
+                  <button
+                    onClick={() => setActiveTool('eraser')}
+                    className={`p-3 rounded-xl border transition-all ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                    title="Eraser Tool"
+                  >
+                    <img src="/images/canvas/eraser_32.png" className="w-5 h-5 object-contain" alt="Eraser" />
+                  </button>
+                  <button
+                    onClick={onClearDrawings}
+                    className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all"
+                    title="Clear All"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
 
-                 <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+                <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
 
-                 {/* Settings */}
-                 <div className="flex items-center gap-8 w-full max-w-md px-4">
-                    {/* Color */}
-                    <div className="flex flex-col gap-2 items-center">
-                        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Color</span>
-                        <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer shadow-sm">
-                            <input
-                                type="color"
-                                value={meme.drawColor || "#ff0000"}
-                                onChange={(e) => handleStyleChange(e)}
-                                name="drawColor"
-                                className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                            />
-                        </div>
+                {/* Settings */}
+                <div className="flex items-center gap-8 w-full max-w-md px-4">
+                  {/* Color */}
+                  <div className="flex flex-col gap-2 items-center">
+                    <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Color</span>
+                    <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer shadow-sm">
+                      <input
+                        type="color"
+                        value={meme.drawColor || "#ff0000"}
+                        onChange={(e) => handleStyleChange(e)}
+                        name="drawColor"
+                        className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                      />
                     </div>
+                  </div>
 
-                    {/* Width */}
-                    <div className="flex flex-col gap-2 flex-1">
-                        <div className="flex justify-between">
-                            <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Stroke Width</span>
-                            <span className="text-[10px] font-bold text-slate-400 font-mono">{meme.drawWidth}px</span>
-                        </div>
-                        <input
-                            type="range" min="1" max="50" name="drawWidth"
-                            value={meme.drawWidth || 5}
-                            onChange={(e) => handleStyleChange(e)}
-                            className="range-slider w-full cursor-pointer h-2 rounded-full"
-                            style={getSliderStyle(meme.drawWidth || 5, 1, 50)}
-                        />
+                  {/* Width */}
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="flex justify-between">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Stroke Width</span>
+                      <span className="text-[10px] font-bold text-slate-400 font-mono">{meme.drawWidth}px</span>
                     </div>
-                 </div>
+                    <input
+                      type="range" min="1" max="50" name="drawWidth"
+                      value={meme.drawWidth || 5}
+                      onChange={(e) => handleStyleChange(e)}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      style={getSliderStyle(meme.drawWidth || 5, 1, 50)}
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>

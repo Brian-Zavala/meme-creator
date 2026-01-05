@@ -155,6 +155,7 @@ export default function Main() {
   const startPosRef = useRef({ x: 0, y: 0 });
   const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
+  const canvasContainerRef = useRef(null);
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
@@ -970,6 +971,16 @@ export default function Main() {
     });
   }, [updateState]);
 
+  const handleToolbarExpand = useCallback(() => {
+    if (canvasContainerRef.current) {
+      const yCoord = canvasContainerRef.current.getBoundingClientRect().top + window.scrollY - 16;
+      window.scroll({
+        top: yCoord,
+        behavior: 'smooth'
+      });
+    }
+  }, []);
+
   function handleReset() {
     triggerFlash("red");
     startTransition(() => {
@@ -1383,7 +1394,7 @@ export default function Main() {
             )}
           </div>
         )}
-        <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
+        <div ref={canvasContainerRef} className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden scroll-mt-4">
           <MemeToolbar
             meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
             activeTool={activeTool}
@@ -1393,6 +1404,7 @@ export default function Main() {
             handleStyleCommit={handleStyleCommit}
             onResetFilters={resetFilters}
             onClearDrawings={handleClearDrawings}
+            onDrawerExpand={handleToolbarExpand}
           />
           <button
             onClick={() => {

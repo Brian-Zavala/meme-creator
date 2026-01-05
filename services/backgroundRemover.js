@@ -22,8 +22,8 @@ export async function removeImageBackground(imageSource, onProgress) {
             const pct = (current / total);
             onProgress(pct); 
         }
-      },
-      publicPath: "https://static.img.ly/background-removal-data/1.0.0/" 
+      }
+      // Removed outdated publicPath to allow default version-specific CDN resolution
     };
 
     const blob = await removeFn(imageSource, config);

@@ -467,7 +467,7 @@ export default function Main() {
 
             const newPanels = prev.panels.map(p => 
                 p.id === prev.activePanelId 
-                ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+                ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: true, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
                 : p
             );
             return {
@@ -726,7 +726,7 @@ export default function Main() {
                 ...prev,
                 panels: newPanels,
                 activePanelId: panelId,
-                mode: isGif || isVideo ? "video" : "image"
+                mode: newPanels.some(p => p.isVideo) ? "video" : "image"
             };
         });
       });

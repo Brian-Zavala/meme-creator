@@ -328,7 +328,7 @@ const MemeCanvas = forwardRef(({
                         }}
                     >
                         {showUrl ? (
-                            panel.isVideo ? (
+                            (panel.isVideo && !showUrl.includes('.gif')) ? (
                                 <video
                                     src={showUrl}
                                     className="w-full h-full block pointer-events-none select-none"

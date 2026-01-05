@@ -618,16 +618,20 @@ export default function Main() {
     }
 
     try {
-      // 1. DECIDE: Static Image or GIF? (30% chance of GIF)
-      const isGifChaos = Math.random() > 0.7;
+      // 1. DECIDE: Static Image or GIF? (40% chance of GIF)
+      const isGifChaos = Math.random() > 0.6;
 
       let selectedMedia = null;
       let isVideo = false;
       let sourceUrl = null;
 
       if (isGifChaos) {
-        // Fetch a random GIF from a chaos keyword
-        const chaosKeywords = ["funny", "cat", "fail", "chaos", "reaction", "coding"]; // Context7 memories?
+        // Fetch a random GIF from expanded chaos keywords
+        const chaosKeywords = [
+          "funny", "cat", "fail", "chaos", "reaction", "coding",
+          "meme", "bruh", "shocked", "rage", "crying", "dance",
+          "explosion", "fire", "based", "sus"
+        ];
         const keyword = chaosKeywords[Math.floor(Math.random() * chaosKeywords.length)];
         const results = await searchTenor(keyword);
 
@@ -644,9 +648,6 @@ export default function Main() {
         const randomMeme = allMemes[Math.floor(Math.random() * allMemes.length)];
         selectedMedia = randomMeme.url;
         isVideo = false;
-        // For images, we try to use the CORS proxy if needed, similar to getMemeImage logic
-        // But for Chaos speed, direct URL is often fine unless we Deep Fry. 
-        // We'll let the standard update handle it. 
       }
 
       // 2. Pick Random Quote
@@ -655,7 +656,39 @@ export default function Main() {
       const quotes = MEME_QUOTES[randomCategory];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-      // 3. Update State with Random Filters
+      // 3. Determine if EXTREME CHAOS mode (15% chance)
+      const isExtremeChaos = Math.random() < 0.15;
+
+      // 4. Generate chaos filters
+      let chaosFilters;
+      if (isExtremeChaos) {
+        // EXTREME CHAOS: Stack multiple intense filters
+        chaosFilters = {
+          ...DEFAULT_FILTERS,
+          deepFry: 15 + Math.floor(Math.random() * 15), // 15-30
+          hueRotate: Math.floor(Math.random() * 180), // Wild colors
+          brightness: 70 + Math.floor(Math.random() * 60), // 70-130
+          contrast: 120 + Math.floor(Math.random() * 40), // 120-160
+          saturate: 150 + Math.floor(Math.random() * 100) // 150-250
+        };
+      } else {
+        // Normal chaos: Randomized but more moderate
+        chaosFilters = {
+          ...DEFAULT_FILTERS,
+          // 40% chance of deep fry, levels 5-25
+          deepFry: Math.random() < 0.4 ? 5 + Math.floor(Math.random() * 20) : 0,
+          // 25% chance hue rotate, 0-180°
+          hueRotate: Math.random() < 0.25 ? Math.floor(Math.random() * 180) : 0,
+          // 60% chance brightness shift, 90-130
+          brightness: Math.random() < 0.6 ? 90 + Math.floor(Math.random() * 40) : 100,
+          // 60% chance contrast shift, 80-140
+          contrast: Math.random() < 0.6 ? 80 + Math.floor(Math.random() * 60) : 100,
+          // 30% chance saturation shift, 50-200
+          saturate: Math.random() < 0.3 ? 50 + Math.floor(Math.random() * 150) : 100
+        };
+      }
+
+      // 5. Update State
       triggerFlash("red");
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
@@ -666,41 +699,37 @@ export default function Main() {
               sourceUrl: sourceUrl,
               isVideo: isVideo,
               objectFit: "cover",
-              filters: {
-                ...DEFAULT_FILTERS,
-                // 30% chance of deep fry, max level 15 (was 30)
-                deepFry: Math.random() > 0.7 ? Math.floor(Math.random() * 15) : 0,
-                // Random subtle color adjustments
-                hueRotate: Math.random() > 0.85 ? Math.floor(Math.random() * 45) : 0,
-                brightness: Math.random() > 0.5 ? 100 + Math.floor(Math.random() * 20) : 100, // Slightly brighter?
-                contrast: Math.random() > 0.5 ? 100 + Math.floor(Math.random() * 20) : 100, // Slightly punchier
-                saturate: Math.random() > 0.8 ? 150 : 100 // Occasional deep saturation
-              },
+              filters: chaosFilters,
               processedImage: null,
               processedDeepFryLevel: 0
             }
             : p
         );
 
+        // Random text with wilder rotation (±12°)
         const newTexts = randomQuote.map((line, idx) => ({
           id: crypto.randomUUID(),
           content: line,
           x: 50,
           y: idx === 0 ? 10 : 90,
-          rotation: (Math.random() - 0.5) * 8,
+          rotation: (Math.random() - 0.5) * 24, // ±12°
         }));
+
+        // Random font size between 24-40
+        const chaosFontSize = 24 + Math.floor(Math.random() * 16);
 
         return {
           ...prev,
           panels: newPanels,
           mode: isVideo ? "video" : "image",
           texts: newTexts,
-          // Basic heuristic for font size, can be improved
-          fontSize: 30,
+          fontSize: chaosFontSize,
         };
       });
 
-      toast("CHAOS MODE ACTIVATED!", { icon: "🎲" });
+      toast(isExtremeChaos ? "EXTREME CHAOS!" : "CHAOS MODE ACTIVATED!", {
+        icon: isExtremeChaos ? "💥" : "🔥"
+      });
     } catch (e) {
       console.error("Chaos failed", e);
       toast.error("Chaos missed!");

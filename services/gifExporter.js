@@ -129,17 +129,25 @@ export async function exportGif(meme, texts, stickers) {
       await Promise.all(meme.panels.map(async (panel) => {
           if (!panel.url) return;
           
-          if (panel.isVideo) { // Treat as GIF
-              const processor = await createGifProcessor(panel.url);
+          let processor = null;
+          // Explicitly check for GIF extension OR isVideo flag
+          // Note: Some URLs might not end in .gif if proxied, so we trust the flag + content sniffing if needed.
+          if (panel.isVideo || panel.url.includes('.gif')) { 
+              processor = await createGifProcessor(panel.url);
               if (processor) {
                   gifProcessors[panel.id] = processor;
+              } else {
+                  console.warn("Failed to create GIF processor for:", panel.url, "Falling back to static image.");
               }
-          } else { // Static Image
+          }
+          
+          // Always load as static image too, as fallback or for non-GIFs
+          if (!processor) {
               await new Promise((resolve) => {
                   const img = new Image();
                   img.crossOrigin = "anonymous";
                   img.onload = () => { staticImages[panel.id] = img; resolve(); };
-                  img.onerror = () => resolve();
+                  img.onerror = () => { console.warn("Failed to load image:", panel.url); resolve(); };
                   img.src = panel.url;
               });
           }

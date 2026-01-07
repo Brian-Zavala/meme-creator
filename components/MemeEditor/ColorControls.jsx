@@ -72,17 +72,17 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
 
   return (
     <div
-      className="w-full md:w-auto flex flex-row flex-nowrap items-center justify-between sm:justify-evenly md:justify-end gap-1.5 sm:gap-6 md:gap-8 min-w-0 animate-in slide-in-from-right duration-500 px-1 md:px-0 pb-2 pt-12 md:pt-2 shrink-0 overflow-x-auto md:overflow-visible no-scrollbar"
+      className="w-full md:w-auto flex flex-row flex-nowrap items-end md:items-center justify-evenly md:justify-end gap-2 sm:gap-6 md:gap-8 min-w-0 animate-in slide-in-from-right duration-500 px-2 md:px-0 pb-2 pt-10 md:pt-2 shrink-0 overflow-visible no-scrollbar"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
 
       {/* Text Color + Opacity */}
-      <div className="flex flex-row md:flex-col items-center gap-4 md:gap-3 shrink-0">
+      <div className="flex flex-col items-center gap-2.5 md:gap-3 shrink-0">
         <div className="relative flex items-center justify-center w-auto md:w-20" title="Text Color">
           {(meme.textColor.substring(0, 7) !== '#ffffff' || getOpacity(meme.textColor) < 100) && (
             <button
               onClick={() => handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true)}
-              className="absolute -top-[34px] md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+              className="absolute -top-8 md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
             >
               Reset
             </button>
@@ -103,7 +103,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           </div>
         </div>
         {hasText && (
-          <div className="relative h-10 w-3 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
+          <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
             <input
               type="range" min="0" max="100"
               value={getOpacity(meme.textColor)}
@@ -113,8 +113,8 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               }}
               onMouseUp={(e) => changeOpacity('textColor', e.target.value, true)}
               onTouchEnd={(e) => changeOpacity('textColor', e.target.value, true)}
-              className="range-vertical range-slider cursor-pointer h-10 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-              style={isMobile ? getVerticalSliderBg(getOpacity(meme.textColor)) : getSliderStyle(getOpacity(meme.textColor))}
+              className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+              style={getSliderStyle(getOpacity(meme.textColor))}
               title="Text Opacity"
             />
           </div>
@@ -122,12 +122,12 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
       </div>
 
       {/* Outline Color + Opacity */}
-      <div className="flex flex-row md:flex-col items-center gap-4 md:gap-3 animate-in fade-in zoom-in duration-300 shrink-0">
+      <div className="flex flex-col items-center gap-2.5 md:gap-3 animate-in fade-in zoom-in duration-300 shrink-0">
         <div className="relative flex items-center justify-center w-auto md:w-20" title="Outline Color">
           {((meme.textShadow || '#000000').substring(0, 7) !== '#000000' || getOpacity(meme.textShadow || '#000000') < 100) && (
             <button
               onClick={() => handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true)}
-              className="absolute -top-[34px] md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+              className="absolute -top-8 md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
             >
               Reset
             </button>
@@ -148,7 +148,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           </div>
         </div>
         {hasText && (
-          <div className="relative h-10 w-3 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
+          <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
             <input
               type="range" min="0" max="100"
               value={getOpacity(meme.textShadow || '#000000')}
@@ -158,8 +158,8 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               }}
               onMouseUp={(e) => changeOpacity('textShadow', e.target.value, true)}
               onTouchEnd={(e) => changeOpacity('textShadow', e.target.value, true)}
-              className="range-vertical range-slider cursor-pointer h-10 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-              style={isMobile ? getVerticalSliderBg(getOpacity(meme.textShadow || '#000000')) : getSliderStyle(getOpacity(meme.textShadow || '#000000'))}
+              className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+              style={getSliderStyle(getOpacity(meme.textShadow || '#000000'))}
               title="Outline Opacity"
             />
           </div>
@@ -168,12 +168,12 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
 
       {/* Background Color + Opacity */}
       {hasText && (
-        <div className="flex flex-row md:flex-col items-center gap-4 md:gap-3 animate-in fade-in zoom-in duration-300 shrink-0">
+        <div className="flex flex-col items-center gap-2.5 md:gap-3 animate-in fade-in zoom-in duration-300 shrink-0">
           <div className="relative flex items-center justify-center w-auto md:w-20" title="Background Color">
             {meme.textBgColor !== 'transparent' && (
               <button
                 onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
-                className="absolute -top-[34px] md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+                className="absolute -top-8 md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
               >
                 Reset
               </button>
@@ -193,7 +193,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               </div>
             </div>
           </div>
-          <div className="relative h-10 w-3 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
+          <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
             <input
               type="range" min="0" max="100"
               value={getOpacity(meme.textBgColor)}
@@ -203,8 +203,8 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               }}
               onMouseUp={(e) => changeOpacity('textBgColor', e.target.value, true)}
               onTouchEnd={(e) => changeOpacity('textBgColor', e.target.value, true)}
-              className="range-vertical range-slider cursor-pointer h-10 md:h-1.5 w-1.5 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-              style={isMobile ? getVerticalSliderBg(getOpacity(meme.textBgColor)) : getSliderStyle(getOpacity(meme.textBgColor))}
+              className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+              style={getSliderStyle(getOpacity(meme.textBgColor))}
               title="Background Opacity"
             />
           </div>

@@ -773,7 +773,7 @@ export default function Main() {
   const [captionDeck, setCaptionDeck] = useState([]);
 
   function handleCaptionRemix() {
-    // Generate new captions, preserve current media
+    // Generate new captions, preserve current media AND animations
     if (allCaptions.length === 0) return;
 
     // Use deck system to ensure no repeats until all are shown
@@ -781,15 +781,21 @@ export default function Main() {
 
     triggerFlash("green");
     updateState((prev) => {
+      // Preserve existing animation from texts that have one
+      const existingAnimations = prev.texts
+        .filter(t => t.animation)
+        .map(t => t.animation);
+      const currentAnimation = existingAnimations[0] || null;
+
       const newTexts = randomQuote.map((line, idx) => ({
         id: crypto.randomUUID(),
         content: line,
         x: 50,
         y: idx === 0 ? 10 : (idx === 1 ? 50 : 90),
         rotation: 0,
-        animation: null,
+        animation: currentAnimation, // Preserve animation!
       }));
-      newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 90, rotation: 0, animation: null });
+      newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 90, rotation: 0, animation: currentAnimation });
       return { ...prev, texts: newTexts };
     });
     remixClickCountRef.current.caption++;

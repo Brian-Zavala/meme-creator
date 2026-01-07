@@ -70,9 +70,10 @@ const MemeCanvas = forwardRef(({
     containerAspect = 4 / 3; // Landscape-ish
   }
 
-  // Adjust for padding
-  if (meme.paddingTop > 0 && containerAspect > 0) {
-    containerAspect = 1 / ((1 / containerAspect) + (meme.paddingTop / 100));
+  // Adjust for padding (top and bottom)
+  const totalPadding = (meme.paddingTop || 0) + (meme.paddingBottom || 0);
+  if (totalPadding > 0 && containerAspect > 0) {
+    containerAspect = 1 / ((1 / containerAspect) + (totalPadding / 100));
   }
 
   // Panel Drag Logic
@@ -162,7 +163,7 @@ const MemeCanvas = forwardRef(({
     });
 
     ctx.globalCompositeOperation = 'source-over';
-  }, [meme.drawings, meme.paddingTop, containerWidth]);
+  }, [meme.drawings, meme.paddingTop, meme.paddingBottom, containerWidth]);
 
   const handleDrawStart = (e) => {
     if (activeTool !== 'pen' && activeTool !== 'eraser') return;
@@ -263,7 +264,7 @@ const MemeCanvas = forwardRef(({
         onPointerDown={onCanvasPointerDown}
         className="relative overflow-hidden shadow-2xl mx-auto"
         style={{
-          backgroundColor: meme.paddingTop > 0 ? '#ffffff' : '#000000',
+          backgroundColor: '#000000',
           width: '100%',
           height: 'auto',
           aspectRatio: containerAspect,
@@ -271,10 +272,34 @@ const MemeCanvas = forwardRef(({
           maxWidth: '100%'
         }}
       >
+        {/* Top Caption Bar */}
+        {meme.paddingTop > 0 && (
+          <div
+            className="absolute inset-x-0 top-0"
+            style={{
+              height: `${meme.paddingTop * containerAspect}%`,
+              backgroundColor: meme.paddingTopColor || '#ffffff'
+            }}
+          />
+        )}
+
+        {/* Bottom Caption Bar */}
+        {meme.paddingBottom > 0 && (
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: `${meme.paddingBottom * containerAspect}%`,
+              backgroundColor: meme.paddingBottomColor || '#ffffff'
+            }}
+          />
+        )}
         {/* === PANELS LAYER === */}
         <div
-          className="absolute inset-x-0 bottom-0"
-          style={{ top: `${(meme.paddingTop || 0) * containerAspect}%` }}
+          className="absolute inset-x-0"
+          style={{
+            top: `${(meme.paddingTop || 0) * containerAspect}%`,
+            bottom: `${(meme.paddingBottom || 0) * containerAspect}%`
+          }}
         >
           {meme.panels?.map((panel) => {
             const isActive = panel.id === activePanelId;

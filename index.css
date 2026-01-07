@@ -100,6 +100,67 @@ body {
   }
 }
 
+/* Color Picker Rotating Border */
+@property --picker-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes picker-border-rotate {
+  from {
+    --picker-border-angle: 0deg;
+  }
+
+  to {
+    --picker-border-angle: 360deg;
+  }
+}
+
+.color-picker-ring {
+  position: relative;
+  z-index: 0;
+  padding: 3px;
+}
+
+.color-picker-ring::before,
+.color-picker-ring::after {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  border-radius: 100%;
+  z-index: -1;
+}
+
+.color-picker-ring::before {
+  opacity: 1;
+  background: repeating-conic-gradient(from var(--picker-border-angle),
+      oklch(53% 0.187 39) 0deg,
+      oklch(53% 0.187 39) 30deg,
+      oklch(80% 0.16 80) 60deg);
+}
+
+.color-picker-ring::after {
+  opacity: 0.6;
+  background: repeating-conic-gradient(from calc(var(--picker-border-angle) * -1),
+      oklch(65% 0.2 50) 0deg,
+      oklch(20% 0.05 39) 60deg);
+}
+
+/* Animate on hover, focus-within (for the input), and active (for mobile touch) */
+.color-picker-ring:hover::before,
+.color-picker-ring:focus-within::before,
+.color-picker-ring:active::before {
+  animation: picker-border-rotate 3s infinite linear;
+}
+
+.color-picker-ring:hover::after,
+.color-picker-ring:focus-within::after,
+.color-picker-ring:active::after {
+  animation: picker-border-rotate 3s infinite linear reverse;
+}
+
 .animate-pulse-ring {
   animation: pulse-ring 1.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
 }

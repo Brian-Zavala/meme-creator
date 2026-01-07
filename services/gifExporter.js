@@ -187,8 +187,25 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
     // Only fill background if NOT in stickersOnly mode
     if (!stickersOnly) {
         const paddingTop = meme.paddingTop || 0;
-        ctx.fillStyle = paddingTop > 0 ? '#ffffff' : '#000000';
+        const paddingBottom = meme.paddingBottom || 0;
+
+        // Black background
+        ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, exportWidth, exportHeight);
+
+        // Top caption bar with custom color
+        if (paddingTop > 0) {
+            const topBarHeight = Math.round(exportWidth * (paddingTop / 100));
+            ctx.fillStyle = meme.paddingTopColor || '#ffffff';
+            ctx.fillRect(0, 0, exportWidth, topBarHeight);
+        }
+
+        // Bottom caption bar with custom color
+        if (paddingBottom > 0) {
+            const bottomBarHeight = Math.round(exportWidth * (paddingBottom / 100));
+            ctx.fillStyle = meme.paddingBottomColor || '#ffffff';
+            ctx.fillRect(0, exportHeight - bottomBarHeight, exportWidth, bottomBarHeight);
+        }
     }
 
     // B. Draw Panels (Skip if stickersOnly)
@@ -410,11 +427,13 @@ function calculateDimensions(meme, assets) {
     }
 
     const paddingTop = meme.paddingTop || 0;
+    const paddingBottom = meme.paddingBottom || 0;
     const contentOffsetY = paddingTop > 0 ? Math.round(exportWidth * (paddingTop / 100)) : 0;
+    const contentOffsetBottom = paddingBottom > 0 ? Math.round(exportWidth * (paddingBottom / 100)) : 0;
     const contentHeight = exportHeight;
-    exportHeight = contentHeight + contentOffsetY;
+    exportHeight = contentHeight + contentOffsetY + contentOffsetBottom;
 
-    return { exportWidth, exportHeight, contentHeight, contentOffsetY };
+    return { exportWidth, exportHeight, contentHeight, contentOffsetY, contentOffsetBottom };
 }
 
 

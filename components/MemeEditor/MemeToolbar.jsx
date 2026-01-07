@@ -15,6 +15,7 @@ import {
   FlipVertical as Invert,
   RefreshCcw,
   PanelTop,
+  PanelBottom,
   Pencil,
   Eraser,
   Trash2,
@@ -155,32 +156,89 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
             {activeTab === "text" && (
               <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
 
-                {/* Group -1: Layout (Caption Bar) */}
-                <div className="w-full flex justify-center animate-in fade-in duration-300">
+                {/* Group -1: Layout (Caption Bars) */}
+                <div className="w-full flex justify-center items-center gap-4 sm:gap-5 px-4 animate-in fade-in duration-300">
+                  {/* Top Bar Color Picker */}
+                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:mr-2">
+                    <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
+                      <input
+                        type="color"
+                        value={meme.paddingTopColor || "#ffffff"}
+                        onChange={(e) => handleStyleChange(e)}
+                        name="paddingTopColor"
+                        className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                        title="Top Bar Color"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Top Caption Bar */}
                   <button
                     onClick={() => {
                       if (navigator.vibrate) navigator.vibrate(10);
-                      const isModern = meme.paddingTop > 0;
-                      handleStyleChange({ currentTarget: { name: 'paddingTop', value: isModern ? 0 : 25 } }, true);
+                      const isOn = meme.paddingTop > 0;
+                      handleStyleChange({ currentTarget: { name: 'paddingTop', value: isOn ? 0 : 15 } }, true);
 
                       setTimeout(() => {
-                        if (!isModern) {
+                        if (!isOn && meme.paddingBottom === 0) {
                           handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
                           handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                        } else {
+                        } else if (isOn && meme.paddingBottom === 0) {
                           handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
                           handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
                         }
                       }, 50);
                     }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 border text-xs uppercase font-bold tracking-wider ${meme.paddingTop > 0
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider ${meme.paddingTop > 0
                       ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20"
                       : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                       }`}
+                    style={{ fontSize: 'clamp(0.6rem, 2.5vw, 0.75rem)' }}
                   >
-                    <PanelTop className="w-4 h-4" />
-                    {meme.paddingTop > 0 ? "Caption Bar On" : "Caption Bar Off"}
+                    <PanelTop className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                    <span className="whitespace-nowrap">Top Bar {meme.paddingTop > 0 ? "On" : "Off"}</span>
                   </button>
+
+                  {/* Bottom Caption Bar */}
+                  <button
+                    onClick={() => {
+                      if (navigator.vibrate) navigator.vibrate(10);
+                      const isOn = (meme.paddingBottom || 0) > 0;
+                      handleStyleChange({ currentTarget: { name: 'paddingBottom', value: isOn ? 0 : 15 } }, true);
+
+                      setTimeout(() => {
+                        if (!isOn && meme.paddingTop === 0) {
+                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                          handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                        } else if (isOn && meme.paddingTop === 0) {
+                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                          handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                        }
+                      }, 50);
+                    }}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider ${(meme.paddingBottom || 0) > 0
+                      ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20"
+                      : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                      }`}
+                    style={{ fontSize: 'clamp(0.6rem, 2.5vw, 0.75rem)' }}
+                  >
+                    <PanelBottom className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                    <span className="whitespace-nowrap">Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
+                  </button>
+
+                  {/* Bottom Bar Color Picker */}
+                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:ml-2">
+                    <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
+                      <input
+                        type="color"
+                        value={meme.paddingBottomColor || "#ffffff"}
+                        onChange={(e) => handleStyleChange(e)}
+                        name="paddingBottomColor"
+                        className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                        title="Bottom Bar Color"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Group 0: Font Selector (Horizontal Scroll) */}

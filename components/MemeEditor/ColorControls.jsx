@@ -74,14 +74,16 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           )}
           <div className="flex items-center gap-2">
             <Palette className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
-            <div className="relative overflow-hidden w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
-              <input
-                type="color" name="textColor"
-                value={toSafeHex(meme.textColor)}
-                onChange={(e) => onColorPick('textColor', e.target.value)}
-                onBlur={handleStyleCommit}
-                className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-              />
+            <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full">
+              <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
+                <input
+                  type="color" name="textColor"
+                  value={toSafeHex(meme.textColor)}
+                  onChange={(e) => onColorPick('textColor', e.target.value)}
+                  onBlur={handleStyleCommit}
+                  className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -117,14 +119,16 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           )}
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 text-slate-400 shrink-0 flex items-center justify-center font-black text-[10px] border border-slate-400 rounded-sm pointer-events-none">T</div>
-            <div className="relative overflow-hidden w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
-              <input
-                type="color" name="textShadow"
-                value={toSafeHex(meme.textShadow || '#000000')}
-                onChange={(e) => onColorPick('textShadow', e.target.value)}
-                onBlur={handleStyleCommit}
-                className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-              />
+            <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full">
+              <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
+                <input
+                  type="color" name="textShadow"
+                  value={toSafeHex(meme.textShadow || '#000000')}
+                  onChange={(e) => onColorPick('textShadow', e.target.value)}
+                  onBlur={handleStyleCommit}
+                  className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -161,14 +165,16 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             )}
             <div className="flex items-center gap-2">
               <Brush className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
-              <div className="relative overflow-hidden w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer focus-within:ring-yellow-500 shadow-sm">
-                <input
-                  type="color" name="textBgColor"
-                  value={toSafeHex(meme.textBgColor)}
-                  onChange={(e) => onColorPick('textBgColor', e.target.value)}
-                  onBlur={handleStyleCommit}
-                  className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                />
+              <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full">
+                <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
+                  <input
+                    type="color" name="textBgColor"
+                    value={toSafeHex(meme.textBgColor)}
+                    onChange={(e) => onColorPick('textBgColor', e.target.value)}
+                    onBlur={handleStyleCommit}
+                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
           </div>

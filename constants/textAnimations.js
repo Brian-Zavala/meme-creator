@@ -14,7 +14,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'wave',
         name: 'Wave',
-        icon: '🌊',
+        icon: '/images/stickers/icons/wave.png',
         // Oscillating sine wave - each character offset slightly
         getTransform: (frameIndex, totalFrames, charIndex = 0) => {
             const progress = (frameIndex / totalFrames) * Math.PI * 2;
@@ -31,7 +31,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'bounce',
         name: 'Bounce',
-        icon: '⚡',
+        icon: '/images/stickers/icons/bounce.png',
         // Bouncing with physics-like easing
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) % 1;
@@ -49,7 +49,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'shake',
         name: 'Shake',
-        icon: '💥',
+        icon: '/images/stickers/icons/shake.png',
         // Random tremor effect - chaotic and intense
         getTransform: (frameIndex) => {
             // Use frame index as seed for pseudo-random but deterministic shake
@@ -69,7 +69,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'glitch',
         name: 'Glitch',
-        icon: '📺',
+        icon: '/images/stickers/icons/glitch.png',
         // Horizontal jitter with occasional large shifts
         getTransform: (frameIndex, totalFrames) => {
             const t = frameIndex / totalFrames;
@@ -88,7 +88,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'pulse',
         name: 'Pulse',
-        icon: '💓',
+        icon: '/images/stickers/icons/pulse.png',
         // Scale pulsing effect
         getTransform: (frameIndex, totalFrames) => {
             const progress = (frameIndex / totalFrames) * Math.PI * 2;
@@ -105,7 +105,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'float',
         name: 'Float',
-        icon: '☁️',
+        icon: '/images/stickers/icons/float.png',
         // Gentle floating up and down
         getTransform: (frameIndex, totalFrames) => {
             const progress = (frameIndex / totalFrames) * Math.PI * 2;
@@ -137,7 +137,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'tada',
         name: 'Tada',
-        icon: '🎉',
+        icon: '/images/stickers/icons/tada.png',
         // Scale up and wiggle
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2; // 0 to 2PI
@@ -157,7 +157,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'wobble',
         name: 'Wobble',
-        icon: '🥴',
+        icon: '/images/stickers/icons/wobble.png',
         // Swaying back and forth combined with rotation
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;

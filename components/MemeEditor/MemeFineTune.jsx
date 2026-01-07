@@ -13,15 +13,15 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
   };
 
   return (
-    <div 
-        className="w-full bg-slate-900 border-t border-slate-800 p-4 animate-in slide-in-from-bottom-5 duration-300 flex flex-col gap-3 rounded-b-2xl relative z-30" 
+    <div
+        className="w-full bg-slate-900 border-t border-slate-800 p-4 animate-in slide-in-from-bottom-5 duration-300 flex flex-col gap-3 rounded-b-2xl relative z-30"
         onPointerDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
     >
         <div className="flex items-center justify-between pb-2 border-b border-slate-800/50">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Fine Tune</span>
-            <button 
+            <button
                 onClick={onCenterText}
                 className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg text-xs font-bold text-slate-300 transition-all active:scale-95"
             >
@@ -33,8 +33,8 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
             {/* Position X */}
             <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-slate-400 w-4 text-center">X</span>
-                <input 
-                    type="range" 
+                <input
+                    type="range"
                     min="0" max="100" step="0.5"
                     value={selectedText.x}
                     onChange={(e) => {
@@ -51,8 +51,8 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
             {/* Position Y */}
             <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-slate-400 w-4 text-center">Y</span>
-                <input 
-                    type="range" 
+                <input
+                    type="range"
                     min="0" max="100" step="0.5"
                     value={selectedText.y}
                     onChange={(e) => {
@@ -68,21 +68,43 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
         </div>
 
         {/* Rotation */}
-        <div className="flex items-center gap-3 pt-1">
-            <RotateCw className="w-3.5 h-3.5 text-slate-400" />
-            <input 
-                type="range" 
-                min="0" max="360" step="1"
-                value={selectedText.rotation || 0}
-                onChange={(e) => {
-                    if (navigator.vibrate) navigator.vibrate(5);
-                    onFineTune('rotation', e.target.value);
-                }}
-                onMouseUp={onFineTuneCommit}
-                onTouchEnd={onFineTuneCommit}
-                className="range-slider flex-1 h-1.5 rounded-full cursor-pointer"
-                style={getSliderStyle(selectedText.rotation || 0, 0, 360)}
-            />
+        <div className={`flex items-center gap-3 pt-1 transition-all duration-300 rounded-lg p-1 ${
+            selectedText.animation && selectedText.animation !== 'none'
+                ? 'bg-red-900/20 border border-red-500/30'
+                : ''
+        }`}>
+            <RotateCw className={`w-3.5 h-3.5 transition-colors ${
+                selectedText.animation && selectedText.animation !== 'none' ? 'text-red-400' : 'text-slate-400'
+            }`} />
+
+            <div className="relative flex-1 h-1.5">
+                <input
+                    type="range"
+                    min="0" max="360" step="1"
+                    disabled={selectedText.animation && selectedText.animation !== 'none'}
+                    value={selectedText.rotation || 0}
+                    onChange={(e) => {
+                        if (navigator.vibrate) navigator.vibrate(5);
+                        onFineTune('rotation', e.target.value);
+                    }}
+                    onMouseUp={onFineTuneCommit}
+                    onTouchEnd={onFineTuneCommit}
+                    className={`range-slider w-full h-full rounded-full absolute inset-0 ${
+                        selectedText.animation && selectedText.animation !== 'none'
+                            ? 'cursor-not-allowed opacity-50 grayscale'
+                            : 'cursor-pointer'
+                    }`}
+                    style={getSliderStyle(selectedText.rotation || 0, 0, 360)}
+                />
+
+                {selectedText.animation && selectedText.animation !== 'none' && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="text-[9px] font-bold text-red-200 uppercase tracking-wider bg-red-900/80 px-2 py-0.5 rounded shadow-sm backdrop-blur-sm">
+                            Locked by Animation
+                        </span>
+                    </div>
+                )}
+            </div>
         </div>
     </div>
   );

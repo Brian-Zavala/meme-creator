@@ -515,7 +515,8 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         let animX = baseX;
         let animY = baseY;
         let animRotation = baseRotation;
-        let animScale = 1;
+        let animScaleX = 1;
+        let animScaleY = 1;
         let animOpacity = 1;
 
         if (textItem.animation && textItem.animation !== 'none') {
@@ -525,7 +526,12 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
                 animX += (transform.offsetX || 0) * scale;
                 animY += (transform.offsetY || 0) * scale;
                 animRotation += (transform.rotation || 0) * (Math.PI / 180);
-                animScale = transform.scale || 1;
+
+                // Support both uniform 'scale' and independent 'scaleX/scaleY'
+                const uniformScale = transform.scale || 1;
+                animScaleX = transform.scaleX ?? uniformScale;
+                animScaleY = transform.scaleY ?? uniformScale;
+
                 animOpacity = transform.opacity ?? 1;
             }
         }
@@ -534,7 +540,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         ctx.globalAlpha = animOpacity;
         ctx.translate(animX, animY);
         ctx.rotate(animRotation);
-        ctx.scale(animScale, animScale);
+        ctx.scale(animScaleX, animScaleY);
 
         ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
         ctx.textAlign = 'center';
@@ -602,8 +608,32 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
 
         lines.forEach((line, index) => {
             const lineY = startY + (index * lineHeight);
-            ctx.strokeText(line, 0, lineY);
-            ctx.fillText(line, 0, lineY);
+
+            if (textItem.animation === 'wave') {
+                // Per-character Wave
+                const lineWidth = ctx.measureText(line).width;
+                let currentX = -lineWidth / 2; // Start from center (centered text alignment)
+
+                const chars = line.split('');
+                chars.forEach((char, charIdx) => {
+                    const charWidth = ctx.measureText(char).width;
+                    const anim = getAnimationById('wave');
+                    // Calculate absolute index if needed, or just relative to line
+                    // To make it continous across lines, we might want a global index, but per-line is usually fine
+                    const transform = anim.getTransform(frameIndex, totalFrames, charIdx);
+
+                    const charY = lineY + (transform.offsetY || 0) * scale;
+
+                    ctx.strokeText(char, currentX + charWidth / 2, charY);
+                    ctx.fillText(char, currentX + charWidth / 2, charY);
+
+                    currentX += charWidth;
+                });
+            } else {
+                // Standard block animation
+                ctx.strokeText(line, 0, lineY);
+                ctx.fillText(line, 0, lineY);
+            }
         });
 
         ctx.restore();

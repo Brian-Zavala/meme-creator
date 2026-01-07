@@ -1,5 +1,6 @@
 import { forwardRef, useRef, useEffect, useState } from "react";
 import { Loader2, Plus, Image as ImageIcon, Video, Upload, X } from "lucide-react";
+import { getAnimationById } from "../../constants/textAnimations";
 
 const MemeCanvas = forwardRef(({
   meme,
@@ -431,39 +432,44 @@ const MemeCanvas = forwardRef(({
         />
 
         {/* === STICKERS LAYER (Global) === */}
-        {meme.stickers?.map((sticker) => (
-          <div
-            key={sticker.id}
-            onPointerDown={(e) => onPointerDown(e, sticker.id)}
-            onDoubleClick={() => onRemoveSticker(sticker.id)}
-            className={`absolute select-none touch-none z-30 flex items-center justify-center transition-transform ${draggedId === sticker.id ? "scale-125 cursor-grabbing" : "cursor-grab"
-              }`}
-            style={{
-              left: `${sticker.x}%`,
-              top: `${sticker.y}%`,
-              fontSize: `${(meme.stickerSize || 60) * scaleFactor}px`,
-              width: sticker.type === 'image' ? `${(meme.stickerSize || 60) * scaleFactor}px` : 'auto',
-              transform: "translate(-50%, -50%)",
-            }}
-            role="img"
-            aria-label={`Sticker: ${sticker.url}`}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Delete' || e.key === 'Backspace') onRemoveSticker(sticker.id);
-            }}
-          >
-            {sticker.type === 'image' ? (
-              <img
-                src={sticker.url}
-                alt="sticker"
-                className="w-full h-full object-contain pointer-events-none select-none drop-shadow-md"
-                draggable="false"
-              />
-            ) : (
-              sticker.url
-            )}
-          </div>
-        ))}
+        {meme.stickers?.map((sticker) => {
+          // Map animation IDs to CSS class names
+          const animationClass = sticker.animation ? `animate-meme-${sticker.animation}` : '';
+
+          return (
+            <div
+              key={sticker.id}
+              onPointerDown={(e) => onPointerDown(e, sticker.id)}
+              onDoubleClick={() => onRemoveSticker(sticker.id)}
+              className={`absolute select-none touch-none z-30 flex items-center justify-center transition-transform ${draggedId === sticker.id ? "scale-125 cursor-grabbing" : "cursor-grab"
+                } ${animationClass}`}
+              style={{
+                left: `${sticker.x}%`,
+                top: `${sticker.y}%`,
+                fontSize: `${(meme.stickerSize || 60) * scaleFactor}px`,
+                width: sticker.type === 'image' ? `${(meme.stickerSize || 60) * scaleFactor}px` : 'auto',
+                transform: "translate(-50%, -50%)",
+              }}
+              role="img"
+              aria-label={`Sticker: ${sticker.url}`}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Delete' || e.key === 'Backspace') onRemoveSticker(sticker.id);
+              }}
+            >
+              {sticker.type === 'image' ? (
+                <img
+                  src={sticker.url}
+                  alt="sticker"
+                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow-md"
+                  draggable="false"
+                />
+              ) : (
+                sticker.url
+              )}
+            </div>
+          )
+        })}
 
         {/* === TEXT FILTER DEF === */}
         <svg className="absolute w-0 h-0 invisible" aria-hidden="true">
@@ -490,7 +496,7 @@ const MemeCanvas = forwardRef(({
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
               className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
-                } ${isSelected ? "z-50" : ""} ${animationClass}`}
+                } ${isSelected ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
               style={{
                 left: `${textItem.x}%`,
                 top: `${textItem.y}%`,
@@ -527,7 +533,33 @@ const MemeCanvas = forwardRef(({
                   />
                 </svg>
               )}
-              {textItem.content}
+              {textItem.animation === 'wave' ? (
+                textItem.content.split('\n').map((line, lineIdx, linesArr) => (
+                  <span key={lineIdx} style={{ display: 'block' }}>
+                    {line.split('').map((char, charIdx) => {
+                      // Ensure space is preserved but allows wrapping if needed?
+                      // Actually, normal space ' ' might collapse in React if not careful?
+                      // But inside a span it should be fine. 
+                      // However, split('') of " " is " ".
+                      return (
+                        <span
+                          key={charIdx}
+                          className="animate-meme-wave-char"
+                          // Stagger delay based on char index to keep wave fluid? 
+                          // Or reset per line? Let's use charIdx (per line) for now to keep lines in sync.
+                          style={{ animationDelay: `${charIdx * 0.1}s` }}
+                        >
+                          {char}
+                        </span>
+                      );
+                    })}
+                    {/* Add zero-width space to help layout if empty line? */}
+                    {line.length === 0 && <span>&nbsp;</span>}
+                  </span>
+                ))
+              ) : (
+                textItem.content
+              )}
             </h2>
           )
         })}

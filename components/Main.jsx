@@ -81,6 +81,8 @@ export default function Main() {
       panels: [
         {
           id: "p1",
+          // Dimensions for single layout (100% width/height)
+          x: 0, y: 0, w: 100, h: 100,
           url: "http://i.imgflip.com/1bij.jpg",
           sourceUrl: null,
           isVideo: false,
@@ -120,13 +122,22 @@ export default function Main() {
           delete parsed.isVideo;
           delete parsed.filters;
         }
-        // Ensure existing panels have posX/posY
+        // Ensure existing panels have posX/posY AND dimensions (x, y, w, h)
         if (parsed.panels) {
-          parsed.panels = parsed.panels.map(p => ({
-            ...p,
-            posX: p.posX ?? 50,
-            posY: p.posY ?? 50
-          }));
+          const layoutDef = DEFAULT_LAYOUTS[parsed.layout || 'single'];
+          parsed.panels = parsed.panels.map((p, idx) => {
+            const layoutSlot = layoutDef[idx] || { x: 0, y: 0, w: 100, h: 100 };
+            return {
+              ...p,
+              // Add missing dimensions from layout definition
+              x: p.x ?? layoutSlot.x,
+              y: p.y ?? layoutSlot.y,
+              w: p.w ?? layoutSlot.w,
+              h: p.h ?? layoutSlot.h,
+              posX: p.posX ?? 50,
+              posY: p.posY ?? 50
+            };
+          });
         }
 
         if (parsed.texts) {

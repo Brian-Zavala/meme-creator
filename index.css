@@ -792,3 +792,108 @@ body {
   display: inline-block;
   animation: meme-wave-char 1s ease-in-out infinite;
 }
+/* === ICON ANIMATIONS (Toolbar Preview) === */
+/* These match the meme animations but without absolute positioning centering */
+
+@keyframes icon-wave {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-4px); }
+  75% { transform: translateY(4px); }
+}
+.animate-icon-wave { animation: icon-wave 1s ease-in-out infinite; }
+
+@keyframes icon-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.05); }
+}
+.animate-icon-bounce { animation: icon-bounce 0.6s ease-in-out infinite; }
+
+@keyframes icon-shake {
+  0%, 100% { transform: translate(0); }
+  10% { transform: translate(-2px, 1px) rotate(-1deg); }
+  20% { transform: translate(2px, -1px) rotate(1deg); }
+  30% { transform: translate(-1.5px, 1.5px) rotate(-0.5deg); }
+  40% { transform: translate(1.5px, -1.5px) rotate(0.5deg); }
+  50% { transform: translate(-1px, 1px); }
+  60% { transform: translate(1px, -0.5px); }
+  70% { transform: translate(-1.5px, 0.5px) rotate(-0.5deg); }
+  80% { transform: translate(1px, 1px) rotate(0.5deg); }
+  90% { transform: translate(-0.5px, -0.5px); }
+}
+.animate-icon-shake { animation: icon-shake 0.5s ease-in-out infinite; }
+
+@keyframes icon-glitch {
+  0%, 100% { transform: translate(0); opacity: 1; }
+  10% { transform: translateX(2px); opacity: 0.9; }
+  20% { transform: translateX(-4px) translateY(1px); }
+  30% { transform: translateX(4px); opacity: 0.7; }
+  40% { transform: translateX(-2px) translateY(-1px); }
+  50% { transform: translate(0); opacity: 1; }
+  60% { transform: translateX(3px); }
+  70% { transform: translateX(-4px) translateY(1px); opacity: 0.8; }
+  80% { transform: translateX(1px); }
+  90% { transform: translateX(-3px); opacity: 0.9; }
+}
+.animate-icon-glitch { animation: icon-glitch 0.8s steps(1) infinite; }
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.animate-icon-pulse { animation: icon-pulse 0.8s ease-in-out infinite; }
+
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-3px) rotate(1deg); }
+}
+.animate-icon-float { animation: icon-float 2s ease-in-out infinite; }
+
+@keyframes icon-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-icon-spin { animation: icon-spin 1s linear infinite; }
+
+@keyframes icon-tada {
+  0% { transform: scale(1); }
+  10%, 20% { transform: scale(0.9) rotate(-3deg); }
+  30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
+  40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.animate-icon-tada { animation: icon-tada 1s ease-in-out infinite; }
+
+@keyframes icon-wobble {
+  0%, 100% { transform: translateX(0%) rotate(0deg); }
+  15% { transform: translateX(-4px) rotate(-5deg); }
+  30% { transform: translateX(3px) rotate(3deg); }
+  45% { transform: translateX(-3px) rotate(-3deg); }
+  60% { transform: translateX(2px) rotate(2deg); }
+  75% { transform: translateX(-1px) rotate(-1deg); }
+}
+.animate-icon-wobble { animation: icon-wobble 2s ease-in-out infinite; }
+
+@keyframes icon-heartbeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.15); }
+  70% { transform: scale(1); }
+}
+.animate-icon-heartbeat { animation: icon-heartbeat 1.3s ease-in-out infinite; }
+
+@keyframes icon-jelly {
+  0% { transform: scale(1, 1); }
+  25% { transform: scale(1.1, 0.9); }
+  50% { transform: scale(0.9, 1.1) translateY(-5px); }
+  75% { transform: scale(1.15, 0.85); }
+  100% { transform: scale(1, 1); }
+}
+.animate-icon-jelly { animation: icon-jelly 0.9s ease-in-out infinite; }
+
+@keyframes icon-flip {
+  0% { transform: scaleX(1); }
+  50% { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
+}
+.animate-icon-flip { animation: icon-flip 2s ease-in-out infinite; }

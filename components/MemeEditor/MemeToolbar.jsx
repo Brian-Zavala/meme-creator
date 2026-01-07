@@ -42,6 +42,46 @@ const FONTS = [
   { name: "Pacifico", label: "Script" },
 ];
 
+function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
+  const [isHovered, setIsHovered] = useState(false);
+  // Animate on hover/focus, but only if not 'none'
+  const shouldAnimate = isHovered && anim.id !== 'none';
+
+  // Base classes for active state depend on variant
+  const activeClasses = variant === 'sticker'
+    ? "bg-blue-500/20 text-blue-400 border-blue-500 font-bold shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+    : "bg-brand/20 text-brand border-brand font-bold shadow-[0_0_10px_rgba(255,199,0,0.3)]";
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocus={() => setIsHovered(true)}
+      onBlur={() => setIsHovered(false)}
+      className={`snap-center shrink-0 px-3 py-2 rounded-lg border text-sm transition-all active:scale-95 flex items-center gap-2 group ${isActive
+        ? activeClasses
+        : anim.id === 'none'
+          ? "bg-slate-900 text-slate-500 border-slate-700 hover:border-slate-500 hover:text-white"
+          : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+        }`}
+    >
+      {anim.icon.includes('/') || anim.icon.includes('.') ? (
+        <img
+          src={anim.icon}
+          alt={anim.name}
+          className={`w-6 h-6 object-contain ${shouldAnimate ? `animate-icon-${anim.id}` : ''}`}
+        />
+      ) : (
+        <span className={`text-base ${shouldAnimate ? `animate-icon-${anim.id}` : ''}`}>
+          {anim.icon}
+        </span>
+      )}
+      <span className="text-xs uppercase font-bold tracking-wide">{anim.name}</span>
+    </button>
+  );
+}
+
 export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange }) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
@@ -286,26 +326,16 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         // Check if ANY text has this animation
                         const isActive = meme.texts.some(t => t.animation === anim.id);
                         return (
-                          <button
+                          <AnimationButton
                             key={anim.id}
+                            anim={anim}
+                            isActive={isActive}
                             onClick={() => {
                               if (navigator.vibrate) navigator.vibrate(10);
                               if (onAnimationChange) onAnimationChange(anim.id);
                             }}
-                            className={`snap-center shrink-0 px-3 py-2 rounded-lg border text-sm transition-all active:scale-95 flex items-center gap-2 ${isActive
-                              ? "bg-brand/20 text-brand border-brand font-bold shadow-[0_0_10px_rgba(255,199,0,0.3)]"
-                              : anim.id === 'none'
-                                ? "bg-slate-900 text-slate-500 border-slate-700 hover:border-slate-500 hover:text-white"
-                                : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
-                              }`}
-                          >
-                            {anim.icon.includes('/') || anim.icon.includes('.') ? (
-                              <img src={anim.icon} alt={anim.name} className="w-6 h-6 object-contain" />
-                            ) : (
-                              <span className="text-base">{anim.icon}</span>
-                            )}
-                            <span className="text-xs uppercase font-bold tracking-wide">{anim.name}</span>
-                          </button>
+                            variant="text"
+                          />
                         );
                       })}
                     </div>
@@ -325,26 +355,16 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         // Check if ANY sticker has this animation
                         const isActive = meme.stickers.some(s => s.animation === anim.id);
                         return (
-                          <button
+                          <AnimationButton
                             key={anim.id}
+                            anim={anim}
+                            isActive={isActive}
                             onClick={() => {
                               if (navigator.vibrate) navigator.vibrate(10);
                               if (onStickerAnimationChange) onStickerAnimationChange(anim.id);
                             }}
-                            className={`snap-center shrink-0 px-3 py-2 rounded-lg border text-sm transition-all active:scale-95 flex items-center gap-2 ${isActive
-                              ? "bg-blue-500/20 text-blue-400 border-blue-500 font-bold shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-                              : anim.id === 'none'
-                                ? "bg-slate-900 text-slate-500 border-slate-700 hover:border-slate-500 hover:text-white"
-                                : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
-                              }`}
-                          >
-                            {anim.icon.includes('/') || anim.icon.includes('.') ? (
-                              <img src={anim.icon} alt={anim.name} className="w-6 h-6 object-contain" />
-                            ) : (
-                              <span className="text-base">{anim.icon}</span>
-                            )}
-                            <span className="text-xs uppercase font-bold tracking-wide">{anim.name}</span>
-                          </button>
+                            variant="sticker"
+                          />
                         );
                       })}
                     </div>

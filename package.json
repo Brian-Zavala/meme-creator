@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
+    "@lottiefiles/dotlottie-react": "^0.17.12",
     "@tailwindcss/vite": "^4.1.18",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",

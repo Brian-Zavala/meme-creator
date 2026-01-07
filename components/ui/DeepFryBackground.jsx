@@ -1,31 +1,16 @@
+import LottieAnimation from '../Animations/LottieAnimation';
+
 /**
- * DeepFryBackground - Placeholder for chicken deep fry SVG
- * User will provide SVG to replace the placeholder
+ * Deep Fry Background - Uses Lottie animation
  */
 export default function DeepFryBackground() {
     return (
-        <div className="absolute inset-0 w-full h-full overflow-hidden rounded-xl bg-gradient-to-br from-orange-600 via-yellow-500 to-orange-700">
-            {/* Bubbling oil effect */}
-            <div className="absolute inset-0 opacity-40">
-                {[...Array(8)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="absolute rounded-full bg-yellow-300/60 animate-ping"
-                        style={{
-                            width: `${8 + Math.random() * 12}px`,
-                            height: `${8 + Math.random() * 12}px`,
-                            left: `${10 + (i * 12)}%`,
-                            bottom: `${10 + Math.random() * 30}%`,
-                            animationDelay: `${i * 0.3}s`,
-                            animationDuration: `${1 + Math.random()}s`
-                        }}
-                    />
-                ))}
-            </div>
-            {/* Placeholder for user's chicken SVG */}
-            <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-60">
-                🍗
-            </div>
+        <div className="absolute inset-0 overflow-hidden rounded-xl bg-red-600 flex items-center justify-center">
+            <LottieAnimation
+                src="/animations/extreme-deep-fry.json"
+                className="w-full h-full object-cover opacity-90"
+                style={{ width: '100%', height: '100%', transform: 'scale(1.65)' }}
+            />
         </div>
     );
 }

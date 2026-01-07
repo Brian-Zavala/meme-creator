@@ -1,4 +1,4 @@
-import { Move, Type, Layers, Image as ImageIcon, Film } from "lucide-react";
+import { Move, Type, Layers, Image as ImageIcon, Film, Layout, Hand } from "lucide-react";
 import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 
 export function InstructionModal({ isOpen, onClose }) {
@@ -16,26 +16,36 @@ export function InstructionModal({ isOpen, onClose }) {
         </div>
         <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 gap-6">
+            
+            <section className="space-y-3">
+              <h3 className="text-brand font-bold uppercase text-sm tracking-wider flex items-center gap-2">
+                <Layout className="w-4 h-4" /> Layouts & Images
+              </h3>
+              <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
+                <li><span className="text-white font-medium">Multi-Panel:</span> Choose a grid layout from the toolbar.</li>
+                <li><span className="text-white font-medium">Tap to Swap:</span> Tap any image slot to upload or search for a new image.</li>
+                <li><span className="text-white font-medium">Drag to Pan:</span> Touch and drag an image within its frame to adjust the crop.</li>
+              </ul>
+            </section>
+
             <section className="space-y-3">
               <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider flex items-center gap-2">
                 <Type className="w-4 h-4" /> Text & Stickers
               </h3>
               <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
-                <li><span className="text-white font-medium">Add text</span> using the inputs on the left. A new input appears automatically!</li>
-                <li><span className="text-white font-medium">Drag & Drop</span> any text or sticker directly on the canvas.</li>
-                <li><span className="text-white font-medium">Long Press / Hold</span> text to select it for fine-tuning and rotation.</li>
-                <li><span className="text-white font-medium">Double Tap</span> a sticker to remove it quickly.</li>
+                <li><span className="text-white font-medium">Add text</span> using the inputs. A new line appears automatically.</li>
+                <li><span className="text-white font-medium">Animations:</span> Select text to apply animations like Wave, Pulse, or Glitch.</li>
+                <li><span className="text-white font-medium">Long Press:</span> Hold any element to select it for fine-tuning.</li>
               </ul>
             </section>
 
             <section className="space-y-3">
               <h3 className="text-blue-400 font-bold uppercase text-sm tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4" /> Tools & Modes
+                <Layers className="w-4 h-4" /> Exporting
               </h3>
               <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
-                <li><span className="text-white font-medium">Mode Switch:</span> Toggle between <ImageIcon className="inline w-3 h-3" /> Static Images and <Film className="inline w-3 h-3" /> GIFs.</li>
-                <li><span className="text-white font-medium">Filters:</span> Adjust contrast, brightness, and more in the toolbar.</li>
-                <li><span className="text-white font-medium">Fine-Tune:</span> Once selected, use the sliders to precisely position and rotate text.</li>
+                <li><span className="text-white font-medium">Static:</span> Saved as high-quality PNG.</li>
+                <li><span className="text-white font-medium">GIF:</span> If you use animated stickers or text, we render a smooth GIF for you.</li>
               </ul>
             </section>
 
@@ -44,7 +54,7 @@ export function InstructionModal({ isOpen, onClose }) {
                 <Move className="w-3 h-3" /> Pro Tip
               </h3>
               <p className="text-slate-400 text-xs leading-relaxed">
-                Use the <b>Center</b> button in Fine-Tune to quickly center your text on the canvas!
+                Use the <b>Fine-Tune</b> tab to make pixel-perfect adjustments or to <b>Center</b> your text instantly.
               </p>
             </div>
           </div>

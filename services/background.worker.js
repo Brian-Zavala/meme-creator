@@ -18,12 +18,19 @@ self.onmessage = async (event) => {
         });
     };
 
+    // Detect Android to avoid unstable WebGPU drivers (fixes Samsung S24 crash)
+    const isAndroid = /Android/i.test(self.navigator.userAgent);
+
     try {
-        // First attempt: GPU (uses WebGPU if available, falls back to WebGL internally)
-        const blob = await tryRemoveBackground('gpu');
-        self.postMessage({ type: 'result', blob, usedFallback: false });
+        // First attempt: GPU (Skip on Android due to driver issues)
+        if (!isAndroid) {
+            const blob = await tryRemoveBackground('gpu');
+            self.postMessage({ type: 'result', blob, usedFallback: false });
+        } else {
+            throw new Error("Skipping WebGPU on Android for stability");
+        }
     } catch (gpuError) {
-        console.warn("GPU background removal failed, trying CPU fallback:", gpuError.message);
+        console.warn("GPU background removal failed/skipped, trying CPU fallback:", gpuError.message);
 
         // Reset progress for retry
         self.postMessage({ type: 'progress', progress: 0 });

@@ -44,19 +44,10 @@ const FONTS = [
 export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange }) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
-  const [showTextStyling, setShowTextStyling] = useState(false); // Collapsed on mobile by default
+  const [showTextStyling, setShowTextStyling] = useState(false); // Collapsed by default on all screens
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
   const hasAnimatedText = meme.texts.some(t => t.animation && t.animation !== 'none');
-
-  // Auto-expand on tablet+ (md: 768px)
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    const handler = (e) => setShowTextStyling(e.matches);
-    handler(mq); // Check initial
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   const handleTabChange = (tab) => {
     startTransition(() => {
@@ -253,13 +244,13 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 {/* Collapsible Text Styling Section */}
                 {(hasText || hasStickers) && (
                   <>
-                    {/* Toggle Button - Only on mobile */}
+                    {/* Toggle Button - All screen sizes */}
                     <button
                       onClick={() => {
                         if (navigator.vibrate) navigator.vibrate(10);
                         startTransition(() => setShowTextStyling(!showTextStyling));
                       }}
-                      className="md:hidden flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-[0.98]"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-[0.98]"
                     >
                       <SlidersHorizontal className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase tracking-wider">
@@ -270,11 +261,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
                     {/* Collapsible Container with Grid Animation */}
                     <div
-                      className={`w-full grid transition-[grid-template-rows] duration-300 ease-out ${showTextStyling ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] md:grid-rows-[1fr]'
+                      className={`w-full grid transition-[grid-template-rows] duration-300 ease-out ${showTextStyling ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                         }`}
                     >
                       <div className="w-full overflow-hidden">
-                        <div className={`w-full flex flex-col gap-6 transition-opacity duration-200 ${showTextStyling ? 'opacity-100 pt-4' : 'opacity-0 md:opacity-100 md:pt-0'
+                        <div className={`w-full flex flex-col gap-6 transition-opacity duration-200 ${showTextStyling ? 'opacity-100 pt-4' : 'opacity-0'
                           }`}>
 
                           {/* Group 1: Size Controls */}

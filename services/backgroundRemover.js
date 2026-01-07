@@ -9,8 +9,7 @@ export async function removeImageBackground(imageSource, onProgress) {
 
     const config = {
       // Points to: public/models/
-      // Append a version query param to force fresh model fetch on devices with stale cache
-      publicPath: window.location.origin + '/models/?v=2.0.1/',
+      publicPath: window.location.origin + '/models/',
       model: 'isnet_fp16',
       debug: true,
     };

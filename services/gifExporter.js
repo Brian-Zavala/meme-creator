@@ -108,114 +108,305 @@ async function createGifProcessor(url) {
  * Exports a meme as an animated GIF
  * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
  */
+// --- REFACTORED HELPERS ---
+
+/**
+ * Loads all image and GIF assets for the meme
+ */
+async function loadMemeAssets(meme, stickers) {
+    const gifProcessors = {};
+    const staticImages = {};
+    const stickerProcessors = {};
+    const stickerImages = {};
+
+    console.log("Loading assets for export...");
+
+    // Load Panels
+    await Promise.all(meme.panels.map(async (panel) => {
+        if (!panel.url) return;
+
+        let processor = null;
+        if (panel.isVideo || panel.url.includes('.gif')) {
+            processor = await createGifProcessor(panel.url);
+            if (processor) {
+                gifProcessors[panel.id] = processor;
+            } else {
+                console.warn("Failed to create GIF processor for:", panel.url);
+            }
+        }
+
+        if (!processor) {
+            try {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = panel.url;
+                await img.decode();
+                staticImages[panel.id] = img;
+            } catch (err) {
+                console.warn("Failed to load/decode image:", panel.url, err);
+            }
+        }
+    }));
+
+    // Load Stickers
+    await Promise.all((stickers || []).filter(s => s.type === 'image').map(async (s) => {
+        let processor = null;
+        if (s.isAnimated || s.url.includes('.gif')) {
+            processor = await createGifProcessor(s.url);
+            if (processor) stickerProcessors[s.id] = processor;
+        }
+
+        if (!processor) {
+            try {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = s.url;
+                await img.decode();
+                stickerImages[s.id] = img;
+            } catch (err) {
+                console.warn("Failed to load sticker:", s.url, err);
+            }
+        }
+    }));
+
+    return { gifProcessors, staticImages, stickerProcessors, stickerImages };
+}
+
+/**
+ * Renders a single frame of the meme to the provided context
+ */
+function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
+    const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
+    const { exportWidth, exportHeight, contentHeight, contentOffsetY } = dimensions;
+    const { stickersOnly = false } = options;
+
+    // A. Clear & Background
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, exportWidth, exportHeight);
+
+    // Only fill background if NOT in stickersOnly mode
+    if (!stickersOnly) {
+        const paddingTop = meme.paddingTop || 0;
+        ctx.fillStyle = paddingTop > 0 ? '#ffffff' : '#000000';
+        ctx.fillRect(0, 0, exportWidth, exportHeight);
+    }
+
+    // B. Draw Panels (Skip if stickersOnly)
+    if (!stickersOnly) {
+        for (const panel of meme.panels) {
+            if (!panel.url) continue;
+
+            const px = (panel.x / 100) * exportWidth;
+            const py = (panel.y / 100) * contentHeight + contentOffsetY;
+            const pw = (panel.w / 100) * exportWidth;
+            const ph = (panel.h / 100) * contentHeight;
+
+            let sourceCanvas = null;
+            let srcW = 0, srcH = 0;
+
+            if (gifProcessors[panel.id]) {
+                const proc = gifProcessors[panel.id];
+                const frameIdx = frameIndex % proc.numFrames;
+                const result = proc.renderFrame(frameIdx);
+                sourceCanvas = result.canvas;
+                srcW = proc.width;
+                srcH = proc.height;
+            } else if (staticImages[panel.id]) {
+                sourceCanvas = staticImages[panel.id];
+                srcW = sourceCanvas.width;
+                srcH = sourceCanvas.height;
+            }
+
+            if (sourceCanvas) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(px, py, pw, ph);
+                ctx.clip();
+
+                const f = panel.filters || {};
+                const filterStr = `
+                    contrast(${f.contrast ?? 100}%)
+                    brightness(${f.brightness ?? 100}%)
+                    blur(${f.blur ?? 0}px)
+                    grayscale(${f.grayscale ?? 0}%)
+                    sepia(${f.sepia ?? 0}%)
+                    hue-rotate(${f.hueRotate ?? 0}deg)
+                    saturate(${f.saturate ?? 100}%)
+                    invert(${f.invert ?? 0}%)
+                `.replace(/\s+/g, ' ').trim();
+
+                if (filterStr !== 'none') ctx.filter = filterStr;
+
+                const ratioW = pw / srcW;
+                const ratioH = ph / srcH;
+                const ratio = panel.objectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
+
+                const newW = srcW * ratio;
+                const newH = srcH * ratio;
+                const offX = px + (pw - newW) / 2;
+                const offY = py + (ph - newH) / 2;
+
+                ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
+
+                if ((f.deepFry || 0) > 0) {
+                    applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
+                }
+
+                ctx.restore();
+            }
+        }
+    }
+
+    // C. Draw Drawings
+    // TODO: Verify if drawings should be included in stickersOnly. 
+    // Assuming YES as they are "on top" layers often used with stickers.
+    if (meme.drawings && meme.drawings.length > 0) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        meme.drawings.forEach(d => {
+            if (!d.points || d.points.length < 2) return;
+            ctx.beginPath();
+            ctx.strokeStyle = d.color;
+            ctx.lineWidth = d.width * (exportWidth / 800);
+            ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
+
+            ctx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
+            for (let j = 1; j < d.points.length; j++) {
+                ctx.lineTo(d.points[j].x * exportWidth, d.points[j].y * exportHeight);
+            }
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
+
+    // D. Draw Stickers
+    for (const sticker of (stickers || [])) {
+        const x = (sticker.x / 100) * exportWidth;
+        const y = (sticker.y / 100) * exportHeight;
+        const size = (meme.stickerSize || 60) * (exportWidth / 800);
+
+        if (sticker.type === 'image') {
+            let drawCanvas = null;
+            let sw = 0, sh = 0;
+
+            if (stickerProcessors[sticker.id]) {
+                const proc = stickerProcessors[sticker.id];
+                const frameIdx = frameIndex % proc.numFrames;
+                const result = proc.renderFrame(frameIdx);
+                drawCanvas = result.canvas;
+                sw = proc.width;
+                sh = proc.height;
+            } else if (stickerImages[sticker.id]) {
+                drawCanvas = stickerImages[sticker.id];
+                sw = drawCanvas.width;
+                sh = drawCanvas.height;
+            }
+
+            if (drawCanvas) {
+                const aspect = sh / sw;
+                const drawWidth = size;
+                const drawHeight = size * aspect;
+                ctx.drawImage(drawCanvas, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+            }
+        } else {
+            ctx.font = `${size}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // Determine text color - default black unless dark mode logic needed? 
+            // Stick to meme creator default (usually just renders the emoji text as is)
+            ctx.fillText(sticker.url, x, y);
+        }
+    }
+
+    // E. Draw Text (Skip if stickersOnly? User said "Export Stickers Only", but conventionally overlay text is kept or separated.
+    // If the goal is "transparent stickers", text is usually considered a sticker-like overlay.
+    // I will INCLUDE text in stickersOnly mode for now, as it's useful to have text transparency too.)
+    drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, 0); // maxFrames passed as 0 or dummy, drawText handles it
+}
+
+/**
+ * Calculates export dimensions
+ */
+function calculateDimensions(meme, assets) {
+    let containerAspect = 1;
+    let exportWidth = 800;
+    let exportHeight = 800;
+    const { gifProcessors, staticImages } = assets;
+
+    if (meme.layout === 'single' && meme.panels[0].url) {
+        const pid = meme.panels[0].id;
+        if (gifProcessors[pid]) {
+            exportWidth = gifProcessors[pid].width;
+            exportHeight = gifProcessors[pid].height;
+        } else if (staticImages[pid]) {
+            exportWidth = staticImages[pid].width;
+            exportHeight = staticImages[pid].height;
+        }
+        containerAspect = exportWidth / exportHeight;
+    } else if (meme.layout === 'top-bottom') {
+        containerAspect = 3 / 4;
+    } else if (meme.layout === 'side-by-side') {
+        containerAspect = 4 / 3;
+    }
+
+    if (meme.layout !== 'single') {
+        exportHeight = Math.round(exportWidth / containerAspect);
+    }
+
+    const paddingTop = meme.paddingTop || 0;
+    const contentOffsetY = paddingTop > 0 ? Math.round(exportWidth * (paddingTop / 100)) : 0;
+    const contentHeight = exportHeight;
+    exportHeight = contentHeight + contentOffsetY;
+
+    return { exportWidth, exportHeight, contentHeight, contentOffsetY };
+}
+
+
+/**
+ * Export Stickers (or any static state) as PNG with Transparency
+ */
+export async function exportStickersAsPng(meme, stickers) {
+    // 1. Load Assets
+    const assets = await loadMemeAssets(meme, stickers);
+
+    // 2. Dimensions
+    const dimensions = calculateDimensions(meme, assets);
+    const { exportWidth, exportHeight } = dimensions;
+
+    // 3. Render Frame 0
+    const canvas = document.createElement('canvas');
+    canvas.width = exportWidth;
+    canvas.height = exportHeight;
+    const ctx = canvas.getContext('2d');
+
+    renderMemeFrame(ctx, meme, stickers, meme.texts, 0, assets, dimensions, { stickersOnly: true });
+
+    // 4. Export as Blob
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        }, 'image/png');
+    });
+}
+
+
+/**
+ * Exports a meme as an animated GIF
+ */
 export async function exportGif(meme, texts, stickers) {
     return new Promise(async (resolve, reject) => {
         try {
-            // 1. Determine Output Size & Aspect Ratio
-            let containerAspect = 1;
-            const firstPanel = meme.panels[0];
+            // 1. Load Assets
+            const assets = await loadMemeAssets(meme, stickers);
+            const { gifProcessors, stickerProcessors } = assets;
 
-            // Try to get aspect from first panel if possible, or use layout defaults
-            if (meme.layout === 'single') {
-                // We need the dimensions of the first image to set the aspect
-                // We can't know it until we load it. Let's assume square or 4:3 default if unknown.
-                // But wait, we can get it from the loaded assets.
-                // Let's defer size calculation until assets are loaded.
-            } else if (meme.layout === 'top-bottom') {
-                containerAspect = 3 / 4;
-            } else if (meme.layout === 'side-by-side') {
-                containerAspect = 4 / 3;
-            }
+            // 2. Dimensions
+            const dimensions = calculateDimensions(meme, assets);
+            const { exportWidth, exportHeight } = dimensions;
 
-            // 2. Load Assets (GIFs and Images)
-            const gifProcessors = {}; // Map<panelId, processor>
-            const staticImages = {};  // Map<panelId, Image>
-            const stickerProcessors = {}; // Map<stickerId, processor>
-            const stickerImages = {}; // Map<stickerId, Image>
-
-            console.log("Loading assets for export...");
-
-            // Load Panels
-            await Promise.all(meme.panels.map(async (panel) => {
-                if (!panel.url) return;
-
-                let processor = null;
-                // Explicitly check for GIF extension OR isVideo flag
-                if (panel.isVideo || panel.url.includes('.gif')) {
-                    processor = await createGifProcessor(panel.url);
-                    if (processor) {
-                        gifProcessors[panel.id] = processor;
-                    } else {
-                        console.warn("Failed to create GIF processor for:", panel.url, "Falling back to static image.");
-                    }
-                }
-
-                // Always load as static image too, as fallback or for non-GIFs
-                if (!processor) {
-                    try {
-                        const img = new Image();
-                        img.crossOrigin = "anonymous";
-                        img.src = panel.url;
-                        await img.decode(); // Wait for full decoding
-                        staticImages[panel.id] = img;
-                    } catch (err) {
-                        console.warn("Failed to load/decode image:", panel.url, err);
-                    }
-                }
-            }));
-
-            // Load Stickers
-            await Promise.all((stickers || []).filter(s => s.type === 'image').map(async (s) => {
-                let processor = null;
-                // Most tenor stickers are gifs
-                if (s.isAnimated || s.url.includes('.gif')) {
-                    processor = await createGifProcessor(s.url);
-                    if (processor) {
-                        stickerProcessors[s.id] = processor;
-                    }
-                }
-
-                if (!processor) {
-                    try {
-                        const img = new Image();
-                        img.crossOrigin = "anonymous";
-                        img.src = s.url;
-                        await img.decode();
-                        stickerImages[s.id] = img;
-                    } catch (err) {
-                        console.warn("Failed to load sticker:", s.url, err);
-                    }
-                }
-            }));
-
-            // 3. Finalize Output Dimensions
-            let exportWidth = 800; // Default base resolution
-            let exportHeight = 800;
-
-            // If single panel, match its native resolution if possible (for best quality)
-            if (meme.layout === 'single' && meme.panels[0].url) {
-                const pid = meme.panels[0].id;
-                if (gifProcessors[pid]) {
-                    exportWidth = gifProcessors[pid].width;
-                    exportHeight = gifProcessors[pid].height;
-                } else if (staticImages[pid]) {
-                    exportWidth = staticImages[pid].width;
-                    exportHeight = staticImages[pid].height;
-                }
-                containerAspect = exportWidth / exportHeight;
-            } else {
-                // For multi-panel, stick to 800 width and calculate height based on aspect
-                exportHeight = Math.round(exportWidth / containerAspect);
-            }
-
-            // Padding adjustment
-            const paddingTop = meme.paddingTop || 0;
-            const contentOffsetY = paddingTop > 0 ? Math.round(exportWidth * (paddingTop / 100)) : 0;
-            const contentHeight = exportHeight; // Keep image height as intended
-            exportHeight = contentHeight + contentOffsetY; // Final total height
-
-
-            // 4. Initialize Encoder with ROBUST Worker Loading
+            // 3. Initialize Encoder
             const base = import.meta.env.BASE_URL || '/';
             const workerPath = `${base}gif.worker.js`.replace(/\/+/g, '/');
 
@@ -228,7 +419,6 @@ export async function exportGif(meme, texts, stickers) {
                 workerBlobUrl = URL.createObjectURL(blob);
             } catch (err) {
                 console.error("Worker load failed:", err);
-                // Fallback to path
                 workerBlobUrl = workerPath;
             }
 
@@ -238,42 +428,34 @@ export async function exportGif(meme, texts, stickers) {
                 width: exportWidth,
                 height: exportHeight,
                 workerScript: workerBlobUrl,
-                repeat: 0 // Loop forever
-                // NOTE: Do NOT set background or transparent - we want fully opaque frames
-                // to prevent black artifacts on macOS Preview and other viewers
+                repeat: 0,
+                // For stickersOnly GIF export, we try our best with transparency
+                transparent: meme.stickersOnly ? 0x00000000 : null,
+                background: meme.stickersOnly ? null : '#000000'
             });
 
-            // 5. Determine Loop Length
-            // Find the max frame count among all GIF panels and GIF stickers
+            // 4. Determine Loop Length
             let maxFrames = 1;
-            let masterDelay = 10; // Default 10fps (100ms)
+            let masterDelay = 10;
+            const activeProcessors = [...Object.values(gifProcessors), ...Object.values(stickerProcessors)];
 
-            const activeProcessors = [
-                ...Object.values(gifProcessors),
-                ...Object.values(stickerProcessors)
-            ];
-
-            if (activeProcessors.length > 0) {
+            if (meme.forceStatic) {
+                maxFrames = 1;
+            } else if (activeProcessors.length > 0) {
                 maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
-                // Take delay from the first active processor found
                 masterDelay = activeProcessors[0].getDelay(0) || 10;
             } else if (hasAnimatedText(texts) || (stickers && stickers.length > 0)) {
-                // Static image with animated text OR stickers: create synthetic animation
-                // This ensures stickers render correctly (most Tenor stickers are animated GIFs)
                 maxFrames = ANIMATED_TEXT_FRAMES;
                 masterDelay = ANIMATED_TEXT_DELAY;
                 console.log('Animation needed on static image (text animation or stickers), creating GIF with', maxFrames, 'frames');
             } else {
-                // No GIFs, no animated text, and no stickers? Just one frame (static export)
                 maxFrames = 1;
             }
 
-            // Limit frames to prevent massive exports (e.g., 300 frames)
             if (maxFrames > 300) {
                 console.warn(`Clamping GIF frames from ${maxFrames} to 300`);
                 maxFrames = 300;
             }
-
             console.log(`Exporting ${maxFrames} frames...`);
 
             const canvas = document.createElement('canvas');
@@ -281,161 +463,26 @@ export async function exportGif(meme, texts, stickers) {
             canvas.height = exportHeight;
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-            // 6. Render Loop
+            // 5. Render Loop
             for (let i = 0; i < maxFrames; i++) {
-                // Yield for UI responsiveness AND give Safari time to breathe
-                await new Promise(r => setTimeout(r, 10)); // Increased delay for stability
+                await new Promise(r => setTimeout(r, 10));
 
-                // A. Clear & Background - CRITICAL: Use solid opaque fill to prevent
-                // alpha channel issues that cause black frames on macOS Preview
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.clearRect(0, 0, exportWidth, exportHeight);
-                ctx.fillStyle = paddingTop > 0 ? '#ffffff' : '#000000';
-                ctx.fillRect(0, 0, exportWidth, exportHeight);
+                // Use Refactored Render Function
+                renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, { stickersOnly: meme.stickersOnly });
 
-                // B. Draw Panels
-                for (const panel of meme.panels) {
-                    if (!panel.url) continue;
-
-                    const px = (panel.x / 100) * exportWidth;
-                    const py = (panel.y / 100) * contentHeight + contentOffsetY;
-                    const pw = (panel.w / 100) * exportWidth;
-                    const ph = (panel.h / 100) * contentHeight;
-
-                    let sourceCanvas = null;
-                    let srcW = 0, srcH = 0;
-
-                    if (gifProcessors[panel.id]) {
-                        const proc = gifProcessors[panel.id];
-                        // Loop the frame index: i % numFrames
-                        const frameIdx = i % proc.numFrames;
-                        const result = proc.renderFrame(frameIdx);
-                        sourceCanvas = result.canvas;
-                        srcW = proc.width;
-                        srcH = proc.height;
-                    } else if (staticImages[panel.id]) {
-                        sourceCanvas = staticImages[panel.id];
-                        srcW = sourceCanvas.width;
-                        srcH = sourceCanvas.height;
-                    }
-
-                    if (sourceCanvas) {
-                        // Draw with ObjectFit (Cover/Contain)
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.rect(px, py, pw, ph);
-                        ctx.clip();
-
-                        // Apply Standard CSS Filters via context filter
-                        const f = panel.filters || {};
-                        const filterStr = `
-                    contrast(${f.contrast ?? 100}%)
-                    brightness(${f.brightness ?? 100}%)
-                    blur(${f.blur ?? 0}px)
-                    grayscale(${f.grayscale ?? 0}%)
-                    sepia(${f.sepia ?? 0}%)
-                    hue-rotate(${f.hueRotate ?? 0}deg)
-                    saturate(${f.saturate ?? 100}%)
-                    invert(${f.invert ?? 0}%)
-                `.replace(/\s+/g, ' ').trim();
-
-                        if (filterStr !== 'none') ctx.filter = filterStr;
-
-                        // Object Fit Logic
-                        const ratioW = pw / srcW;
-                        const ratioH = ph / srcH;
-                        const ratio = panel.objectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
-
-                        const newW = srcW * ratio;
-                        const newH = srcH * ratio;
-                        const offX = px + (pw - newW) / 2; // Center
-                        const offY = py + (ph - newH) / 2;
-
-                        ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
-
-                        // Deep Fry (Per Panel)
-                        if ((f.deepFry || 0) > 0) {
-                            applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
-                        }
-
-                        ctx.restore();
-                    }
-                }
-
-                // C. Draw Drawings
-                if (meme.drawings && meme.drawings.length > 0) {
-                    ctx.save();
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-
-                    meme.drawings.forEach(d => {
-                        if (!d.points || d.points.length < 2) return;
-                        ctx.beginPath();
-                        ctx.strokeStyle = d.color;
-                        ctx.lineWidth = d.width * (exportWidth / 800);
-                        ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
-
-                        ctx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
-                        for (let j = 1; j < d.points.length; j++) {
-                            ctx.lineTo(d.points[j].x * exportWidth, d.points[j].y * exportHeight);
-                        }
-                        ctx.stroke();
-                    });
-                    ctx.restore();
-                }
-
-                // D. Draw Stickers
-                for (const sticker of (stickers || [])) {
-                    const x = (sticker.x / 100) * exportWidth;
-                    const y = (sticker.y / 100) * exportHeight;
-                    const size = (meme.stickerSize || 60) * (exportWidth / 800);
-
-                    if (sticker.type === 'image') {
-                        let drawCanvas = null;
-                        let sw = 0, sh = 0;
-
-                        if (stickerProcessors[sticker.id]) {
-                            const proc = stickerProcessors[sticker.id];
-                            const frameIdx = i % proc.numFrames;
-                            const result = proc.renderFrame(frameIdx);
-                            drawCanvas = result.canvas;
-                            sw = proc.width;
-                            sh = proc.height;
-                        } else if (stickerImages[sticker.id]) {
-                            drawCanvas = stickerImages[sticker.id];
-                            sw = drawCanvas.width;
-                            sh = drawCanvas.height;
-                        }
-
-                        if (drawCanvas) {
-                            const aspect = sh / sw;
-                            const drawWidth = size;
-                            const drawHeight = size * aspect;
-                            ctx.drawImage(drawCanvas, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
-                        }
-                    } else {
-                        ctx.font = `${size}px sans-serif`;
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(sticker.url, x, y);
-                    }
-                }
-
-                // E. Draw Text (with animation frame info)
-                drawText(ctx, texts, meme, exportWidth, exportHeight, 0, i, maxFrames);
-
-                // F. Add Frame
-                // masterDelay is in centiseconds (e.g. 10 = 100ms)
-                // GIF.js takes milliseconds
-                gif.addFrame(canvas, { delay: masterDelay * 10, copy: true });
+                gif.addFrame(canvas, {
+                    delay: masterDelay * 10,
+                    copy: true,
+                    disposal: 2 // Restore to background (transparent) to prevent ghosting
+                });
             }
 
-            // FIX: Add a timeout to detect hangs (e.g. worker 404)
+            // 6. Finish
             const timeoutId = setTimeout(() => {
                 try { gif.abort(); } catch (e) { }
                 if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
                 reject(new Error("Encoding timed out. Worker likely failed to start."));
-            }, 60000); // 60 second timeout
+            }, 60000);
 
             gif.on('finished', (blob) => {
                 clearTimeout(timeoutId);
@@ -450,8 +497,8 @@ export async function exportGif(meme, texts, stickers) {
 
             gif.render();
 
-        } catch (e) {
-            reject(e);
+        } catch (err) {
+            reject(err);
         }
     });
 }

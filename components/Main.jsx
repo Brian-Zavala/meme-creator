@@ -6,6 +6,7 @@ import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
 import { searchTenor, registerShare, getAutocomplete, getCategories } from "../services/tenor";
 import { exportGif } from "../services/gifExporter";
+import { hasAnimatedText } from "../constants/textAnimations";
 import { deepFryImage } from "../services/imageProcessor";
 import { MEME_QUOTES } from "../constants/memeQuotes";
 
@@ -13,6 +14,7 @@ import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
 import { LayoutSelector } from "./MemeEditor/LayoutSelector";
+import { ExportConfirmModal } from "./ExportConfirmModal";
 const RemixCarousel = lazy(() => import("./MemeEditor/RemixCarousel"));
 
 const MemeActions = lazy(() => import("./MemeEditor/MemeActions").then((module) => ({ default: module.MemeActions })));
@@ -171,6 +173,7 @@ export default function Main() {
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -796,11 +799,24 @@ export default function Main() {
     const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000"];
     const shadows = ["#000000", "#1a1a1a", "#ff0000", "#0000ff", "transparent"];
 
+    // Calculate safe font size based on text length to prevent overflow
+    // (MemeCanvas scaling handles device width, this handles content density)
+    const maxTextLength = Math.max(...meme.texts.map(t => (t.content || "").length), 0);
+    let maxSafeSize = 60;
+    if (maxTextLength > 100) maxSafeSize = 25;
+    else if (maxTextLength > 50) maxSafeSize = 35;
+    else if (maxTextLength > 20) maxSafeSize = 50;
+    
+    // Ensure we don't go below readable minimum
+    const minSafeSize = Math.max(20, maxSafeSize - 15);
+
     const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const randomShadow = shadows[Math.floor(Math.random() * shadows.length)];
-    const randomSpacing = Math.floor(Math.random() * 15);
-    const randomSize = 24 + Math.floor(Math.random() * 20);
+    // Reduce spacing for longer text
+    const maxSpacing = maxTextLength > 30 ? 2 : 10;
+    const randomSpacing = Math.floor(Math.random() * maxSpacing);
+    const randomSize = minSafeSize + Math.floor(Math.random() * (maxSafeSize - minSafeSize));
 
     triggerFlash("green");
     updateState((prev) => ({
@@ -1303,95 +1319,113 @@ export default function Main() {
     [meme.stickers, meme.texts, updateState],
   );
 
+  // --- EXPORT HELPER FUNCTIONS ---
+
+  // Helper: Execute GIF export
+  const doGifExport = useCallback(async () => {
+    if (!memeRef.current) return;
+
+    const isDeepFrying = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
+    const loadingMsg = isDeepFrying ? "Deep frying frames... (this takes longer) 🍟" : "Encoding GIF...";
+
+    const promise = (async () => {
+      const exportMeme = { ...meme };
+      const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
+      if (meme.id) registerShare(meme.id, searchQuery);
+
+      const safeName = (meme.name || 'meme')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50)
+        || 'meme';
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${safeName}-${Date.now()}.gif`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+      triggerFireworks();
+    })();
+
+    toast.promise(promise, {
+      loading: loadingMsg,
+      success: "Downloaded!",
+      error: (err) => {
+        console.error("GIF Export Error:", err);
+        return "Export failed";
+      },
+    });
+  }, [meme, searchQuery]);
+
+  // Helper: Execute static PNG export
+  const doStaticExport = useCallback(async () => {
+    if (!memeRef.current) return;
+
+    const promise = (async () => {
+      const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
+      const finalDataUrl = canvas.toDataURL("image/png");
+
+      const safeName = (meme.name || 'meme')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50)
+        || 'meme';
+
+      const link = document.createElement("a");
+      link.href = finalDataUrl;
+      link.download = `${safeName}-${Date.now()}.png`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+      }, 100);
+      triggerFireworks();
+    })();
+
+    toast.promise(promise, {
+      loading: "Generating...",
+      success: "Downloaded!",
+      error: (err) => {
+        console.error("Image Export Error:", err);
+        return "Export failed";
+      },
+    });
+  }, [meme.name]);
+
   async function handleDownload() {
     if (!memeRef.current) return;
 
-    // Support GIF export if we have at least one video/gif panel OR a gif sticker
+    // Determine content types
     const hasVideoPanel = meme.panels.some(p => p.isVideo || (p.url && p.url.includes('.gif')));
     const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
-    const canExportGif = hasVideoPanel || hasGifSticker;
+    const hasAnimatedTextContent = hasAnimatedText(meme.texts);
+    const hasAnyStickers = meme.stickers.length > 0;
 
-    if (canExportGif) {
-      // Check if ANY panel is deep frying
-      const isDeepFrying = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
-      const loadingMsg = isDeepFrying ? "Deep frying frames... (this takes longer) 🍟" : "Encoding GIF...";
-
-      const promise = (async () => {
-        // Construct a export meme object (we pass the whole meme now)
-        const exportMeme = { ...meme };
-
-        const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
-        if (meme.id) registerShare(meme.id, searchQuery);
-
-        // Sanitize filename: remove problematic characters
-        const safeName = (meme.name || 'meme')
-          .replace(/[^\w\s-]/g, '')  // Remove non-word chars except space/hyphen
-          .replace(/\s+/g, '-')       // Replace spaces with hyphens
-          .replace(/-+/g, '-')        // Collapse multiple hyphens
-          .replace(/^-+|-+$/g, '')    // Trim leading/trailing hyphens
-          .substring(0, 50)           // Limit length
-          || 'meme';
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${safeName}-${Date.now()}.gif`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        // Delay cleanup to ensure download starts with correct filename
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }, 100);
-        triggerFireworks();
-      })();
-
-      toast.promise(promise, {
-        loading: loadingMsg,
-        success: "Downloaded!",
-        error: (err) => {
-          console.error("GIF Export Error:", err);
-          return "Export failed";
-        },
-      });
-    } else {
-      const promise = (async () => {
-        const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
-        // Note: html2canvas captures the visual state of the DOM, including CSS filters on video elements.
-        // Deep fry logic is visual-only here.
-        const finalDataUrl = canvas.toDataURL("image/png");
-
-        // Sanitize filename
-        const safeName = (meme.name || 'meme')
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-+|-+$/g, '')
-          .substring(0, 50)
-          || 'meme';
-
-        const link = document.createElement("a");
-        link.href = finalDataUrl;
-        link.download = `${safeName}-${Date.now()}.png`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        // Delay cleanup to ensure download starts with correct filename
-        setTimeout(() => {
-          document.body.removeChild(link);
-        }, 100);
-        triggerFireworks();
-      })();
-      toast.promise(promise, {
-        loading: "Generating...",
-        success: "Downloaded!",
-        error: (err) => {
-          console.error("Image Export Error:", err);
-          return "Export failed";
-        },
-      });
+    // If the base image is already animated (GIF/video), always export as GIF
+    if (hasVideoPanel) {
+      doGifExport();
+      return;
     }
+
+    // If static image has animated content, show confirmation modal
+    if (hasGifSticker || hasAnimatedTextContent || hasAnyStickers) {
+      setShowExportModal(true);
+      return;
+    }
+
+    // Pure static image with no animated content - export as PNG
+    doStaticExport();
   }
 
   async function handleShare() {
@@ -1437,6 +1471,14 @@ export default function Main() {
       <div
         className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
         style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }}
+      />
+
+      {/* Export Confirmation Modal */}
+      <ExportConfirmModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExportGif={doGifExport}
+        onExportStatic={doStaticExport}
       />
 
       <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">

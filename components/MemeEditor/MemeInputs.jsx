@@ -98,7 +98,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
             >
               <div className="flex items-center gap-3">
                 <div className="p-1.5 rounded-lg bg-brand/10 text-brand group-hover:bg-brand/20 transition-colors" aria-hidden="true">
-                  <Smile className="w-5 h-5" />
+                  <img src="/images/stickers/sticker.png" alt="" className="w-5 h-5 object-contain" />
                 </div>
                 <span className="text-slate-300 font-medium">Add a sticker...</span>
               </div>

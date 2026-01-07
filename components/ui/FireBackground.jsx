@@ -75,9 +75,19 @@ const FireBackground = () => {
                 <div className="w-1/3 h-full"><FireSVG seed={99} id="extra1" /></div>
                 <div className="w-1/3 h-full"><FireSVG seed={333} id="extra2" /></div>
             </div>
+            {/* Mid Right Layer - Fill gap slightly right of center */}
+            <div className="absolute inset-0 flex" style={{ left: '32%' }}>
+                <div className="w-1/3 h-full"><FireSVG seed={444} id="midRight1" /></div>
+                <div className="w-1/3 h-full"><FireSVG seed={555} id="midRight2" /></div>
+            </div>
+            {/* Far Right Layer */}
+            <div className="absolute inset-0 flex" style={{ left: '50%' }}>
+                <div className="w-1/3 h-full"><FireSVG seed={801} id="farRight1" /></div>
+                <div className="w-1/3 h-full"><FireSVG seed={802} id="farRight2" /></div>
+                <div className="w-1/3 h-full"><FireSVG seed={803} id="farRight3" /></div>
+            </div>
         </div>
     );
 };
 
 export default FireBackground;
-

@@ -314,7 +314,8 @@ body {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  padding: 0.5rem 0;
+  padding: 0.5rem 1rem;
+  /* Added horizontal padding for mobile edge spacing */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -348,6 +349,6 @@ body {
 /* Desktop: 5-column row */
 @media (min-width: 1024px) {
   .remix-carousel {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
 }

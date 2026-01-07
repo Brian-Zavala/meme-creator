@@ -167,7 +167,7 @@ export default function Main() {
   const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
-  const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0 });
+  const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
@@ -871,6 +871,25 @@ export default function Main() {
     }
   }
 
+  function handleExtremeDeepFry() {
+    triggerFlash("red");
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? { ...p, filters: { ...DEFAULT_FILTERS, deepFry: 50 }, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        )
+      }));
+    });
+
+    remixClickCountRef.current.deepfry++;
+    if (remixClickCountRef.current.deepfry === 1 || remixClickCountRef.current.deepfry % 5 === 0) {
+      toast("Extreme Deep Fry applied!", { icon: "🍗" });
+    }
+  }
+
   function handleLayoutChange(layoutId) {
     if (layoutId === meme.layout) return;
 
@@ -1264,12 +1283,28 @@ export default function Main() {
 
         const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
         if (meme.id) registerShare(meme.id, searchQuery);
+
+        // Sanitize filename: remove problematic characters
+        const safeName = (meme.name || 'meme')
+          .replace(/[^\w\s-]/g, '')  // Remove non-word chars except space/hyphen
+          .replace(/\s+/g, '-')       // Replace spaces with hyphens
+          .replace(/-+/g, '-')        // Collapse multiple hyphens
+          .replace(/^-+|-+$/g, '')    // Trim leading/trailing hyphens
+          .substring(0, 50)           // Limit length
+          || 'meme';
+
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.download = `${meme.name}-${Date.now()}.gif`;
         link.href = url;
+        link.download = `${safeName}-${Date.now()}.gif`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
         link.click();
-        URL.revokeObjectURL(url);
+        // Delay cleanup to ensure download starts with correct filename
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
         triggerFireworks();
       })();
 
@@ -1287,10 +1322,26 @@ export default function Main() {
         // Note: html2canvas captures the visual state of the DOM, including CSS filters on video elements.
         // Deep fry logic is visual-only here.
         const finalDataUrl = canvas.toDataURL("image/png");
+
+        // Sanitize filename
+        const safeName = (meme.name || 'meme')
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .substring(0, 50)
+          || 'meme';
+
         const link = document.createElement("a");
-        link.download = `${meme.name}-${Date.now()}.png`;
         link.href = finalDataUrl;
+        link.download = `${safeName}-${Date.now()}.png`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
         link.click();
+        // Delay cleanup to ensure download starts with correct filename
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
         triggerFireworks();
       })();
       toast.promise(promise, {
@@ -1603,6 +1654,7 @@ export default function Main() {
             onStyleShuffle={handleStyleShuffle}
             onFilterFrenzy={handleFilterFrenzy}
             onVibeCheck={handleVibeCheck}
+            onExtremeDeepFry={handleExtremeDeepFry}
           />
         </Suspense>
 

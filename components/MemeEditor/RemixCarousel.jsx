@@ -4,19 +4,21 @@ import CaptionRemixBackground from "../ui/CaptionRemixBackground";
 import StyleShuffleBackground from "../ui/StyleShuffleBackground";
 import FilterFrenzyBackground from "../ui/FilterFrenzyBackground";
 import VibeCheckBackground from "../ui/VibeCheckBackground";
+import DeepFryBackground from "../ui/DeepFryBackground";
 
 /**
- * RemixCarousel - 5 creative remix buttons with unique animated backgrounds
+ * RemixCarousel - 6 creative remix buttons with unique animated backgrounds
  * Mobile: Horizontal snap-scroll
  * Tablet: 3-column grid  
- * Desktop: 5-column row
+ * Desktop: 6-column row
  */
 export default function RemixCarousel({
     onChaos,
     onCaptionRemix,
     onStyleShuffle,
     onFilterFrenzy,
-    onVibeCheck
+    onVibeCheck,
+    onExtremeDeepFry
 }) {
     const remixModes = [
         {
@@ -53,6 +55,13 @@ export default function RemixCarousel({
             handler: onVibeCheck,
             Background: VibeCheckBackground,
             ariaLabel: "Apply themed filter preset"
+        },
+        {
+            id: "deepfry",
+            label: "Extreme Deep Fry",
+            handler: onExtremeDeepFry,
+            Background: DeepFryBackground,
+            ariaLabel: "Apply extreme deep fry effect"
         }
     ];
 

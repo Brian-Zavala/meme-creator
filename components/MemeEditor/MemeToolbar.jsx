@@ -157,9 +157,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
               <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
 
                 {/* Group -1: Layout (Caption Bars) */}
-                <div className="w-full flex justify-center items-center gap-4 sm:gap-5 px-4 animate-in fade-in duration-300">
+                <div className="w-full flex flex-wrap justify-center items-center gap-3 sm:gap-4 px-3 sm:px-4 min-w-0 animate-in fade-in duration-300">
                   {/* Top Bar Color Picker */}
-                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:mr-2">
+                  <div className="color-picker-ring w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:mr-2">
                     <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                       <input
                         type="color"
@@ -196,7 +196,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     style={{ fontSize: 'clamp(0.6rem, 2.5vw, 0.75rem)' }}
                   >
                     <PanelTop className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                    <span className="whitespace-nowrap">Top Bar {meme.paddingTop > 0 ? "On" : "Off"}</span>
+                    <span className="hidden sm:inline whitespace-nowrap">Top Bar {meme.paddingTop > 0 ? "On" : "Off"}</span>
                   </button>
 
                   {/* Bottom Caption Bar */}
@@ -223,11 +223,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     style={{ fontSize: 'clamp(0.6rem, 2.5vw, 0.75rem)' }}
                   >
                     <PanelBottom className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                    <span className="whitespace-nowrap">Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
+                    <span className="hidden sm:inline whitespace-nowrap">Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
                   </button>
 
                   {/* Bottom Bar Color Picker */}
-                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:ml-2">
+                  <div className="color-picker-ring w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:ml-2">
                     <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                       <input
                         type="color"

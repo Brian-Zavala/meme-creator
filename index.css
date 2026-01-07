@@ -120,7 +120,15 @@ body {
 .color-picker-ring {
   position: relative;
   z-index: 0;
-  padding: 3px;
+  padding: 2px;
+  /* Default for mobile */
+}
+
+@media (min-width: 640px) {
+  .color-picker-ring {
+    padding: 3px;
+    /* Restore for larger screens */
+  }
 }
 
 .color-picker-ring::before,

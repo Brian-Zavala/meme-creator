@@ -59,7 +59,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
   };
 
   return (
-    <div className="w-full md:w-auto flex flex-row flex-nowrap items-center justify-evenly md:justify-end gap-8 md:gap-8 animate-in slide-in-from-right duration-500 px-2 md:px-0 shrink-0">
+    <div className="w-full md:w-auto flex flex-row flex-wrap items-center justify-evenly md:justify-end gap-4 sm:gap-6 md:gap-8 min-w-0 animate-in slide-in-from-right duration-500 px-2 md:px-0 shrink-0">
 
       {/* Text Color + Opacity */}
       <div className="flex flex-row md:flex-col items-center gap-2 md:gap-3">

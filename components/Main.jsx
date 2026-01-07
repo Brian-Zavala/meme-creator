@@ -13,7 +13,7 @@ import MemeCanvas from "./MemeEditor/MemeCanvas";
 import MemeToolbar from "./MemeEditor/MemeToolbar";
 import MemeInputs from "./MemeEditor/MemeInputs";
 import { LayoutSelector } from "./MemeEditor/LayoutSelector";
-import FireBackground from "./ui/FireBackground";
+const RemixCarousel = lazy(() => import("./MemeEditor/RemixCarousel"));
 
 const MemeActions = lazy(() => import("./MemeEditor/MemeActions").then((module) => ({ default: module.MemeActions })));
 const GifSearch = lazy(() => import("./MemeEditor/GifSearch").then((module) => ({ default: module.GifSearch })));
@@ -167,6 +167,7 @@ export default function Main() {
   const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
+  const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0 });
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
@@ -748,12 +749,125 @@ export default function Main() {
         };
       });
 
-      toast(isExtremeChaos ? "EXTREME CHAOS!" : "CHAOS MODE ACTIVATED!", {
-        icon: isExtremeChaos ? "💥" : "🔥"
-      });
+      remixClickCountRef.current.chaos++;
+      if (remixClickCountRef.current.chaos === 1 || remixClickCountRef.current.chaos % 5 === 0) {
+        toast(isExtremeChaos ? "EXTREME CHAOS!" : "CHAOS MODE ACTIVATED!", {
+          icon: isExtremeChaos ? "💥" : "🔥"
+        });
+      }
     } catch (e) {
       console.error("Chaos failed", e);
       toast.error("Chaos missed!");
+    }
+  }
+
+  // --- REMIX HANDLERS ---
+
+  function handleCaptionRemix() {
+    // Generate new captions, preserve current media
+    const categories = Object.keys(MEME_QUOTES);
+    const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+    const quotes = MEME_QUOTES[randomCategory];
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    triggerFlash("green");
+    updateState((prev) => {
+      const newTexts = randomQuote.map((line, idx) => ({
+        id: crypto.randomUUID(),
+        content: line,
+        x: 50,
+        y: idx === 0 ? 10 : 90,
+        rotation: 0,
+      }));
+      newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 50, rotation: 0 });
+      return { ...prev, texts: newTexts };
+    });
+    remixClickCountRef.current.caption++;
+    if (remixClickCountRef.current.caption === 1 || remixClickCountRef.current.caption % 5 === 0) {
+      toast("Caption remixed!", { icon: "💬" });
+    }
+  }
+
+  function handleStyleShuffle() {
+    const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Pacifico", "Permanent Marker"];
+    const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000"];
+    const shadows = ["#000000", "#1a1a1a", "#ff0000", "#0000ff", "transparent"];
+
+    const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const randomShadow = shadows[Math.floor(Math.random() * shadows.length)];
+    const randomSpacing = Math.floor(Math.random() * 15);
+    const randomSize = 24 + Math.floor(Math.random() * 20);
+
+    triggerFlash("green");
+    updateState((prev) => ({
+      ...prev,
+      fontFamily: randomFont,
+      textColor: randomColor,
+      textShadow: randomShadow,
+      letterSpacing: randomSpacing,
+      fontSize: randomSize,
+    }));
+    remixClickCountRef.current.style++;
+    if (remixClickCountRef.current.style === 1 || remixClickCountRef.current.style % 5 === 0) {
+      toast("Style shuffled!", { icon: "🎨" });
+    }
+  }
+
+  function handleFilterFrenzy() {
+    const randomFilters = {
+      ...DEFAULT_FILTERS,
+      contrast: 80 + Math.floor(Math.random() * 60),
+      brightness: 80 + Math.floor(Math.random() * 50),
+      hueRotate: Math.floor(Math.random() * 360),
+      saturate: 50 + Math.floor(Math.random() * 150),
+      grayscale: Math.random() < 0.2 ? Math.floor(Math.random() * 50) : 0,
+      sepia: Math.random() < 0.15 ? Math.floor(Math.random() * 40) : 0,
+    };
+
+    triggerFlash("green");
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? { ...p, filters: randomFilters, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        )
+      }));
+    });
+    remixClickCountRef.current.filter++;
+    if (remixClickCountRef.current.filter === 1 || remixClickCountRef.current.filter % 5 === 0) {
+      toast("Filters applied!", { icon: "✨" });
+    }
+  }
+
+  function handleVibeCheck() {
+    const vibes = {
+      retro: { sepia: 40, grayscale: 20, contrast: 110, brightness: 95, saturate: 80, hueRotate: 0, blur: 0, invert: 0, deepFry: 0 },
+      neon: { saturate: 200, hueRotate: 180, brightness: 120, contrast: 120, sepia: 0, grayscale: 0, blur: 0, invert: 0, deepFry: 0 },
+      cursed: { deepFry: 40, contrast: 150, saturate: 180, brightness: 110, hueRotate: 15, sepia: 0, grayscale: 0, blur: 0, invert: 0 },
+      noir: { grayscale: 100, contrast: 130, brightness: 90, saturate: 0, sepia: 0, hueRotate: 0, blur: 0, invert: 0, deepFry: 0 },
+      dreamy: { blur: 1, brightness: 115, saturate: 120, sepia: 15, contrast: 95, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 }
+    };
+    const vibeNames = Object.keys(vibes);
+    const randomVibe = vibeNames[Math.floor(Math.random() * vibeNames.length)];
+    const filters = vibes[randomVibe];
+
+    triggerFlash("green");
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? { ...p, filters, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        )
+      }));
+    });
+    remixClickCountRef.current.vibe++;
+    if (remixClickCountRef.current.vibe === 1 || remixClickCountRef.current.vibe % 5 === 0) {
+      toast(`${randomVibe.charAt(0).toUpperCase() + randomVibe.slice(1)} vibe applied!`, { icon: "🎭" });
     }
   }
 
@@ -1481,19 +1595,16 @@ export default function Main() {
           )}
         </div>
 
-        {/* Chaos Mode Button */}
-        <button
-          onClick={handleChaos}
-          className="w-full relative overflow-hidden group bg-black hover:bg-black/90 border-2 border-red-500/50 hover:border-orange-500 text-white font-bold tracking-widest py-4 px-4 rounded-xl transition-all active:scale-[0.98] shadow-lg hover:shadow-orange-500/30 mb-3"
-        >
-          <FireBackground />
-          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300 z-10" />
-          <div className="relative z-20 flex items-center justify-center gap-3">
-            <span className="text-lg font-black uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)] tracking-[0.2em]">
-              Chaos Mode
-            </span>
-          </div>
-        </button>
+        {/* Remix Carousel */}
+        <Suspense fallback={<div className="h-14 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+          <RemixCarousel
+            onChaos={handleChaos}
+            onCaptionRemix={handleCaptionRemix}
+            onStyleShuffle={handleStyleShuffle}
+            onFilterFrenzy={handleFilterFrenzy}
+            onVibeCheck={handleVibeCheck}
+          />
+        </Suspense>
 
         {/* Undo / Redo Controls */}
         <div className="grid grid-cols-[1fr_1fr_auto] gap-3">

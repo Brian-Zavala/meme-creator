@@ -72,7 +72,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
 
   return (
     <div
-      className="w-full md:w-auto flex flex-row flex-nowrap items-center justify-between sm:justify-evenly md:justify-end gap-1.5 sm:gap-6 md:gap-8 min-w-0 animate-in slide-in-from-right duration-500 px-1 md:px-0 shrink-0 overflow-x-auto no-scrollbar"
+      className="w-full md:w-auto flex flex-row flex-nowrap items-center justify-between sm:justify-evenly md:justify-end gap-1.5 sm:gap-6 md:gap-8 min-w-0 animate-in slide-in-from-right duration-500 px-1 md:px-0 py-2 shrink-0 overflow-x-auto md:overflow-visible no-scrollbar"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
 

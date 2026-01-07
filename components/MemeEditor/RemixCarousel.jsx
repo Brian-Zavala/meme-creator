@@ -18,7 +18,8 @@ export default function RemixCarousel({
     onStyleShuffle,
     onFilterFrenzy,
     onVibeCheck,
-    onExtremeDeepFry
+    onExtremeDeepFry,
+    deepFryLevel = 0
 }) {
     const remixModes = [
         {
@@ -82,7 +83,11 @@ export default function RemixCarousel({
                     aria-label={ariaLabel}
                 >
                     {/* Animated background */}
-                    <Background />
+                    {id === 'deepfry' ? (
+                        <Background key={deepFryLevel > 0 ? 'active' : 'inactive'} />
+                    ) : (
+                        <Background />
+                    )}
 
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-300 z-10" />

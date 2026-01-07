@@ -874,21 +874,36 @@ export default function Main() {
   function handleExtremeDeepFry() {
     triggerFlash("red");
     startTransition(() => {
-      updateState((prev) => ({
-        ...prev,
-        panels: prev.panels.map(p =>
-          p.id === prev.activePanelId
-            ? { ...p, filters: { ...DEFAULT_FILTERS, deepFry: 50 }, processedImage: null, processedDeepFryLevel: 0 }
-            : p
-        )
-      }));
+      updateState((prev) => {
+        const activePanelId = prev.activePanelId;
+        const currentPanel = prev.panels.find(p => p.id === activePanelId);
+        const currentFry = currentPanel?.filters?.deepFry || 0;
+        const newFry = currentFry > 0 ? 0 : 50;
+
+        return {
+          ...prev,
+          panels: prev.panels.map(p =>
+            p.id === activePanelId
+              ? { ...p, filters: { ...DEFAULT_FILTERS, deepFry: newFry }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          )
+        };
+      });
     });
 
+    const currentFry = meme.panels.find(p => p.id === meme.activePanelId)?.filters?.deepFry || 0;
+    const isTurningOn = currentFry === 0;
+
     remixClickCountRef.current.deepfry++;
-    if (remixClickCountRef.current.deepfry === 1 || remixClickCountRef.current.deepfry % 5 === 0) {
+    if (isTurningOn) {
       toast("Extreme Deep Fry applied!", { icon: "🍗" });
+    } else {
+      toast("Deep Fry removed", { icon: "🧹" });
     }
   }
+
+  // Calculate current deep fry level for the active panel to pass down
+  const currentDeepFryLevel = meme.panels.find(p => p.id === meme.activePanelId)?.filters?.deepFry || 0;
 
   function handleLayoutChange(layoutId) {
     if (layoutId === meme.layout) return;
@@ -1044,46 +1059,54 @@ export default function Main() {
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
-      const localUrl = URL.createObjectURL(file);
       const isGif = file.type === "image/gif";
       const isVideo = file.type.startsWith("video/");
 
-      updateState((prev) => {
-        const newPanels = prev.panels.map(p =>
-          p.id === prev.activePanelId
-            ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
-            : p
-        );
-        return {
-          ...prev,
-          panels: newPanels,
-          name: file.name.split(".")[0],
-          mode: isGif || isVideo ? "video" : "image",
-        };
-      });
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        updateState((prev) => {
+          const newPanels = prev.panels.map(p =>
+            p.id === prev.activePanelId
+              ? { ...p, url: dataUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          );
+          return {
+            ...prev,
+            panels: newPanels,
+            name: file.name.split(".")[0],
+            mode: isGif || isVideo ? "video" : "image",
+          };
+        });
+      };
+      reader.readAsDataURL(file);
     }
   }
 
   const handleCanvasDrop = useCallback((file, panelId) => {
-    const localUrl = URL.createObjectURL(file);
     const isGif = file.type === "image/gif";
     const isVideo = file.type.startsWith("video/");
 
-    startTransition(() => {
-      updateState((prev) => {
-        const newPanels = prev.panels.map(p =>
-          p.id === panelId
-            ? { ...p, url: localUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
-            : p
-        );
-        return {
-          ...prev,
-          panels: newPanels,
-          activePanelId: panelId,
-          mode: newPanels.some(p => p.isVideo) ? "video" : "image"
-        };
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      startTransition(() => {
+        updateState((prev) => {
+          const newPanels = prev.panels.map(p =>
+            p.id === panelId
+              ? { ...p, url: dataUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          );
+          return {
+            ...prev,
+            panels: newPanels,
+            activePanelId: panelId,
+            mode: newPanels.some(p => p.isVideo) ? "video" : "image"
+          };
+        });
       });
-    });
+    };
+    reader.readAsDataURL(file);
   }, [updateState]);
 
   const handleClearPanel = useCallback((panelId) => {
@@ -1655,6 +1678,7 @@ export default function Main() {
             onFilterFrenzy={handleFilterFrenzy}
             onVibeCheck={handleVibeCheck}
             onExtremeDeepFry={handleExtremeDeepFry}
+            deepFryLevel={currentDeepFryLevel}
           />
         </Suspense>
 

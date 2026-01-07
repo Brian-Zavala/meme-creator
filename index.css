@@ -69,6 +69,23 @@ body {
   animation: pop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes roll-down {
+  0% {
+    opacity: 0;
+    transform: scaleY(0) translateY(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+
+.animate-roll-down {
+  animation: roll-down 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transform-origin: top center;
+}
+
 @keyframes pulse-ring {
   0% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.1);

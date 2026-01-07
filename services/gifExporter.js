@@ -178,7 +178,7 @@ async function loadMemeAssets(meme, stickers) {
 function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
     const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
     const { exportWidth, exportHeight, contentHeight, contentOffsetY } = dimensions;
-    const { stickersOnly = false } = options;
+    const { stickersOnly = false, totalFrames = 1 } = options;
 
     // A. Clear & Background
     ctx.globalCompositeOperation = 'source-over';
@@ -287,6 +287,39 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         const y = (sticker.y / 100) * exportHeight;
         const size = (meme.stickerSize || 60) * (exportWidth / 800);
 
+        // Animation Transform
+        let animX = x;
+        let animY = y;
+        let animRotation = 0;
+        let animScaleX = 1;
+        let animScaleY = 1;
+        let animOpacity = 1;
+
+        if (sticker.animation && sticker.animation !== 'none') {
+            const anim = getAnimationById(sticker.animation);
+            if (anim && anim.getTransform) {
+                const scale = exportWidth / 800;
+                // Use totalFrames passed from exportGif (default 1)
+                // If totalFrames is 1, t is 0 (start frame)
+                const t = anim.getTransform(frameIndex, totalFrames);
+
+                animX += (t.offsetX || 0) * scale;
+                animY += (t.offsetY || 0) * scale;
+                animRotation += (t.rotation || 0) * (Math.PI / 180);
+
+                const s = t.scale || 1;
+                animScaleX = t.scaleX ?? s;
+                animScaleY = t.scaleY ?? s;
+                animOpacity = t.opacity ?? 1;
+            }
+        }
+
+        ctx.save();
+        ctx.globalAlpha = animOpacity;
+        ctx.translate(animX, animY);
+        ctx.rotate(animRotation);
+        ctx.scale(animScaleX, animScaleY);
+
         if (sticker.type === 'image') {
             let drawCanvas = null;
             let sw = 0, sh = 0;
@@ -308,7 +341,8 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
                 const aspect = sh / sw;
                 const drawWidth = size;
                 const drawHeight = size * aspect;
-                ctx.drawImage(drawCanvas, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+                // Draw centered at (0,0) because we translated to center
+                ctx.drawImage(drawCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
             }
         } else {
             ctx.font = `${size}px sans-serif`;
@@ -316,14 +350,17 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
             ctx.textBaseline = 'middle';
             // Determine text color - default black unless dark mode logic needed? 
             // Stick to meme creator default (usually just renders the emoji text as is)
-            ctx.fillText(sticker.url, x, y);
+            ctx.fillText(sticker.url, 0, 0);
         }
+        ctx.restore();
     }
 
     // E. Draw Text (Skip if stickersOnly? User said "Export Stickers Only", but conventionally overlay text is kept or separated.
     // If the goal is "transparent stickers", text is usually considered a sticker-like overlay.
     // I will INCLUDE text in stickersOnly mode for now, as it's useful to have text transparency too.)
-    drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, 0); // maxFrames passed as 0 or dummy, drawText handles it
+    // E. Draw Text
+    // We pass totalFrames correctly so animations calculate progress (frameIndex / totalFrames)
+    drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, totalFrames);
 }
 
 /**
@@ -338,7 +375,12 @@ function calculateDimensions(meme, assets) {
     // Check if we actually have any valid panels
     const hasValidPanel = meme.panels && meme.panels.length > 0 && meme.panels[0].url;
 
-    if (hasValidPanel) {
+    if (meme.stickersOnly) {
+        // Force standardized sticker size (e.g. for Telegram/Signal/WhatsApp)
+        exportWidth = 512;
+        exportHeight = 512;
+        containerAspect = 1;
+    } else if (hasValidPanel) {
         if (meme.layout === 'single') {
             const pid = meme.panels[0].id;
             if (gifProcessors[pid]) {
@@ -380,11 +422,13 @@ function calculateDimensions(meme, assets) {
  * Export Stickers (or any static state) as PNG with Transparency
  */
 export async function exportStickersAsPng(meme, stickers) {
+    const exportMeme = { ...meme, stickersOnly: true };
+
     // 1. Load Assets
-    const assets = await loadMemeAssets(meme, stickers);
+    const assets = await loadMemeAssets(exportMeme, stickers);
 
     // 2. Dimensions
-    const dimensions = calculateDimensions(meme, assets);
+    const dimensions = calculateDimensions(exportMeme, assets);
     const { exportWidth, exportHeight } = dimensions;
 
     // 3. Render Frame 0
@@ -393,7 +437,7 @@ export async function exportStickersAsPng(meme, stickers) {
     canvas.height = exportHeight;
     const ctx = canvas.getContext('2d');
 
-    renderMemeFrame(ctx, meme, stickers, meme.texts, 0, assets, dimensions, { stickersOnly: true });
+    renderMemeFrame(ctx, exportMeme, stickers, meme.texts, 0, assets, dimensions, { stickersOnly: true });
 
     // 4. Export as Blob
     return new Promise((resolve) => {
@@ -480,7 +524,10 @@ export async function exportGif(meme, texts, stickers) {
                 await new Promise(r => setTimeout(r, 10));
 
                 // Use Refactored Render Function
-                renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, { stickersOnly: meme.stickersOnly });
+                renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
+                    stickersOnly: meme.stickersOnly,
+                    totalFrames: maxFrames
+                });
 
                 gif.addFrame(canvas, {
                     delay: masterDelay * 10,

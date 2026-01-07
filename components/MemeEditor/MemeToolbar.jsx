@@ -233,7 +233,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                 : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                               }`}
                           >
-                            <span className="text-base">{anim.icon}</span>
+                            {anim.icon.includes('/') || anim.icon.includes('.') ? (
+                              <img src={anim.icon} alt={anim.name} className="w-6 h-6 object-contain" />
+                            ) : (
+                              <span className="text-base">{anim.icon}</span>
+                            )}
                             <span className="text-xs uppercase font-bold tracking-wide">{anim.name}</span>
                           </button>
                         );
@@ -268,7 +272,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                 : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                               }`}
                           >
-                            <span className="text-base">{anim.icon}</span>
+                            {anim.icon.includes('/') || anim.icon.includes('.') ? (
+                              <img src={anim.icon} alt={anim.name} className="w-6 h-6 object-contain" />
+                            ) : (
+                              <span className="text-base">{anim.icon}</span>
+                            )}
                             <span className="text-xs uppercase font-bold tracking-wide">{anim.name}</span>
                           </button>
                         );

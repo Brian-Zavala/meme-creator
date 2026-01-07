@@ -93,8 +93,8 @@ export default function Main() {
         }
       ],
 
-      texts: [{ id: "top", content: "", x: 50, y: 5, rotation: 0 },
-      { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
+      texts: [{ id: "top", content: "", x: 50, y: 5, rotation: 0, animation: null },
+      { id: "bottom", content: "", x: 50, y: 95, rotation: 0, animation: null },
       ],
       stickers: [],
       drawings: [],
@@ -141,7 +141,7 @@ export default function Main() {
         }
 
         if (parsed.texts) {
-          parsed.texts = parsed.texts.map((t) => ({ ...t, rotation: t.rotation ?? 0 }));
+          parsed.texts = parsed.texts.map((t) => ({ ...t, rotation: t.rotation ?? 0, animation: t.animation ?? null }));
         }
         return { ...defaultState, ...parsed };
       } catch (e) {
@@ -726,6 +726,7 @@ export default function Main() {
           x: 50,
           y: idx === 0 ? 10 : 90,
           rotation: 0,
+          animation: null,
         }));
 
         // Add empty text input to enable conditional rendering for additional inputs
@@ -735,6 +736,7 @@ export default function Main() {
           x: 50,
           y: 50,
           rotation: 0,
+          animation: null,
         });
 
         // Random font size between 24-40
@@ -778,8 +780,9 @@ export default function Main() {
         x: 50,
         y: idx === 0 ? 10 : 90,
         rotation: 0,
+        animation: null,
       }));
-      newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 50, rotation: 0 });
+      newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 50, rotation: 0, animation: null });
       return { ...prev, texts: newTexts };
     });
     remixClickCountRef.current.caption++;
@@ -979,6 +982,7 @@ export default function Main() {
           x: 50,
           y: 50,
           rotation: 0,
+          animation: null,
         });
       }
 
@@ -994,6 +998,18 @@ export default function Main() {
     updateState((prev) => ({
       ...prev,
       texts: prev.texts.map((t) => (t.id === meme.selectedId ? { ...t, x: 50, y: 50 } : t)),
+    }));
+  }
+
+  function handleAnimationChange(animationId) {
+    // Apply animation to ALL texts with content
+    updateState((prev) => ({
+      ...prev,
+      texts: prev.texts.map((t) => (
+        (t.content || "").trim().length > 0
+          ? { ...t, animation: animationId === 'none' ? null : animationId }
+          : t
+      )),
     }));
   }
 
@@ -1154,8 +1170,8 @@ export default function Main() {
       updateState((prev) => ({
         ...prev,
         texts: [
-          { id: "top", content: "", x: 50, y: 5, rotation: 0 },
-          { id: "bottom", content: "", x: 50, y: 95, rotation: 0 },
+          { id: "top", content: "", x: 50, y: 5, rotation: 0, animation: null },
+          { id: "bottom", content: "", x: 50, y: 95, rotation: 0, animation: null },
         ],
         stickers: [],
         drawings: [],
@@ -1604,6 +1620,7 @@ export default function Main() {
             onResetFilters={resetFilters}
             onClearDrawings={handleClearDrawings}
             onDrawerExpand={handleToolbarExpand}
+            onAnimationChange={handleAnimationChange}
           />
           <button
             onClick={() => {

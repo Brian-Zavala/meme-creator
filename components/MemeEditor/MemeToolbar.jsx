@@ -20,6 +20,7 @@ import {
   Trash2,
   Flame,
 } from "lucide-react";
+import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 
 const ColorControls = lazy(() => import("./ColorControls"));
 
@@ -38,11 +39,12 @@ const FONTS = [
   { name: "Pacifico", label: "Script" },
 ];
 
-export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand }) {
+export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange }) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
+  const hasAnimatedText = meme.texts.some(t => t.animation && t.animation !== 'none');
 
   const handleTabChange = (tab) => {
     startTransition(() => {
@@ -194,6 +196,41 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                           {font.label}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Animation Selector */}
+                {hasText && (
+                  <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${hasAnimatedText ? 'text-brand' : 'text-slate-500'}`}>
+                        Text Animation {hasAnimatedText && <span className="text-amber-400">• GIF Export</span>}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                      {TEXT_ANIMATIONS.map((anim) => {
+                        // Check if ANY text has this animation
+                        const isActive = meme.texts.some(t => t.animation === anim.id);
+                        return (
+                          <button
+                            key={anim.id}
+                            onClick={() => {
+                              if (navigator.vibrate) navigator.vibrate(10);
+                              if (onAnimationChange) onAnimationChange(anim.id);
+                            }}
+                            className={`snap-center shrink-0 px-3 py-2 rounded-lg border text-sm transition-all active:scale-95 flex items-center gap-2 ${isActive
+                              ? "bg-brand/20 text-brand border-brand font-bold shadow-[0_0_10px_rgba(255,199,0,0.3)]"
+                              : anim.id === 'none'
+                                ? "bg-slate-900 text-slate-500 border-slate-700 hover:border-slate-500 hover:text-white"
+                                : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                              }`}
+                          >
+                            <span className="text-base">{anim.icon}</span>
+                            <span className="text-xs uppercase font-bold tracking-wide">{anim.name}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

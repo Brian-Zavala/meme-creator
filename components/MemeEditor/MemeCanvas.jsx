@@ -482,12 +482,15 @@ const MemeCanvas = forwardRef(({
           const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
           const isSelected = selectedId === textItem.id;
 
+          // Map animation IDs to CSS class names
+          const animationClass = textItem.animation ? `animate-meme-${textItem.animation}` : '';
+
           return (
             <h2
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
               className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
-                } ${isSelected ? "z-50" : ""}`}
+                } ${isSelected ? "z-50" : ""} ${animationClass}`}
               style={{
                 left: `${textItem.x}%`,
                 top: `${textItem.y}%`,

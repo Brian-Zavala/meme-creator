@@ -1,5 +1,6 @@
 import GIF from 'gif.js';
 import { GifReader } from 'omggif';
+import { getAnimationById, hasAnimatedText, ANIMATED_TEXT_FRAMES, ANIMATED_TEXT_DELAY } from '../constants/textAnimations';
 
 /**
  * Helper to create a processor for a single GIF source
@@ -256,8 +257,13 @@ export async function exportGif(meme, texts, stickers) {
                 maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
                 // Take delay from the first active processor found
                 masterDelay = activeProcessors[0].getDelay(0) || 10;
+            } else if (hasAnimatedText(texts)) {
+                // Static image with animated text: create synthetic animation
+                maxFrames = ANIMATED_TEXT_FRAMES;
+                masterDelay = ANIMATED_TEXT_DELAY;
+                console.log('Animated text detected on static image, creating GIF with', maxFrames, 'frames');
             } else {
-                // No GIFs? Just one frame (static export)
+                // No GIFs and no animated text? Just one frame (static export)
                 maxFrames = 1;
             }
 
@@ -414,8 +420,8 @@ export async function exportGif(meme, texts, stickers) {
                     }
                 }
 
-                // E. Draw Text
-                drawText(ctx, texts, meme, exportWidth, exportHeight, 0);
+                // E. Draw Text (with animation frame info)
+                drawText(ctx, texts, meme, exportWidth, exportHeight, 0, i, maxFrames);
 
                 // F. Add Frame
                 // masterDelay is in centiseconds (e.g. 10 = 100ms)
@@ -490,21 +496,42 @@ function applyDeepFry(ctx, x, y, w, h, level) {
     ctx.putImageData(imageData, x, y);
 }
 
-function drawText(ctx, texts, meme, width, height, offsetY) {
+function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, totalFrames = 1) {
     for (const textItem of texts) {
         if (!textItem.content.trim()) continue;
 
-        const x = (textItem.x / 100) * width;
-        const y = (textItem.y / 100) * height + offsetY;
+        const baseX = (textItem.x / 100) * width;
+        const baseY = (textItem.y / 100) * height + offsetY;
         const fontSize = meme.fontSize || 40;
         const stroke = Math.max(1, fontSize / 25);
-        const rotation = (textItem.rotation || 0) * (Math.PI / 180);
+        const baseRotation = (textItem.rotation || 0) * (Math.PI / 180);
         const maxWidth = ((meme.maxWidth || 80) / 100) * width;
         const lineHeight = fontSize * 1.2;
 
+        // Get animation transform for this frame
+        let animX = baseX;
+        let animY = baseY;
+        let animRotation = baseRotation;
+        let animScale = 1;
+        let animOpacity = 1;
+
+        if (textItem.animation && textItem.animation !== 'none') {
+            const anim = getAnimationById(textItem.animation);
+            if (anim && anim.getTransform) {
+                const transform = anim.getTransform(frameIndex, totalFrames, 0, 1);
+                animX += transform.offsetX || 0;
+                animY += transform.offsetY || 0;
+                animRotation += (transform.rotation || 0) * (Math.PI / 180);
+                animScale = transform.scale || 1;
+                animOpacity = transform.opacity ?? 1;
+            }
+        }
+
         ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation);
+        ctx.globalAlpha = animOpacity;
+        ctx.translate(animX, animY);
+        ctx.rotate(animRotation);
+        ctx.scale(animScale, animScale);
 
         ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
         ctx.textAlign = 'center';

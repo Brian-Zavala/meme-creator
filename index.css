@@ -314,8 +314,7 @@ body {
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  margin-top: -5px;
-  /* (Track Height 6px - Thumb Height 16px) / 2 */
+  margin-top: calc((0.375rem - 16px) / 2);
   transition: transform 0.1s;
 }
 
@@ -361,8 +360,7 @@ body {
 @media (max-width: 767px) {
   .range-vertical.range-slider::-webkit-slider-thumb {
     margin-top: 0;
-    margin-left: -5px;
-    /* (Track 6px - Thumb 16px) / 2 */
+    margin-left: calc(50% - 8px);
   }
 
 }

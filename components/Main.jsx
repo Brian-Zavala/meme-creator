@@ -70,7 +70,7 @@ export default function Main() {
       textBgColor: "transparent",
       textShadow: "#000000",
       fontFamily: "Impact",
-      fontSize: 30,
+      fontSize: 24,
       paddingTop: 0,
       letterSpacing: 0,
       drawColor: "#ff0000",
@@ -410,7 +410,7 @@ export default function Main() {
   };
 
   const calculateSmartFontSize = () => {
-    return 30;
+    return 24;
   };
 
   useEffect(() => {

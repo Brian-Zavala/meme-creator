@@ -317,9 +317,8 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         if (navigator.vibrate) navigator.vibrate(10);
                         startTransition(() => setShowTextStyling(!showTextStyling));
                       }}
-                      className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all active:scale-[0.98]"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-slate-800/50 border border-brand text-slate-400 hover:text-white hover:border-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all active:scale-[0.98]"
                     >
-                      <SlidersHorizontal className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase tracking-wider">
                         {showTextStyling ? 'Hide' : 'Show'} Text Styling
                       </span>
@@ -332,7 +331,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         }`}
                     >
                       <div className="w-full overflow-hidden">
-                        <div className={`w-full flex flex-col gap-6 transition-opacity duration-200 ${showTextStyling ? 'opacity-100 pt-4' : 'opacity-0'
+                        <div className={`w-full flex flex-col gap-6 transition-opacity duration-200 ${showTextStyling ? 'opacity-100 pt-10' : 'opacity-0'
                           }`}>
 
                           {/* Group 1: Size Controls */}

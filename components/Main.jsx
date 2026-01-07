@@ -769,12 +769,15 @@ export default function Main() {
 
   // --- REMIX HANDLERS ---
 
+  const allCaptions = useMemo(() => Object.values(MEME_QUOTES).flat(), []);
+  const [captionDeck, setCaptionDeck] = useState([]);
+
   function handleCaptionRemix() {
     // Generate new captions, preserve current media
-    const categories = Object.keys(MEME_QUOTES);
-    const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-    const quotes = MEME_QUOTES[randomCategory];
-    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    if (allCaptions.length === 0) return;
+
+    // Use deck system to ensure no repeats until all are shown
+    const randomQuote = getNextItem(allCaptions, captionDeck, setCaptionDeck);
 
     triggerFlash("green");
     updateState((prev) => {
@@ -782,11 +785,11 @@ export default function Main() {
         id: crypto.randomUUID(),
         content: line,
         x: 50,
-        y: idx === 0 ? 10 : 90,
+        y: idx === 0 ? 10 : (idx === 1 ? 50 : 90),
         rotation: 0,
         animation: null,
       }));
-      newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 50, rotation: 0, animation: null });
+      newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 90, rotation: 0, animation: null });
       return { ...prev, texts: newTexts };
     });
     remixClickCountRef.current.caption++;

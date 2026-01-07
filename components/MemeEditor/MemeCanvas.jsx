@@ -534,29 +534,45 @@ const MemeCanvas = forwardRef(({
                 </svg>
               )}
               {textItem.animation === 'wave' ? (
-                textItem.content.split('\n').map((line, lineIdx, linesArr) => (
-                  <span key={lineIdx} style={{ display: 'block' }}>
-                    {line.split('').map((char, charIdx) => {
-                      // Ensure space is preserved but allows wrapping if needed?
-                      // Actually, normal space ' ' might collapse in React if not careful?
-                      // But inside a span it should be fine. 
-                      // However, split('') of " " is " ".
-                      return (
-                        <span
-                          key={charIdx}
-                          className="animate-meme-wave-char"
-                          // Stagger delay based on char index to keep wave fluid? 
-                          // Or reset per line? Let's use charIdx (per line) for now to keep lines in sync.
-                          style={{ animationDelay: `${charIdx * 0.1}s` }}
-                        >
-                          {char}
-                        </span>
-                      );
-                    })}
-                    {/* Add zero-width space to help layout if empty line? */}
-                    {line.length === 0 && <span>&nbsp;</span>}
-                  </span>
-                ))
+                textItem.content.split('\n').map((line, lineIdx) => {
+                  // Split line into words (preserving spaces as separators)
+                  const words = line.split(/(\s+)/);
+                  let globalCharIdx = 0;
+
+                  return (
+                    <span key={lineIdx} style={{ display: 'block' }}>
+                      {words.map((word, wordIdx) => {
+                        // If it's whitespace, render a regular space (allows wrapping)
+                        if (/^\s+$/.test(word)) {
+                          globalCharIdx += word.length;
+                          return ' ';
+                        }
+
+                        // For actual words, wrap in inline-block to keep together
+                        const chars = word.split('').map((char, charInWordIdx) => {
+                          const charDelay = globalCharIdx + charInWordIdx;
+                          return (
+                            <span
+                              key={charInWordIdx}
+                              className="animate-meme-wave-char"
+                              style={{ animationDelay: `${charDelay * 0.1}s` }}
+                            >
+                              {char}
+                            </span>
+                          );
+                        });
+                        globalCharIdx += word.length;
+
+                        return (
+                          <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+                            {chars}
+                          </span>
+                        );
+                      })}
+                      {line.length === 0 && <span>&nbsp;</span>}
+                    </span>
+                  );
+                })
               ) : (
                 textItem.content
               )}

@@ -9,26 +9,26 @@ async function createGifProcessor(url) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-        
+
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
+
         const arrayBuffer = await response.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         const reader = new GifReader(uint8Array);
-        
+
         const width = reader.width;
         const height = reader.height;
         const numFrames = reader.numFrames();
-        
+
         // Canvas to hold the CURRENT state of the GIF (accumulated frames)
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        
+
         // Helper for decoding
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = width;
@@ -50,7 +50,7 @@ async function createGifProcessor(url) {
                 // If we are asking for the next frame sequentially, great.
                 // If we skipped or looped, we might need to reset or seek.
                 // For simple looping (0 -> 1 -> ... -> N -> 0), we handle the wrap properly.
-                
+
                 if (frameIndex === 0 && currentFrameIndex !== -1) {
                     // Reset state for loop
                     ctx.clearRect(0, 0, width, height);
@@ -91,7 +91,7 @@ async function createGifProcessor(url) {
 
                     previousInfo = info;
                 }
-                
+
                 currentFrameIndex = frameIndex;
                 const delay = reader.frameInfo(frameIndex).delay;
                 return { canvas, delay };
@@ -108,212 +108,216 @@ async function createGifProcessor(url) {
  * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
  */
 export async function exportGif(meme, texts, stickers) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // 1. Determine Output Size & Aspect Ratio
-      let containerAspect = 1;
-      const firstPanel = meme.panels[0];
-      
-      // Try to get aspect from first panel if possible, or use layout defaults
-      if (meme.layout === 'single') {
-          // We need the dimensions of the first image to set the aspect
-          // We can't know it until we load it. Let's assume square or 4:3 default if unknown.
-          // But wait, we can get it from the loaded assets.
-          // Let's defer size calculation until assets are loaded.
-      } else if (meme.layout === 'top-bottom') {
-          containerAspect = 3/4;
-      } else if (meme.layout === 'side-by-side') {
-          containerAspect = 4/3;
-      }
+    return new Promise(async (resolve, reject) => {
+        try {
+            // 1. Determine Output Size & Aspect Ratio
+            let containerAspect = 1;
+            const firstPanel = meme.panels[0];
 
-      // 2. Load Assets (GIFs and Images)
-      const gifProcessors = {}; // Map<panelId, processor>
-      const staticImages = {};  // Map<panelId, Image>
-      const stickerProcessors = {}; // Map<stickerId, processor>
-      const stickerImages = {}; // Map<stickerId, Image>
-
-      console.log("Loading assets for export...");
-
-      // Load Panels
-      await Promise.all(meme.panels.map(async (panel) => {
-          if (!panel.url) return;
-          
-          let processor = null;
-          // Explicitly check for GIF extension OR isVideo flag
-          if (panel.isVideo || panel.url.includes('.gif')) { 
-              processor = await createGifProcessor(panel.url);
-              if (processor) {
-                  gifProcessors[panel.id] = processor;
-              } else {
-                  console.warn("Failed to create GIF processor for:", panel.url, "Falling back to static image.");
-              }
-          }
-          
-          // Always load as static image too, as fallback or for non-GIFs
-          if (!processor) {
-              await new Promise((resolve) => {
-                  const img = new Image();
-                  img.crossOrigin = "anonymous";
-                  img.onload = () => { staticImages[panel.id] = img; resolve(); };
-                  img.onerror = () => { console.warn("Failed to load image:", panel.url); resolve(); };
-                  img.src = panel.url;
-              });
-          }
-      }));
-
-      // Load Stickers
-      await Promise.all((stickers || []).filter(s => s.type === 'image').map(async (s) => {
-          let processor = null;
-          // Most tenor stickers are gifs
-          if (s.isAnimated || s.url.includes('.gif')) {
-              processor = await createGifProcessor(s.url);
-              if (processor) {
-                  stickerProcessors[s.id] = processor;
-              }
-          }
-
-          if (!processor) {
-              await new Promise((resolve) => {
-                  const img = new Image();
-                  img.crossOrigin = "anonymous";
-                  img.onload = () => { stickerImages[s.id] = img; resolve(); };
-                  img.onerror = () => resolve(); 
-                  img.src = s.url;
-              });
-          }
-      }));
-
-      // 3. Finalize Output Dimensions
-      let exportWidth = 800; // Default base resolution
-      let exportHeight = 800;
-
-      // If single panel, match its native resolution if possible (for best quality)
-      if (meme.layout === 'single' && meme.panels[0].url) {
-          const pid = meme.panels[0].id;
-          if (gifProcessors[pid]) {
-              exportWidth = gifProcessors[pid].width;
-              exportHeight = gifProcessors[pid].height;
-          } else if (staticImages[pid]) {
-              exportWidth = staticImages[pid].width;
-              exportHeight = staticImages[pid].height;
-          }
-          containerAspect = exportWidth / exportHeight;
-      } else {
-          // For multi-panel, stick to 800 width and calculate height based on aspect
-          exportHeight = Math.round(exportWidth / containerAspect);
-      }
-
-      // Padding adjustment
-      const paddingTop = meme.paddingTop || 0;
-      const contentOffsetY = paddingTop > 0 ? Math.round(exportWidth * (paddingTop / 100)) : 0;
-      const contentHeight = exportHeight; // Keep image height as intended
-      exportHeight = contentHeight + contentOffsetY; // Final total height
-
-
-      // 4. Initialize Encoder with ROBUST Worker Loading
-      const base = import.meta.env.BASE_URL || '/';
-      const workerPath = `${base}gif.worker.js`.replace(/\/+/g, '/');
-      
-      let workerBlobUrl = null;
-      try {
-          const response = await fetch(workerPath);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const workerScriptText = await response.text();
-          const blob = new Blob([workerScriptText], { type: 'application/javascript' });
-          workerBlobUrl = URL.createObjectURL(blob);
-      } catch (err) {
-          console.error("Worker load failed:", err);
-          // Fallback to path
-          workerBlobUrl = workerPath;
-      }
-
-      const gif = new GIF({
-        workers: 4,
-        quality: 10,
-        width: exportWidth,
-        height: exportHeight,
-        workerScript: workerBlobUrl,
-        background: '#000000',
-        repeat: 0 // Loop forever
-      });
-
-      // 5. Determine Loop Length
-      // Find the max frame count among all GIF panels and GIF stickers
-      let maxFrames = 1;
-      let masterDelay = 10; // Default 10fps (100ms)
-
-      const activeProcessors = [
-          ...Object.values(gifProcessors),
-          ...Object.values(stickerProcessors)
-      ];
-
-      if (activeProcessors.length > 0) {
-          maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
-          // Take delay from the first active processor found
-          masterDelay = activeProcessors[0].getDelay(0) || 10;
-      } else {
-          // No GIFs? Just one frame (static export)
-          maxFrames = 1;
-      }
-      
-      // Limit frames to prevent massive exports (e.g., 300 frames)
-      if (maxFrames > 300) {
-          console.warn(`Clamping GIF frames from ${maxFrames} to 300`);
-          maxFrames = 300;
-      }
-
-      console.log(`Exporting ${maxFrames} frames...`);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = exportWidth;
-      canvas.height = exportHeight;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-      // 6. Render Loop
-      for (let i = 0; i < maxFrames; i++) {
-        // Yield for UI responsiveness
-        if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
-
-        // A. Clear & Background
-        ctx.fillStyle = paddingTop > 0 ? '#ffffff' : '#000000';
-        ctx.fillRect(0, 0, exportWidth, exportHeight);
-
-        // B. Draw Panels
-        for (const panel of meme.panels) {
-            if (!panel.url) continue;
-
-            const px = (panel.x / 100) * exportWidth;
-            const py = (panel.y / 100) * contentHeight + contentOffsetY;
-            const pw = (panel.w / 100) * exportWidth;
-            const ph = (panel.h / 100) * contentHeight;
-
-            let sourceCanvas = null;
-            let srcW = 0, srcH = 0;
-
-            if (gifProcessors[panel.id]) {
-                const proc = gifProcessors[panel.id];
-                // Loop the frame index: i % numFrames
-                const frameIdx = i % proc.numFrames;
-                const result = proc.renderFrame(frameIdx);
-                sourceCanvas = result.canvas;
-                srcW = proc.width;
-                srcH = proc.height;
-            } else if (staticImages[panel.id]) {
-                sourceCanvas = staticImages[panel.id];
-                srcW = sourceCanvas.width;
-                srcH = sourceCanvas.height;
+            // Try to get aspect from first panel if possible, or use layout defaults
+            if (meme.layout === 'single') {
+                // We need the dimensions of the first image to set the aspect
+                // We can't know it until we load it. Let's assume square or 4:3 default if unknown.
+                // But wait, we can get it from the loaded assets.
+                // Let's defer size calculation until assets are loaded.
+            } else if (meme.layout === 'top-bottom') {
+                containerAspect = 3 / 4;
+            } else if (meme.layout === 'side-by-side') {
+                containerAspect = 4 / 3;
             }
 
-            if (sourceCanvas) {
-                // Draw with ObjectFit (Cover/Contain)
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(px, py, pw, ph);
-                ctx.clip();
+            // 2. Load Assets (GIFs and Images)
+            const gifProcessors = {}; // Map<panelId, processor>
+            const staticImages = {};  // Map<panelId, Image>
+            const stickerProcessors = {}; // Map<stickerId, processor>
+            const stickerImages = {}; // Map<stickerId, Image>
 
-                // Apply Standard CSS Filters via context filter
-                const f = panel.filters || {};
-                const filterStr = `
+            console.log("Loading assets for export...");
+
+            // Load Panels
+            await Promise.all(meme.panels.map(async (panel) => {
+                if (!panel.url) return;
+
+                let processor = null;
+                // Explicitly check for GIF extension OR isVideo flag
+                if (panel.isVideo || panel.url.includes('.gif')) {
+                    processor = await createGifProcessor(panel.url);
+                    if (processor) {
+                        gifProcessors[panel.id] = processor;
+                    } else {
+                        console.warn("Failed to create GIF processor for:", panel.url, "Falling back to static image.");
+                    }
+                }
+
+                // Always load as static image too, as fallback or for non-GIFs
+                if (!processor) {
+                    await new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+                        img.onload = () => { staticImages[panel.id] = img; resolve(); };
+                        img.onerror = () => { console.warn("Failed to load image:", panel.url); resolve(); };
+                        img.src = panel.url;
+                    });
+                }
+            }));
+
+            // Load Stickers
+            await Promise.all((stickers || []).filter(s => s.type === 'image').map(async (s) => {
+                let processor = null;
+                // Most tenor stickers are gifs
+                if (s.isAnimated || s.url.includes('.gif')) {
+                    processor = await createGifProcessor(s.url);
+                    if (processor) {
+                        stickerProcessors[s.id] = processor;
+                    }
+                }
+
+                if (!processor) {
+                    await new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+                        img.onload = () => { stickerImages[s.id] = img; resolve(); };
+                        img.onerror = () => resolve();
+                        img.src = s.url;
+                    });
+                }
+            }));
+
+            // 3. Finalize Output Dimensions
+            let exportWidth = 800; // Default base resolution
+            let exportHeight = 800;
+
+            // If single panel, match its native resolution if possible (for best quality)
+            if (meme.layout === 'single' && meme.panels[0].url) {
+                const pid = meme.panels[0].id;
+                if (gifProcessors[pid]) {
+                    exportWidth = gifProcessors[pid].width;
+                    exportHeight = gifProcessors[pid].height;
+                } else if (staticImages[pid]) {
+                    exportWidth = staticImages[pid].width;
+                    exportHeight = staticImages[pid].height;
+                }
+                containerAspect = exportWidth / exportHeight;
+            } else {
+                // For multi-panel, stick to 800 width and calculate height based on aspect
+                exportHeight = Math.round(exportWidth / containerAspect);
+            }
+
+            // Padding adjustment
+            const paddingTop = meme.paddingTop || 0;
+            const contentOffsetY = paddingTop > 0 ? Math.round(exportWidth * (paddingTop / 100)) : 0;
+            const contentHeight = exportHeight; // Keep image height as intended
+            exportHeight = contentHeight + contentOffsetY; // Final total height
+
+
+            // 4. Initialize Encoder with ROBUST Worker Loading
+            const base = import.meta.env.BASE_URL || '/';
+            const workerPath = `${base}gif.worker.js`.replace(/\/+/g, '/');
+
+            let workerBlobUrl = null;
+            try {
+                const response = await fetch(workerPath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const workerScriptText = await response.text();
+                const blob = new Blob([workerScriptText], { type: 'application/javascript' });
+                workerBlobUrl = URL.createObjectURL(blob);
+            } catch (err) {
+                console.error("Worker load failed:", err);
+                // Fallback to path
+                workerBlobUrl = workerPath;
+            }
+
+            const gif = new GIF({
+                workers: 4,
+                quality: 10,
+                width: exportWidth,
+                height: exportHeight,
+                workerScript: workerBlobUrl,
+                repeat: 0 // Loop forever
+                // NOTE: Do NOT set background or transparent - we want fully opaque frames
+                // to prevent black artifacts on macOS Preview and other viewers
+            });
+
+            // 5. Determine Loop Length
+            // Find the max frame count among all GIF panels and GIF stickers
+            let maxFrames = 1;
+            let masterDelay = 10; // Default 10fps (100ms)
+
+            const activeProcessors = [
+                ...Object.values(gifProcessors),
+                ...Object.values(stickerProcessors)
+            ];
+
+            if (activeProcessors.length > 0) {
+                maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
+                // Take delay from the first active processor found
+                masterDelay = activeProcessors[0].getDelay(0) || 10;
+            } else {
+                // No GIFs? Just one frame (static export)
+                maxFrames = 1;
+            }
+
+            // Limit frames to prevent massive exports (e.g., 300 frames)
+            if (maxFrames > 300) {
+                console.warn(`Clamping GIF frames from ${maxFrames} to 300`);
+                maxFrames = 300;
+            }
+
+            console.log(`Exporting ${maxFrames} frames...`);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = exportWidth;
+            canvas.height = exportHeight;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+            // 6. Render Loop
+            for (let i = 0; i < maxFrames; i++) {
+                // Yield for UI responsiveness
+                if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
+
+                // A. Clear & Background - CRITICAL: Use solid opaque fill to prevent
+                // alpha channel issues that cause black frames on macOS Preview
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.clearRect(0, 0, exportWidth, exportHeight);
+                ctx.fillStyle = paddingTop > 0 ? '#ffffff' : '#000000';
+                ctx.fillRect(0, 0, exportWidth, exportHeight);
+
+                // B. Draw Panels
+                for (const panel of meme.panels) {
+                    if (!panel.url) continue;
+
+                    const px = (panel.x / 100) * exportWidth;
+                    const py = (panel.y / 100) * contentHeight + contentOffsetY;
+                    const pw = (panel.w / 100) * exportWidth;
+                    const ph = (panel.h / 100) * contentHeight;
+
+                    let sourceCanvas = null;
+                    let srcW = 0, srcH = 0;
+
+                    if (gifProcessors[panel.id]) {
+                        const proc = gifProcessors[panel.id];
+                        // Loop the frame index: i % numFrames
+                        const frameIdx = i % proc.numFrames;
+                        const result = proc.renderFrame(frameIdx);
+                        sourceCanvas = result.canvas;
+                        srcW = proc.width;
+                        srcH = proc.height;
+                    } else if (staticImages[panel.id]) {
+                        sourceCanvas = staticImages[panel.id];
+                        srcW = sourceCanvas.width;
+                        srcH = sourceCanvas.height;
+                    }
+
+                    if (sourceCanvas) {
+                        // Draw with ObjectFit (Cover/Contain)
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(px, py, pw, ph);
+                        ctx.clip();
+
+                        // Apply Standard CSS Filters via context filter
+                        const f = panel.filters || {};
+                        const filterStr = `
                     contrast(${f.contrast ?? 100}%)
                     brightness(${f.brightness ?? 100}%)
                     blur(${f.blur ?? 0}px)
@@ -323,122 +327,122 @@ export async function exportGif(meme, texts, stickers) {
                     saturate(${f.saturate ?? 100}%)
                     invert(${f.invert ?? 0}%)
                 `.replace(/\s+/g, ' ').trim();
-                
-                if (filterStr !== 'none') ctx.filter = filterStr;
 
-                // Object Fit Logic
-                const ratioW = pw / srcW;
-                const ratioH = ph / srcH;
-                const ratio = panel.objectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
+                        if (filterStr !== 'none') ctx.filter = filterStr;
 
-                const newW = srcW * ratio;
-                const newH = srcH * ratio;
-                const offX = px + (pw - newW) / 2; // Center
-                const offY = py + (ph - newH) / 2;
+                        // Object Fit Logic
+                        const ratioW = pw / srcW;
+                        const ratioH = ph / srcH;
+                        const ratio = panel.objectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
 
-                ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
-                
-                // Deep Fry (Per Panel)
-                if ((f.deepFry || 0) > 0) {
-                    applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
+                        const newW = srcW * ratio;
+                        const newH = srcH * ratio;
+                        const offX = px + (pw - newW) / 2; // Center
+                        const offY = py + (ph - newH) / 2;
+
+                        ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
+
+                        // Deep Fry (Per Panel)
+                        if ((f.deepFry || 0) > 0) {
+                            applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
+                        }
+
+                        ctx.restore();
+                    }
                 }
 
-                ctx.restore();
+                // C. Draw Drawings
+                if (meme.drawings && meme.drawings.length > 0) {
+                    ctx.save();
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+
+                    meme.drawings.forEach(d => {
+                        if (!d.points || d.points.length < 2) return;
+                        ctx.beginPath();
+                        ctx.strokeStyle = d.color;
+                        ctx.lineWidth = d.width * (exportWidth / 800);
+                        ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
+
+                        ctx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
+                        for (let j = 1; j < d.points.length; j++) {
+                            ctx.lineTo(d.points[j].x * exportWidth, d.points[j].y * exportHeight);
+                        }
+                        ctx.stroke();
+                    });
+                    ctx.restore();
+                }
+
+                // D. Draw Stickers
+                for (const sticker of (stickers || [])) {
+                    const x = (sticker.x / 100) * exportWidth;
+                    const y = (sticker.y / 100) * exportHeight;
+                    const size = (meme.stickerSize || 60) * (exportWidth / 800);
+
+                    if (sticker.type === 'image') {
+                        let drawCanvas = null;
+                        let sw = 0, sh = 0;
+
+                        if (stickerProcessors[sticker.id]) {
+                            const proc = stickerProcessors[sticker.id];
+                            const frameIdx = i % proc.numFrames;
+                            const result = proc.renderFrame(frameIdx);
+                            drawCanvas = result.canvas;
+                            sw = proc.width;
+                            sh = proc.height;
+                        } else if (stickerImages[sticker.id]) {
+                            drawCanvas = stickerImages[sticker.id];
+                            sw = drawCanvas.width;
+                            sh = drawCanvas.height;
+                        }
+
+                        if (drawCanvas) {
+                            const aspect = sh / sw;
+                            const drawWidth = size;
+                            const drawHeight = size * aspect;
+                            ctx.drawImage(drawCanvas, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+                        }
+                    } else {
+                        ctx.font = `${size}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(sticker.url, x, y);
+                    }
+                }
+
+                // E. Draw Text
+                drawText(ctx, texts, meme, exportWidth, exportHeight, 0);
+
+                // F. Add Frame
+                // masterDelay is in centiseconds (e.g. 10 = 100ms)
+                // GIF.js takes milliseconds
+                gif.addFrame(canvas, { delay: masterDelay * 10, copy: true });
             }
-        }
 
-        // C. Draw Drawings
-        if (meme.drawings && meme.drawings.length > 0) {
-            ctx.save();
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            meme.drawings.forEach(d => {
-                if (!d.points || d.points.length < 2) return;
-                ctx.beginPath();
-                ctx.strokeStyle = d.color;
-                ctx.lineWidth = d.width * (exportWidth / 800);
-                ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
-                
-                ctx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
-                for (let j = 1; j < d.points.length; j++) {
-                    ctx.lineTo(d.points[j].x * exportWidth, d.points[j].y * exportHeight);
-                }
-                ctx.stroke();
+            // FIX: Add a timeout to detect hangs (e.g. worker 404)
+            const timeoutId = setTimeout(() => {
+                try { gif.abort(); } catch (e) { }
+                if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
+                reject(new Error("Encoding timed out. Worker likely failed to start."));
+            }, 60000); // 60 second timeout
+
+            gif.on('finished', (blob) => {
+                clearTimeout(timeoutId);
+                if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
+                resolve(blob);
             });
-            ctx.restore();
+
+            gif.on('progress', (p) => {
+                // You could pass this up to a callback if needed, but for now we'll just log
+                console.log(`Encoding progress: ${Math.round(p * 100)}%`);
+            });
+
+            gif.render();
+
+        } catch (e) {
+            reject(e);
         }
-
-        // D. Draw Stickers
-        for (const sticker of (stickers || [])) {
-          const x = (sticker.x / 100) * exportWidth;
-          const y = (sticker.y / 100) * exportHeight;
-          const size = (meme.stickerSize || 60) * (exportWidth / 800);
-
-          if (sticker.type === 'image') {
-              let drawCanvas = null;
-              let sw = 0, sh = 0;
-
-              if (stickerProcessors[sticker.id]) {
-                  const proc = stickerProcessors[sticker.id];
-                  const frameIdx = i % proc.numFrames;
-                  const result = proc.renderFrame(frameIdx);
-                  drawCanvas = result.canvas;
-                  sw = proc.width;
-                  sh = proc.height;
-              } else if (stickerImages[sticker.id]) {
-                  drawCanvas = stickerImages[sticker.id];
-                  sw = drawCanvas.width;
-                  sh = drawCanvas.height;
-              }
-
-              if (drawCanvas) {
-                  const aspect = sh / sw;
-                  const drawWidth = size;
-                  const drawHeight = size * aspect;
-                  ctx.drawImage(drawCanvas, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
-              }
-          } else {
-              ctx.font = `${size}px sans-serif`;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText(sticker.url, x, y);
-          }
-        }
-
-        // E. Draw Text
-        drawText(ctx, texts, meme, exportWidth, exportHeight, 0);
-
-        // F. Add Frame
-        // masterDelay is in centiseconds (e.g. 10 = 100ms)
-        // GIF.js takes milliseconds
-        gif.addFrame(canvas, { delay: masterDelay * 10, copy: true });
-      }
-
-      // FIX: Add a timeout to detect hangs (e.g. worker 404)
-      const timeoutId = setTimeout(() => {
-          try { gif.abort(); } catch(e) {}
-          if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
-          reject(new Error("Encoding timed out. Worker likely failed to start."));
-      }, 60000); // 60 second timeout
-
-      gif.on('finished', (blob) => {
-          clearTimeout(timeoutId);
-          if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
-          resolve(blob);
-      });
-      
-      gif.on('progress', (p) => {
-          // You could pass this up to a callback if needed, but for now we'll just log
-          console.log(`Encoding progress: ${Math.round(p * 100)}%`);
-      });
-
-      gif.render();
-
-    } catch (e) {
-      reject(e);
-    }
-  });
+    });
 }
 
 // --- Helpers ---
@@ -452,7 +456,7 @@ function applyDeepFry(ctx, x, y, w, h, level) {
     const imageData = ctx.getImageData(x, y, w, h);
     const data = imageData.data;
 
-    const contrastFactor = 1 + (level / 20); 
+    const contrastFactor = 1 + (level / 20);
     const noiseAmount = level * 1.5;
     const satBoost = 1 + (level / 50);
 
@@ -463,7 +467,7 @@ function applyDeepFry(ctx, x, y, w, h, level) {
 
         const noise = (Math.random() - 0.5) * noiseAmount;
         r += noise;
-        g += noise + (level * 0.2); 
+        g += noise + (level * 0.2);
         b += noise;
 
         r = (r - 128) * contrastFactor + 128;
@@ -476,89 +480,89 @@ function applyDeepFry(ctx, x, y, w, h, level) {
         b = gray + (b - gray) * satBoost;
 
         data[p] = r < 0 ? 0 : r > 255 ? 255 : r;
-        data[p+1] = g < 0 ? 0 : g > 255 ? 255 : g;
-        data[p+2] = b < 0 ? 0 : b > 255 ? 255 : b;
+        data[p + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+        data[p + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
     }
     ctx.putImageData(imageData, x, y);
 }
 
 function drawText(ctx, texts, meme, width, height, offsetY) {
     for (const textItem of texts) {
-          if (!textItem.content.trim()) continue;
+        if (!textItem.content.trim()) continue;
 
-          const x = (textItem.x / 100) * width;
-          const y = (textItem.y / 100) * height + offsetY;
-          const fontSize = meme.fontSize || 40;
-          const stroke = Math.max(1, fontSize / 25);
-          const rotation = (textItem.rotation || 0) * (Math.PI / 180);
-          const maxWidth = ((meme.maxWidth || 80) / 100) * width;
-          const lineHeight = fontSize * 1.2;
+        const x = (textItem.x / 100) * width;
+        const y = (textItem.y / 100) * height + offsetY;
+        const fontSize = meme.fontSize || 40;
+        const stroke = Math.max(1, fontSize / 25);
+        const rotation = (textItem.rotation || 0) * (Math.PI / 180);
+        const maxWidth = ((meme.maxWidth || 80) / 100) * width;
+        const lineHeight = fontSize * 1.2;
 
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(rotation);
-          
-          ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          
-          const lines = [];
-          const rawLines = textItem.content.toUpperCase().split('\n');
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
 
-          for (const rawLine of rawLines) {
-              const words = rawLine.split(' ');
-              let currentLine = words[0];
+        ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-              for (let i = 1; i < words.length; i++) {
-                  const word = words[i];
-                  const w = ctx.measureText(currentLine + " " + word).width;
-                  if (w < maxWidth) {
-                      currentLine += " " + word;
-                  } else {
-                      lines.push(currentLine);
-                      currentLine = word;
-                  }
-              }
-              lines.push(currentLine);
-          }
+        const lines = [];
+        const rawLines = textItem.content.toUpperCase().split('\n');
 
-          const totalHeight = lines.length * lineHeight;
-          const startY = -(totalHeight / 2) + (lineHeight / 2);
+        for (const rawLine of rawLines) {
+            const words = rawLine.split(' ');
+            let currentLine = words[0];
 
-          if (meme.textBgColor && meme.textBgColor !== 'transparent') {
-             let maxLineWidth = 0;
-             lines.forEach(line => {
-                 const w = ctx.measureText(line).width;
-                 if (w > maxLineWidth) maxLineWidth = w;
-             });
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                const w = ctx.measureText(currentLine + " " + word).width;
+                if (w < maxWidth) {
+                    currentLine += " " + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            lines.push(currentLine);
+        }
 
-             const bgWidth = maxLineWidth + (fontSize * 1.0);
-             const bgHeight = totalHeight + (fontSize * 0.5);
-             
-             ctx.fillStyle = meme.textBgColor;
-             const radius = fontSize * 0.15;
-             const bx = -bgWidth / 2;
-             const by = -(totalHeight / 2) - (fontSize * 0.25); 
-             
-             ctx.beginPath();
-             ctx.roundRect(bx, by, bgWidth, bgHeight, radius);
-             ctx.fill();
-          }
+        const totalHeight = lines.length * lineHeight;
+        const startY = -(totalHeight / 2) + (lineHeight / 2);
 
-          ctx.shadowColor = 'rgba(0,0,0,0.8)';
-          ctx.shadowBlur = 4;
-          ctx.shadowOffsetY = 2;
-          ctx.lineWidth = stroke * 2;
-          ctx.lineJoin = 'round';
-          ctx.strokeStyle = meme.textShadow || '#000000';
-          ctx.fillStyle = meme.textColor || '#ffffff';
+        if (meme.textBgColor && meme.textBgColor !== 'transparent') {
+            let maxLineWidth = 0;
+            lines.forEach(line => {
+                const w = ctx.measureText(line).width;
+                if (w > maxLineWidth) maxLineWidth = w;
+            });
 
-          lines.forEach((line, index) => {
-              const lineY = startY + (index * lineHeight);
-              ctx.strokeText(line, 0, lineY);
-              ctx.fillText(line, 0, lineY);
-          });
-          
-          ctx.restore();
+            const bgWidth = maxLineWidth + (fontSize * 1.0);
+            const bgHeight = totalHeight + (fontSize * 0.5);
+
+            ctx.fillStyle = meme.textBgColor;
+            const radius = fontSize * 0.15;
+            const bx = -bgWidth / 2;
+            const by = -(totalHeight / 2) - (fontSize * 0.25);
+
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bgWidth, bgHeight, radius);
+            ctx.fill();
+        }
+
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.lineWidth = stroke * 2;
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = meme.textShadow || '#000000';
+        ctx.fillStyle = meme.textColor || '#ffffff';
+
+        lines.forEach((line, index) => {
+            const lineY = startY + (index * lineHeight);
+            ctx.strokeText(line, 0, lineY);
+            ctx.fillText(line, 0, lineY);
+        });
+
+        ctx.restore();
     }
 }

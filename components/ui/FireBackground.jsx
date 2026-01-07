@@ -1,12 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
  * Fire background using SVG turbulence effect.
  * Three fire elements for full coverage across the button.
  * Based on user-provided code that uses path animation + group transform
  * to create the illusion of fire moving through turbulence.
+ * 
+ * NOTE: Uses visibility change detection to restart animations when
+ * user returns from a backgrounded tab (browsers pause SVG animations).
  */
 const FireBackground = () => {
+    // Key to force remount and restart animations
+    const [animationKey, setAnimationKey] = useState(0);
+
+    // Restart animations when user returns to the tab
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Force remount by changing key - this restarts all SVG animations
+                setAnimationKey(k => k + 1);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
     const FireSVG = ({ seed, id }) => (
         <svg
             viewBox="0 0 200 200"
@@ -65,7 +83,7 @@ const FireBackground = () => {
     );
 
     return (
-        <div className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl">
+        <div key={animationKey} className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl">
             {/* Base layer - 3 main flames spread across */}
             <div className="absolute inset-0 flex">
                 <div className="w-1/3 h-full">

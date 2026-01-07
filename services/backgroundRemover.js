@@ -13,15 +13,26 @@ export async function removeImageBackground(imageSource, onProgress) {
       debug: true,
     };
 
+    // Timeout for very slow devices (60 seconds)
+    const timeoutId = setTimeout(() => {
+      worker.terminate();
+      reject(new Error("Background removal timed out. Device may be too slow."));
+    }, 60000);
+
     worker.onmessage = (event) => {
-      const { type, blob, progress, error } = event.data;
+      const { type, blob, progress, error, usedFallback } = event.data;
 
       if (type === 'progress') {
         if (onProgress) onProgress(progress);
       } else if (type === 'result') {
+        clearTimeout(timeoutId);
         worker.terminate();
+        if (usedFallback) {
+          console.info("Background removal completed using CPU fallback");
+        }
         resolve(blob);
       } else if (type === 'error') {
+        clearTimeout(timeoutId);
         worker.terminate();
         console.error("Worker Background Removal Failed:", error);
         reject(new Error(error));
@@ -29,6 +40,7 @@ export async function removeImageBackground(imageSource, onProgress) {
     };
 
     worker.onerror = (err) => {
+      clearTimeout(timeoutId);
       worker.terminate();
       console.error("Worker Error:", err);
       reject(err);

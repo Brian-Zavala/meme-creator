@@ -97,7 +97,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
               className={`flex-1 flex items-center justify-between bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-xl px-4 py-3 transition-all active:scale-95 group focus:outline-none focus:ring-2 focus:ring-yellow-500 ${isOpen ? 'ring-2 ring-brand border-transparent' : ''}`}
             >
               <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-lg bg-brand/10 text-brand group-hover:bg-brand/20 transition-colors" aria-hidden="true">
+                <div className="p-1.5 rounded-lg transition-colors" aria-hidden="true">
                   <img src="/images/stickers/sticker.png" alt="" className="w-5 h-5 object-contain" />
                 </div>
                 <span className="text-slate-300 font-medium">Add a sticker...</span>

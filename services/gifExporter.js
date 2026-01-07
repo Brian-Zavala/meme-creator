@@ -257,13 +257,14 @@ export async function exportGif(meme, texts, stickers) {
                 maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
                 // Take delay from the first active processor found
                 masterDelay = activeProcessors[0].getDelay(0) || 10;
-            } else if (hasAnimatedText(texts)) {
-                // Static image with animated text: create synthetic animation
+            } else if (hasAnimatedText(texts) || (stickers && stickers.length > 0)) {
+                // Static image with animated text OR stickers: create synthetic animation
+                // This ensures stickers render correctly (most Tenor stickers are animated GIFs)
                 maxFrames = ANIMATED_TEXT_FRAMES;
                 masterDelay = ANIMATED_TEXT_DELAY;
-                console.log('Animated text detected on static image, creating GIF with', maxFrames, 'frames');
+                console.log('Animation needed on static image (text animation or stickers), creating GIF with', maxFrames, 'frames');
             } else {
-                // No GIFs and no animated text? Just one frame (static export)
+                // No GIFs, no animated text, and no stickers? Just one frame (static export)
                 maxFrames = 1;
             }
 
@@ -497,12 +498,14 @@ function applyDeepFry(ctx, x, y, w, h, level) {
 }
 
 function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, totalFrames = 1) {
+    const scale = width / 800;
+
     for (const textItem of texts) {
         if (!textItem.content.trim()) continue;
 
         const baseX = (textItem.x / 100) * width;
         const baseY = (textItem.y / 100) * height + offsetY;
-        const fontSize = meme.fontSize || 40;
+        const fontSize = (meme.fontSize || 40) * scale;
         const stroke = Math.max(1, fontSize / 25);
         const baseRotation = (textItem.rotation || 0) * (Math.PI / 180);
         const maxWidth = ((meme.maxWidth || 80) / 100) * width;
@@ -519,8 +522,8 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
             const anim = getAnimationById(textItem.animation);
             if (anim && anim.getTransform) {
                 const transform = anim.getTransform(frameIndex, totalFrames, 0, 1);
-                animX += transform.offsetX || 0;
-                animY += transform.offsetY || 0;
+                animX += (transform.offsetX || 0) * scale;
+                animY += (transform.offsetY || 0) * scale;
                 animRotation += (transform.rotation || 0) * (Math.PI / 180);
                 animScale = transform.scale || 1;
                 animOpacity = transform.opacity ?? 1;
@@ -536,6 +539,15 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+
+        // Letter spacing implementation (Canvas doesn't support it natively in all contexts yet)
+        if (ctx.letterSpacing !== undefined) {
+            ctx.letterSpacing = `${(meme.letterSpacing || 0) * scale}px`;
+        } else {
+            // Fallback or ignore for now (complex manual drawing required for reliable cross-browser letter-spacing)
+            // Canvas letterSpacing is supported in recent Chrome/Firefox/Safari
+            ctx.canvas.style.letterSpacing = `${(meme.letterSpacing || 0) * scale}px`;
+        }
 
         const lines = [];
         const rawLines = textItem.content.toUpperCase().split('\n');
@@ -581,8 +593,8 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         }
 
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetY = 2;
+        ctx.shadowBlur = 4 * scale;
+        ctx.shadowOffsetY = 2 * scale;
         ctx.lineWidth = stroke * 2;
         ctx.lineJoin = 'round';
         ctx.strokeStyle = meme.textShadow || '#000000';

@@ -1029,6 +1029,16 @@ export default function Main() {
     }));
   }
 
+  function handleStickerAnimationChange(animationId) {
+    updateState((prev) => ({
+      ...prev,
+      stickers: prev.stickers.map((s) => ({
+        ...s,
+        animation: animationId === 'none' ? null : animationId
+      })),
+    }));
+  }
+
   function resetFilters() {
     startTransition(() => {
       updateState((prev) => {
@@ -1206,7 +1216,7 @@ export default function Main() {
   function addSticker(urlOrEmoji, type = "emoji", isAnimated = false) {
     updateState((prev) => ({
       ...prev,
-      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: urlOrEmoji, type, x: 50, y: 50, isAnimated }],
+      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: urlOrEmoji, type, x: 50, y: 50, isAnimated, animation: null }],
     }));
   }
 
@@ -1662,6 +1672,7 @@ export default function Main() {
             onClearDrawings={handleClearDrawings}
             onDrawerExpand={handleToolbarExpand}
             onAnimationChange={handleAnimationChange}
+            onStickerAnimationChange={handleStickerAnimationChange}
           />
           <button
             onClick={() => {

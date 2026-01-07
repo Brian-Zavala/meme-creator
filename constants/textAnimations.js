@@ -134,6 +134,104 @@ export const TEXT_ANIMATIONS = [
             };
         },
     },
+    {
+        id: 'tada',
+        name: 'Tada',
+        icon: '🎉',
+        // Scale up and wiggle
+        getTransform: (frameIndex, totalFrames) => {
+            const t = (frameIndex / totalFrames) * Math.PI * 2; // 0 to 2PI
+            // Wiggle: fast sine wave
+            const wiggle = Math.sin(t * 3) * (Math.sin(t) > 0 ? 10 : 0); // Wiggle mostly during "up" phase
+            // Scale: pulse up once
+            const scale = 1 + (Math.sin(t) > 0 ? Math.sin(t) * 0.2 : 0);
+            return {
+                offsetX: 0,
+                offsetY: 0,
+                rotation: wiggle,
+                scale: scale,
+                opacity: 1,
+            };
+        },
+    },
+    {
+        id: 'wobble',
+        name: 'Wobble',
+        icon: '🥴',
+        // Swaying back and forth combined with rotation
+        getTransform: (frameIndex, totalFrames) => {
+            const t = (frameIndex / totalFrames) * Math.PI * 2;
+            const x = Math.sin(t) * 10;
+            const rot = Math.sin(t) * 5;
+            return {
+                offsetX: x,
+                offsetY: 0,
+                rotation: rot,
+                scale: 1,
+                opacity: 1,
+            };
+        },
+    },
+    {
+        id: 'heartbeat',
+        name: 'Heartbeat',
+        icon: '💓',
+        // Iconic double-pulse
+        getTransform: (frameIndex, totalFrames) => {
+            const t = (frameIndex / totalFrames); // 0 to 1
+            // Heartbeat mathematical approximation
+            // Two rapid pulses per cycle
+            let scale = 1;
+            if (t < 0.15) scale = 1 + Math.sin(t * (Math.PI / 0.15)) * 0.15;
+            else if (t > 0.2 && t < 0.45) scale = 1 + Math.sin((t - 0.2) * (Math.PI / 0.25)) * 0.2;
+
+            return {
+                offsetX: 0,
+                offsetY: 0,
+                rotation: 0,
+                scale: scale,
+                opacity: 1,
+            };
+        },
+    },
+    {
+        id: 'flip',
+        name: 'Flip',
+        icon: '🤸',
+        // 3D Flip simulated with 2D scaleX
+        getTransform: (frameIndex, totalFrames) => {
+            const t = (frameIndex / totalFrames) * Math.PI * 2;
+            const scaleX = Math.cos(t);
+            return {
+                offsetX: 0,
+                offsetY: 0,
+                rotation: 0,
+                scaleX: scaleX,
+                scaleY: 1,
+                opacity: 1,
+            };
+        },
+    },
+    {
+        id: 'jelly',
+        name: 'Jelly',
+        icon: '🍮',
+        // Squash and stretch bounce
+        getTransform: (frameIndex, totalFrames) => {
+            const t = (frameIndex / totalFrames) * Math.PI * 2;
+            // When going up, stretch Y (scale > 1). When hitting bottom, squash (scale < 1).
+            // Since we only have uniform scale, we can't do true conservation of volume (scaleX * scaleY = 1).
+            // We'll simulate a "Zooming" jelly effect.
+            const scale = 1 + Math.sin(t * 2) * 0.1 + Math.cos(t) * 0.05;
+            return {
+                offsetX: 0,
+                offsetY: Math.sin(t) * 5,
+                rotation: Math.cos(t) * 5,
+                scale: scale,
+                opacity: 1
+            };
+        }
+    }
 ];
 
 /**

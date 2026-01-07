@@ -41,13 +41,17 @@ const FONTS = [
   { name: "Pacifico", label: "Script" },
 ];
 
-export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange }) {
+export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange }) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
-  const [showTextStyling, setShowTextStyling] = useState(false); // Collapsed by default on all screens
+  const [showSliders, setShowSliders] = useState(false); // Collapsed by default on mobile
+  const [showTextStyling, setShowTextStyling] = useState(true); // Default open for better discovery
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
   const hasAnimatedText = meme.texts.some(t => t.animation && t.animation !== 'none');
+  const hasAnimatedSticker = meme.stickers.some(s => s.animation && s.animation !== 'none');
+
+  // Auto-expand on desktop
 
   const handleTabChange = (tab) => {
     startTransition(() => {
@@ -238,8 +242,63 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </div>
                 )}
 
+                {/* Sticker Animation Selector */}
+                {hasStickers && (
+                  <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300 slide-in-from-top-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${hasAnimatedSticker ? 'text-blue-400' : 'text-slate-500'}`}>
+                        Sticker Animation {hasAnimatedSticker && <span className="text-amber-400">• GIF Export</span>}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                      {TEXT_ANIMATIONS.map((anim) => {
+                        // Check if ANY sticker has this animation
+                        const isActive = meme.stickers.some(s => s.animation === anim.id);
+                        return (
+                          <button
+                            key={anim.id}
+                            onClick={() => {
+                              if (navigator.vibrate) navigator.vibrate(10);
+                              if (onStickerAnimationChange) onStickerAnimationChange(anim.id);
+                            }}
+                            className={`snap-center shrink-0 px-3 py-2 rounded-lg border text-sm transition-all active:scale-95 flex items-center gap-2 ${isActive
+                              ? "bg-blue-500/20 text-blue-400 border-blue-500 font-bold shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+                              : anim.id === 'none'
+                                ? "bg-slate-900 text-slate-500 border-slate-700 hover:border-slate-500 hover:text-white"
+                                : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                              }`}
+                          >
+                            <span className="text-base">{anim.icon}</span>
+                            <span className="text-xs uppercase font-bold tracking-wide">{anim.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sticker Size Slider - Moved here */}
+                {hasStickers && (
+                  <div className="w-full flex items-center gap-4 animate-in slide-in-from-top-1 fade-in duration-300">
+                    <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <input
+                      type="range" min="5" max="250" name="stickerSize"
+                      value={meme.stickerSize || 60}
+                      onChange={(e) => {
+                        if (navigator.vibrate) navigator.vibrate(5);
+                        handleStyleChange(e);
+                      }}
+                      onMouseUp={handleStyleCommit}
+                      onTouchEnd={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer rounded-full opacity-90 h-2"
+                      style={getSliderStyle(meme.stickerSize || 60, 5, 250)}
+                      title="Sticker Size"
+                    />
+                  </div>
+                )}
+
                 {/* Divider */}
-                {hasText && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
+                {hasText && !hasStickers && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
 
                 {/* Collapsible Text Styling Section */}
                 {(hasText || hasStickers) && (
@@ -301,25 +360,6 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                     />
                                   </div>
                                 </div>
-                              </div>
-                            )}
-
-                            {hasStickers && (
-                              <div className="flex items-center gap-4 w-full animate-in slide-in-from-top-1 fade-in duration-300">
-                                <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                                <input
-                                  type="range" min="5" max="250" name="stickerSize"
-                                  value={meme.stickerSize || 60}
-                                  onChange={(e) => {
-                                    if (navigator.vibrate) navigator.vibrate(5);
-                                    handleStyleChange(e);
-                                  }}
-                                  onMouseUp={handleStyleCommit}
-                                  onTouchEnd={handleStyleCommit}
-                                  className="range-slider w-full cursor-pointer rounded-full opacity-90 h-2"
-                                  style={getSliderStyle(meme.stickerSize || 60, 5, 250)}
-                                  title="Sticker Size"
-                                />
                               </div>
                             )}
                           </div>

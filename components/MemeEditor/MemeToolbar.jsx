@@ -157,9 +157,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
               <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
 
                 {/* Group -1: Layout (Caption Bars) */}
-                <div className="w-full flex flex-wrap justify-center items-center gap-3 sm:gap-4 px-3 sm:px-4 min-w-0 animate-in fade-in duration-300">
+                <div className="w-full flex flex-nowrap justify-center items-center gap-4 sm:gap-5 md:gap-6 px-2 sm:px-4 min-w-0 animate-in fade-in duration-300">
                   {/* Top Bar Color Picker */}
-                  <div className="color-picker-ring w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:mr-2">
+                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
                     <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                       <input
                         type="color"
@@ -189,13 +189,17 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         }
                       }, 50);
                     }}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider ${meme.paddingTop > 0
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 ${meme.paddingTop > 0
                       ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20"
                       : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                       }`}
-                    style={{ fontSize: 'clamp(0.6rem, 2.5vw, 0.75rem)' }}
+                    style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                   >
-                    <PanelTop className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                    {/* Custom SVG with filled top bar */}
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <rect x="3" y="3" width="18" height="6" rx="2" fill="currentColor" />
+                    </svg>
                     <span className="hidden sm:inline whitespace-nowrap">Top Bar {meme.paddingTop > 0 ? "On" : "Off"}</span>
                   </button>
 
@@ -216,18 +220,22 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         }
                       }, 50);
                     }}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider ${(meme.paddingBottom || 0) > 0
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 ${(meme.paddingBottom || 0) > 0
                       ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20"
                       : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                       }`}
-                    style={{ fontSize: 'clamp(0.6rem, 2.5vw, 0.75rem)' }}
+                    style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                   >
-                    <PanelBottom className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                    {/* Custom SVG with filled bottom bar */}
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <rect x="3" y="15" width="18" height="6" rx="2" fill="currentColor" />
+                    </svg>
                     <span className="hidden sm:inline whitespace-nowrap">Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
                   </button>
 
                   {/* Bottom Bar Color Picker */}
-                  <div className="color-picker-ring w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full shrink-0 sm:ml-2">
+                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
                     <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                       <input
                         type="color"

@@ -151,13 +151,15 @@ export async function exportGif(meme, texts, stickers) {
 
                 // Always load as static image too, as fallback or for non-GIFs
                 if (!processor) {
-                    await new Promise((resolve) => {
+                    try {
                         const img = new Image();
                         img.crossOrigin = "anonymous";
-                        img.onload = () => { staticImages[panel.id] = img; resolve(); };
-                        img.onerror = () => { console.warn("Failed to load image:", panel.url); resolve(); };
                         img.src = panel.url;
-                    });
+                        await img.decode(); // Wait for full decoding
+                        staticImages[panel.id] = img;
+                    } catch (err) {
+                        console.warn("Failed to load/decode image:", panel.url, err);
+                    }
                 }
             }));
 
@@ -173,13 +175,15 @@ export async function exportGif(meme, texts, stickers) {
                 }
 
                 if (!processor) {
-                    await new Promise((resolve) => {
+                    try {
                         const img = new Image();
                         img.crossOrigin = "anonymous";
-                        img.onload = () => { stickerImages[s.id] = img; resolve(); };
-                        img.onerror = () => resolve();
                         img.src = s.url;
-                    });
+                        await img.decode();
+                        stickerImages[s.id] = img;
+                    } catch (err) {
+                        console.warn("Failed to load sticker:", s.url, err);
+                    }
                 }
             }));
 
@@ -272,8 +276,8 @@ export async function exportGif(meme, texts, stickers) {
 
             // 6. Render Loop
             for (let i = 0; i < maxFrames; i++) {
-                // Yield for UI responsiveness
-                if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
+                // Yield for UI responsiveness AND give Safari time to breathe
+                await new Promise(r => setTimeout(r, 10)); // Increased delay for stability
 
                 // A. Clear & Background - CRITICAL: Use solid opaque fill to prevent
                 // alpha channel issues that cause black frames on macOS Preview

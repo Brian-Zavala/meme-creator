@@ -2,13 +2,15 @@
 export async function removeImageBackground(imageSource, onProgress) {
   return new Promise((resolve, reject) => {
     // Instantiate the worker using Vite's worker import syntax
+    // V2.0.1 - Force worker hash change to bust cache on mobile devices
     const worker = new Worker(new URL('./background.worker.js', import.meta.url), {
       type: 'module',
     });
 
     const config = {
       // Points to: public/models/
-      publicPath: window.location.origin + '/models/',
+      // Append a version query param to force fresh model fetch on devices with stale cache
+      publicPath: window.location.origin + '/models/?v=2.0.1/',
       model: 'isnet_fp16',
       debug: true,
     };
@@ -16,8 +18,9 @@ export async function removeImageBackground(imageSource, onProgress) {
     // Timeout for very slow devices (60 seconds)
     const timeoutId = setTimeout(() => {
       worker.terminate();
-      reject(new Error("Background removal timed out. Device may be too slow."));
+      reject(new Error("Background removal timed out. Device may be too slow or offline."));
     }, 60000);
+
 
     worker.onmessage = (event) => {
       const { type, blob, progress, error, usedFallback } = event.data;

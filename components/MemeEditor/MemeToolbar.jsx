@@ -19,6 +19,8 @@ import {
   Eraser,
   Trash2,
   Flame,
+  ChevronDown,
+  Settings2,
 } from "lucide-react";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 
@@ -42,9 +44,22 @@ const FONTS = [
 export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange }) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
+  const [showSliders, setShowSliders] = useState(false); // Collapsed by default on mobile
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
   const hasAnimatedText = meme.texts.some(t => t.animation && t.animation !== 'none');
+
+  // Auto-expand on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setShowSliders(true);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleTabChange = (tab) => {
     startTransition(() => {
@@ -238,132 +253,154 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 {/* Divider */}
                 {hasText && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
 
-                {/* Group 1: Size Controls */}
-                <div className={`flex-1 w-full flex ${hasStickers ? 'flex-col gap-4' : 'items-center gap-4'}`}>
-                  {hasText && (
-                    <div className="flex flex-col w-full gap-2 animate-in fade-in duration-300">
-                      <div className="flex items-center justify-between w-full relative">
-                        {meme.fontSize != 30 && (
-                          <button
-                            onClick={() => {
-                              if (navigator.vibrate) navigator.vibrate(10);
-                              handleStyleChange({ currentTarget: { name: 'fontSize', value: 30 } }, true);
-                            }}
-                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
-                          >
-                            Reset
-                          </button>
-                        )}
-                        <div className="flex items-center gap-4 w-full">
-                          <Type className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                          <input
-                            type="range" min="2" max="120" name="fontSize"
-                            value={meme.fontSize}
-                            onChange={(e) => {
-                              if (navigator.vibrate) navigator.vibrate(5);
-                              handleStyleChange(e);
-                            }}
-                            onMouseUp={handleStyleCommit}
-                            onTouchEnd={handleStyleCommit}
-                            className="range-slider w-full cursor-pointer rounded-full h-2"
-                            style={getSliderStyle(meme.fontSize, 2, 120)}
-                            title="Font Size"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {hasStickers && (
-                    <div className="flex items-center gap-4 w-full animate-in slide-in-from-top-1 fade-in duration-300">
-                      <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="5" max="250" name="stickerSize"
-                        value={meme.stickerSize || 60}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleStyleChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit}
-                        onTouchEnd={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer rounded-full opacity-90 h-2"
-                        style={getSliderStyle(meme.stickerSize || 60, 5, 250)}
-                        title="Sticker Size"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Divider */}
-                {(hasText || hasStickers) && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
-
-                {/* Group 2: Width Control */}
-                {hasText && (
+                {/* Collapsible Text Styling Section - Mobile First */}
+                {(hasText || hasStickers) && (
                   <>
-                    <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
-                      <div className="flex items-center justify-between w-full relative">
-                        {meme.maxWidth != 100 && (
-                          <button
-                            onClick={() => {
-                              if (navigator.vibrate) navigator.vibrate(10);
-                              handleStyleChange({ currentTarget: { name: 'maxWidth', value: 100 } }, true);
-                            }}
-                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
-                          >
-                            Reset
-                          </button>
-                        )}
-                        <div className="flex items-center gap-4 w-full">
-                          <MoveHorizontal className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                          <input
-                            type="range" min="20" max="100" name="maxWidth"
-                            value={meme.maxWidth}
-                            onChange={(e) => {
-                              if (navigator.vibrate) navigator.vibrate(5);
-                              handleStyleChange(e);
-                            }}
-                            onMouseUp={handleStyleCommit}
-                            onTouchEnd={handleStyleCommit}
-                            className="range-slider w-full cursor-pointer rounded-full h-2"
-                            style={getSliderStyle(meme.maxWidth, 20, 100)}
-                            title="Text Width (Wrap)"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    {/* Toggle Button - Only visible on mobile/tablet */}
+                    <button
+                      onClick={() => {
+                        if (navigator.vibrate) navigator.vibrate(10);
+                        startTransition(() => setShowSliders(!showSliders));
+                      }}
+                      className="lg:hidden flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-[0.98]"
+                    >
+                      <Settings2 className="w-4 h-4" />
+                      <span className="text-xs font-bold uppercase tracking-wider">
+                        {showSliders ? 'Hide' : 'Show'} Text Styling
+                      </span>
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showSliders ? 'rotate-180' : ''}`} />
+                    </button>
 
-                    {/* Divider */}
-                    <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+                    {/* Collapsible Container */}
+                    <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${showSliders ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] lg:grid-rows-[1fr]'}`}>
+                      <div className="overflow-hidden">
+                        <div className={`flex flex-col gap-6 transition-opacity duration-300 ${showSliders ? 'opacity-100 pt-2' : 'opacity-0 lg:opacity-100 lg:pt-2'}`}>
 
-                    {/* Group 2.5: Letter Spacing */}
-                    <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
-                      <div className="flex items-center justify-between w-full relative">
-                        {meme.letterSpacing !== 0 && (
-                          <button
-                            onClick={() => {
-                              if (navigator.vibrate) navigator.vibrate(10);
-                              handleStyleChange({ currentTarget: { name: 'letterSpacing', value: 0 } }, true);
-                            }}
-                            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
-                          >
-                            Reset
-                          </button>
-                        )}
-                        <div className="flex items-center gap-4 w-full">
-                          <ArrowLeftRight className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                          <input
-                            type="range" min="-5" max="50" step="1" name="letterSpacing"
-                            value={meme.letterSpacing || 0}
-                            onChange={(e) => {
-                              if (navigator.vibrate) navigator.vibrate(5);
-                              handleStyleChange(e);
-                            }}
-                            onMouseUp={handleStyleCommit}
-                            onTouchEnd={handleStyleCommit}
-                            className="range-slider w-full cursor-pointer rounded-full h-2"
-                            style={getSliderStyle(meme.letterSpacing || 0, -5, 50)}
-                            title="Letter Spacing"
-                          />
+                          {/* Font Size Slider */}
+                          {hasText && (
+                            <div className="flex flex-col w-full gap-2 animate-in fade-in duration-300">
+                              <div className="flex items-center justify-between w-full relative">
+                                {meme.fontSize != 30 && (
+                                  <button
+                                    onClick={() => {
+                                      if (navigator.vibrate) navigator.vibrate(10);
+                                      handleStyleChange({ currentTarget: { name: 'fontSize', value: 30 } }, true);
+                                    }}
+                                    className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
+                                <div className="flex items-center gap-4 w-full">
+                                  <Type className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                                  <input
+                                    type="range" min="2" max="120" name="fontSize"
+                                    value={meme.fontSize}
+                                    onChange={(e) => {
+                                      if (navigator.vibrate) navigator.vibrate(5);
+                                      handleStyleChange(e);
+                                    }}
+                                    onMouseUp={handleStyleCommit}
+                                    onTouchEnd={handleStyleCommit}
+                                    className="range-slider w-full cursor-pointer rounded-full h-2"
+                                    style={getSliderStyle(meme.fontSize, 2, 120)}
+                                    title="Font Size"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Sticker Size Slider */}
+                          {hasStickers && (
+                            <div className="flex items-center gap-4 w-full animate-in slide-in-from-top-1 fade-in duration-300">
+                              <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                              <input
+                                type="range" min="5" max="250" name="stickerSize"
+                                value={meme.stickerSize || 60}
+                                onChange={(e) => {
+                                  if (navigator.vibrate) navigator.vibrate(5);
+                                  handleStyleChange(e);
+                                }}
+                                onMouseUp={handleStyleCommit}
+                                onTouchEnd={handleStyleCommit}
+                                className="range-slider w-full cursor-pointer rounded-full opacity-90 h-2"
+                                style={getSliderStyle(meme.stickerSize || 60, 5, 250)}
+                                title="Sticker Size"
+                              />
+                            </div>
+                          )}
+
+                          {/* Text Width Slider */}
+                          {hasText && (
+                            <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
+                              <div className="flex items-center justify-between w-full relative">
+                                {meme.maxWidth != 100 && (
+                                  <button
+                                    onClick={() => {
+                                      if (navigator.vibrate) navigator.vibrate(10);
+                                      handleStyleChange({ currentTarget: { name: 'maxWidth', value: 100 } }, true);
+                                    }}
+                                    className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
+                                <div className="flex items-center gap-4 w-full">
+                                  <MoveHorizontal className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                                  <input
+                                    type="range" min="20" max="100" name="maxWidth"
+                                    value={meme.maxWidth}
+                                    onChange={(e) => {
+                                      if (navigator.vibrate) navigator.vibrate(5);
+                                      handleStyleChange(e);
+                                    }}
+                                    onMouseUp={handleStyleCommit}
+                                    onTouchEnd={handleStyleCommit}
+                                    className="range-slider w-full cursor-pointer rounded-full h-2"
+                                    style={getSliderStyle(meme.maxWidth, 20, 100)}
+                                    title="Text Width (Wrap)"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Letter Spacing Slider */}
+                          {hasText && (
+                            <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
+                              <div className="flex items-center justify-between w-full relative">
+                                {meme.letterSpacing !== 0 && (
+                                  <button
+                                    onClick={() => {
+                                      if (navigator.vibrate) navigator.vibrate(10);
+                                      handleStyleChange({ currentTarget: { name: 'letterSpacing', value: 0 } }, true);
+                                    }}
+                                    className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
+                                <div className="flex items-center gap-4 w-full">
+                                  <ArrowLeftRight className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                                  <input
+                                    type="range" min="-5" max="50" step="1" name="letterSpacing"
+                                    value={meme.letterSpacing || 0}
+                                    onChange={(e) => {
+                                      if (navigator.vibrate) navigator.vibrate(5);
+                                      handleStyleChange(e);
+                                    }}
+                                    onMouseUp={handleStyleCommit}
+                                    onTouchEnd={handleStyleCommit}
+                                    className="range-slider w-full cursor-pointer rounded-full h-2"
+                                    style={getSliderStyle(meme.letterSpacing || 0, -5, 50)}
+                                    title="Letter Spacing"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                         </div>
                       </div>
                     </div>

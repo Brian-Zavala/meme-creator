@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo } from "react";
 import html2canvas from "html2canvas-pro";
-import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp } from "lucide-react";
+import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
@@ -1451,7 +1451,6 @@ export default function Main() {
         <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
           <MemeActions
             onFileUpload={handleFileUpload}
-            onReset={handleReset}
             onDownload={handleDownload}
             onShare={handleShare}
           />
@@ -1722,6 +1721,13 @@ export default function Main() {
             <HelpCircle className="w-5 h-5" />
           </button>
         </div>
+
+        <button
+          onClick={handleReset}
+          className="w-full bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-red-900/50"
+        >
+          <Eraser className="w-4 h-4" /> <span>Remove Everything</span>
+        </button>
       </div>
     </main>
   );

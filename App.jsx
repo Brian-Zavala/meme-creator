@@ -14,7 +14,7 @@ export default function App() {
     const preloadImages = ["/images/canvas/marker-pen_32.png", "/images/canvas/eraser_32.png"];
 
     preloadImages.forEach((src) => {
-      const img = new Image();
+      const img = new Image()
       img.src = src;
     });
 

@@ -331,28 +331,40 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
  */
 function calculateDimensions(meme, assets) {
     let containerAspect = 1;
-    let exportWidth = 800;
+    let exportWidth = 800; // Default base resolution
     let exportHeight = 800;
     const { gifProcessors, staticImages } = assets;
 
-    if (meme.layout === 'single' && meme.panels[0].url) {
-        const pid = meme.panels[0].id;
-        if (gifProcessors[pid]) {
-            exportWidth = gifProcessors[pid].width;
-            exportHeight = gifProcessors[pid].height;
-        } else if (staticImages[pid]) {
-            exportWidth = staticImages[pid].width;
-            exportHeight = staticImages[pid].height;
-        }
-        containerAspect = exportWidth / exportHeight;
-    } else if (meme.layout === 'top-bottom') {
-        containerAspect = 3 / 4;
-    } else if (meme.layout === 'side-by-side') {
-        containerAspect = 4 / 3;
-    }
+    // Check if we actually have any valid panels
+    const hasValidPanel = meme.panels && meme.panels.length > 0 && meme.panels[0].url;
 
-    if (meme.layout !== 'single') {
-        exportHeight = Math.round(exportWidth / containerAspect);
+    if (hasValidPanel) {
+        if (meme.layout === 'single') {
+            const pid = meme.panels[0].id;
+            if (gifProcessors[pid]) {
+                exportWidth = gifProcessors[pid].width;
+                exportHeight = gifProcessors[pid].height;
+            } else if (staticImages[pid]) {
+                exportWidth = staticImages[pid].width;
+                exportHeight = staticImages[pid].height;
+            }
+            // If asset load failed but url exists, we might default to 800x800 or generic
+            containerAspect = exportWidth / exportHeight;
+        } else if (meme.layout === 'top-bottom') {
+            containerAspect = 3 / 4;
+        } else if (meme.layout === 'side-by-side') {
+            containerAspect = 4 / 3;
+        }
+
+        if (meme.layout !== 'single') {
+            exportHeight = Math.round(exportWidth / containerAspect);
+        }
+    } else {
+        // No panels (Empty Canvas / Sticker Only mode)
+        console.log("No valid panels found, defaulting to 800x800 square canvas");
+        exportWidth = 800;
+        exportHeight = 800;
+        containerAspect = 1;
     }
 
     const paddingTop = meme.paddingTop || 0;

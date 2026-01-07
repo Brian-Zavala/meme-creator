@@ -1443,7 +1443,7 @@ export default function Main() {
         return "Export failed";
       },
     });
-  }, [meme.name]);
+  }, [meme, searchQuery]);
 
   async function handleDownload() {
     if (!memeRef.current) return;

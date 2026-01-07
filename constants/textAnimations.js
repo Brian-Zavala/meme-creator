@@ -14,7 +14,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'wave',
         name: 'Wave',
-        icon: '/images/stickers/icons/wave.png',
+        icon: '/images/stickers/wave.png',
         // Oscillating sine wave - each character offset slightly
         getTransform: (frameIndex, totalFrames, charIndex = 0) => {
             const progress = (frameIndex / totalFrames) * Math.PI * 2;
@@ -31,7 +31,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'bounce',
         name: 'Bounce',
-        icon: '/images/stickers/icons/bounce.png',
+        icon: '/images/stickers/bounce.svg',
         // Bouncing with physics-like easing
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) % 1;
@@ -49,7 +49,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'shake',
         name: 'Shake',
-        icon: '/images/stickers/icons/shake.png',
+        icon: '/images/stickers/shake.png',
         // Random tremor effect - chaotic and intense
         getTransform: (frameIndex) => {
             // Use frame index as seed for pseudo-random but deterministic shake
@@ -69,7 +69,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'glitch',
         name: 'Glitch',
-        icon: '/images/stickers/icons/glitch.png',
+        icon: '/images/stickers/glitch.png',
         // Horizontal jitter with occasional large shifts
         getTransform: (frameIndex, totalFrames) => {
             const t = frameIndex / totalFrames;
@@ -88,7 +88,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'pulse',
         name: 'Pulse',
-        icon: '/images/stickers/icons/pulse.png',
+        icon: '/images/stickers/pulse.svg',
         // Scale pulsing effect
         getTransform: (frameIndex, totalFrames) => {
             const progress = (frameIndex / totalFrames) * Math.PI * 2;
@@ -105,7 +105,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'float',
         name: 'Float',
-        icon: '/images/stickers/icons/float.png',
+        icon: '/images/stickers/float.png',
         // Gentle floating up and down
         getTransform: (frameIndex, totalFrames) => {
             const progress = (frameIndex / totalFrames) * Math.PI * 2;
@@ -121,7 +121,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'spin',
         name: 'Spin',
-        icon: '🔄',
+        icon: '/images/stickers/spin.png',
         // Full 360° rotation over the loop
         getTransform: (frameIndex, totalFrames) => {
             const progress = frameIndex / totalFrames;
@@ -137,7 +137,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'tada',
         name: 'Tada',
-        icon: '/images/stickers/icons/tada.png',
+        icon: '/images/stickers/tada.png',
         // Scale up and wiggle
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2; // 0 to 2PI
@@ -157,7 +157,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'wobble',
         name: 'Wobble',
-        icon: '/images/stickers/icons/wobble.png',
+        icon: '/images/stickers/wobble.png',
         // Swaying back and forth combined with rotation
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;
@@ -175,7 +175,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'heartbeat',
         name: 'Heartbeat',
-        icon: '💓',
+        icon: '/images/stickers/heartbeat.png',
         // Iconic double-pulse
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames); // 0 to 1
@@ -197,7 +197,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'flip',
         name: 'Flip',
-        icon: '🤸',
+        icon: '/images/stickers/flip.png',
         // 3D Flip simulated with 2D scaleX
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;
@@ -215,7 +215,7 @@ export const TEXT_ANIMATIONS = [
     {
         id: 'jelly',
         name: 'Jelly',
-        icon: '🍮',
+        icon: '/images/stickers/jelly.png',
         // Squash and stretch bounce
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;

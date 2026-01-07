@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
 import { searchTenor, registerShare, getAutocomplete, getCategories } from "../services/tenor";
-import { exportGif } from "../services/gifExporter";
+import { exportGif, exportStickersAsPng } from "../services/gifExporter";
 import { hasAnimatedText } from "../constants/textAnimations";
 import { deepFryImage } from "../services/imageProcessor";
 import { MEME_QUOTES } from "../constants/memeQuotes";
@@ -174,6 +174,7 @@ export default function Main() {
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [isStickerExport, setIsStickerExport] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -806,7 +807,7 @@ export default function Main() {
     if (maxTextLength > 100) maxSafeSize = 25;
     else if (maxTextLength > 50) maxSafeSize = 35;
     else if (maxTextLength > 20) maxSafeSize = 50;
-    
+
     // Ensure we don't go below readable minimum
     const minSafeSize = Math.max(20, maxSafeSize - 15);
 
@@ -1332,14 +1333,15 @@ export default function Main() {
   // --- EXPORT HELPER FUNCTIONS ---
 
   // Helper: Execute GIF export
-  const doGifExport = useCallback(async () => {
+  const doGifExport = useCallback(async (options = {}) => {
     if (!memeRef.current) return;
 
+    const { stickersOnly = false } = options;
     const isDeepFrying = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
-    const loadingMsg = isDeepFrying ? "Deep frying frames... (this takes longer) 🍟" : "Encoding GIF...";
+    const loadingMsg = stickersOnly ? "Exporting stickers..." : (isDeepFrying ? "Deep frying frames... (this takes longer) 🍟" : "Encoding GIF...");
 
     const promise = (async () => {
-      const exportMeme = { ...meme };
+      const exportMeme = { ...meme, stickersOnly };
       const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
       if (meme.id) registerShare(meme.id, searchQuery);
 
@@ -1354,7 +1356,7 @@ export default function Main() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${safeName}-${Date.now()}.gif`;
+      link.download = `${safeName}-${stickersOnly ? 'stickers' : ''}-${Date.now()}.gif`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
@@ -1376,8 +1378,38 @@ export default function Main() {
   }, [meme, searchQuery]);
 
   // Helper: Execute static PNG export
-  const doStaticExport = useCallback(async () => {
+  const doStaticExport = useCallback(async (options = {}) => {
     if (!memeRef.current) return;
+
+    const { stickersOnly = false, forceStatic = false } = options;
+
+    // Special Case: Static Sticker Export via PNG (Transparent)
+    if (stickersOnly) {
+      const promise = (async () => {
+        // Use our new direct PNG exporter!
+        const blob = await exportStickersAsPng(meme, meme.stickers);
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `stickers-${Date.now()}.png`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
+        triggerFireworks();
+      })();
+
+      toast.promise(promise, {
+        loading: "Exporting sticker...",
+        success: "Downloaded!",
+        error: "Export failed"
+      });
+      return;
+    }
 
     const promise = (async () => {
       const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
@@ -1438,6 +1470,22 @@ export default function Main() {
     doStaticExport();
   }
 
+  async function handleExportStickers() {
+    if (!memeRef.current) return;
+    setIsStickerExport(true);
+
+    const hasAnimatedSticker = meme.stickers.some(s => s.animation && s.animation !== 'none');
+    const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
+
+    // If we have animated content, ask the user what to do
+    if (hasAnimatedSticker || hasGifSticker) {
+      setShowExportModal(true);
+    } else {
+      // Static stickers only -> Auto-export as static
+      doStaticExport({ stickersOnly: true, forceStatic: true });
+    }
+  }
+
   async function handleShare() {
     if (!memeRef.current) return;
 
@@ -1486,9 +1534,10 @@ export default function Main() {
       {/* Export Confirmation Modal */}
       <ExportConfirmModal
         isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        onExportGif={doGifExport}
-        onExportStatic={doStaticExport}
+        onClose={() => { setShowExportModal(false); setIsStickerExport(false); }}
+        onExportGif={() => doGifExport({ stickersOnly: isStickerExport })}
+        onExportStatic={() => doStaticExport({ stickersOnly: isStickerExport, forceStatic: isStickerExport })}
+        isStickerOnly={isStickerExport}
       />
 
       <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
@@ -1499,6 +1548,8 @@ export default function Main() {
           onMagicCaption={generateMagicCaption}
           isMagicGenerating={isMagicGenerating}
           onChaos={handleChaos}
+          hasStickers={meme.stickers.length > 0}
+          onExportStickers={handleExportStickers}
         />
         <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
           <MemeActions

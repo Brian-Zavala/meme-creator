@@ -5,7 +5,7 @@ import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
  * Modal to confirm export format when static image has animated content
  * Lets user choose between GIF (keep animations) or PNG (static export)
  */
-export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStatic }) {
+export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStatic, isStickerOnly }) {
     useLockBodyScroll(isOpen);
 
     if (!isOpen) return null;
@@ -26,14 +26,17 @@ export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStati
                 <div className="bg-brand px-6 py-5 text-center">
                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-md flex items-center justify-center gap-2">
                         <Sparkles className="w-5 h-5" />
-                        ANIMATED CONTENT DETECTED
+                        {isStickerOnly ? "ANIMATED STICKERS DETECTED" : "ANIMATED CONTENT DETECTED"}
                     </h2>
                 </div>
 
                 <div className="p-6 space-y-5">
                     <p className="text-slate-300 text-sm text-center leading-relaxed">
-                        Your meme has <span className="text-white font-semibold">animated stickers or text</span>.
-                        How would you like to export it?
+                        {isStickerOnly
+                            ? "Some stickers are animated GIFs."
+                            : <span>Your meme has <span className="text-white font-semibold">animated stickers or text</span>.</span>
+                        }
+                        <br />How would you like to export?
                     </p>
 
                     <div className="grid grid-cols-1 gap-3">

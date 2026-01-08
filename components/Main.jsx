@@ -921,7 +921,7 @@ export default function Main() {
     if (remixClickCountRef.current.vibe === 1 || remixClickCountRef.current.vibe % 5 === 0) {
       toast(`${randomVibe.charAt(0).toUpperCase() + randomVibe.slice(1)} vibe applied!`, {
         icon: (
-          <ToastIcon src="/animations/vibe-check-toast/animations/b5a0a0ca-14cd-11ed-8c34-12dbed2149cd.json" />
+          <ToastIcon src="/animations/performing-arts.json" />
         )
       });
     }

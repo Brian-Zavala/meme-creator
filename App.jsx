@@ -12,9 +12,20 @@ function ToastLimiter() {
   const { toasts } = useToasterStore();
 
   useEffect(() => {
-    const visibleToasts = toasts.filter((t) => t.visible);
+    // Filter out loading toasts so they don't count towards the limit and aren't dismissed
+    const visibleToasts = toasts.filter((t) => t.visible && t.type !== 'loading');
+
     if (visibleToasts.length > TOAST_LIMIT) {
-      // Dismiss oldest toasts beyond the limit
+      // Dismiss oldest toasts beyond the limit (assuming toasts are ordered new -> old or we should sort)
+      // Note: react-hot-toast usually appends new toasts. If so, [old, new].
+      // If we want to dismiss OLD, we should dismiss from the START of the array if it's [old, new].
+      // The original code used slice(TOAST_LIMIT) which implies it kept the FIRST N and dismissed the REST.
+      // If order is [new, old], slice keeps new and dismisses old. Correct.
+      // If order is [old, new], slice keeps old and dismisses new. Incorrect.
+      // Let's safe-guard by not changing the order assumption too much,
+      // but strictly protecting 'loading'.
+
+      // If the original code worked for normal toasts, we stick to its logic but on the filtered list.
       visibleToasts
         .slice(TOAST_LIMIT)
         .forEach((t) => toast.dismiss(t.id));

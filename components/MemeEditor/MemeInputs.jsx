@@ -20,7 +20,12 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
   const showStickerHelp = (e) => {
     e.stopPropagation();
     toast("Tip: Double-tap or Long-press a sticker to remove it!", {
-      icon: "💡",
+      icon: (
+        <picture>
+          <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/512.webp" type="image/webp" />
+          <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/512.gif" alt="💡" width="32" height="32" />
+        </picture>
+      ),
       style: { borderRadius: '10px', background: '#333', color: '#fff' },
       duration: 3000
     });

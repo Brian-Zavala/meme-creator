@@ -488,8 +488,17 @@ export async function exportGif(meme, texts, stickers) {
                 const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
                 exportWidth = Math.round(exportWidth * scale);
                 exportHeight = Math.round(exportHeight * scale);
+
                 // Update dimensions object for renderMemeFrame
-                dimensions = { ...dimensions, exportWidth, exportHeight };
+                // IMPORTANT: We must also scale contentHeight and offsets to prevent aspect ratio mismatch (zoomed in effect)
+                dimensions = {
+                    ...dimensions,
+                    exportWidth,
+                    exportHeight,
+                    contentHeight: Math.round(dimensions.contentHeight * scale),
+                    contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
+                    contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
+                };
                 console.log(`Scaled GIF dimensions to ${exportWidth}x${exportHeight} for file size optimization`);
             }
 

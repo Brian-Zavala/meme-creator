@@ -251,7 +251,7 @@ export function hasAnimatedText(texts) {
 /**
  * Default frame count for animated text on static images
  */
-export const ANIMATED_TEXT_FRAMES = 10;
+export const ANIMATED_TEXT_FRAMES = 30;
 
 /**
  * Default delay for animated text frames (in centiseconds for GIF)

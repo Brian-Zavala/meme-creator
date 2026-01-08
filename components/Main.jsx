@@ -1405,7 +1405,9 @@ export default function Main() {
     const isDeepFrying = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
     const loadingMsg = stickersOnly ? "Exporting stickers..." : (isDeepFrying ? "Deep frying frames... (this takes longer) 🍟" : "Encoding GIF...");
 
-    const promise = (async () => {
+    const toastId = toast.loading(loadingMsg);
+
+    try {
       const exportMeme = { ...meme, stickersOnly };
       const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
       if (meme.id) registerShare(meme.id, searchQuery);
@@ -1430,16 +1432,11 @@ export default function Main() {
         URL.revokeObjectURL(url);
       }, 100);
       triggerFireworks();
-    })();
-
-    toast.promise(promise, {
-      loading: loadingMsg,
-      success: "Downloaded!",
-      error: (err) => {
-        console.error("GIF Export Error:", err);
-        return "Export failed";
-      },
-    });
+      toast.success("Downloaded!", { id: toastId });
+    } catch (err) {
+      console.error("GIF Export Error:", err);
+      toast.error("Export failed", { id: toastId });
+    }
   }, [meme, searchQuery]);
 
   // Helper: Execute static PNG export
@@ -1450,7 +1447,8 @@ export default function Main() {
 
     // Special Case: Static Sticker Export via PNG (Transparent)
     if (stickersOnly) {
-      const promise = (async () => {
+      const toastId = toast.loading("Exporting sticker...");
+      try {
         // Use our new direct PNG exporter!
         const blob = await exportStickersAsPng(meme, meme.stickers);
 
@@ -1466,17 +1464,15 @@ export default function Main() {
           URL.revokeObjectURL(url);
         }, 100);
         triggerFireworks();
-      })();
-
-      toast.promise(promise, {
-        loading: "Exporting sticker...",
-        success: "Downloaded!",
-        error: "Export failed"
-      });
+        toast.success("Downloaded!", { id: toastId });
+      } catch (e) {
+        toast.error("Export failed", { id: toastId });
+      }
       return;
     }
 
-    const promise = (async () => {
+    const toastId = toast.loading("Generating...");
+    try {
       const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
       const finalDataUrl = canvas.toDataURL("image/png");
 
@@ -1498,16 +1494,11 @@ export default function Main() {
         document.body.removeChild(link);
       }, 100);
       triggerFireworks();
-    })();
-
-    toast.promise(promise, {
-      loading: "Generating...",
-      success: "Downloaded!",
-      error: (err) => {
-        console.error("Image Export Error:", err);
-        return "Export failed";
-      },
-    });
+      toast.success("Downloaded!", { id: toastId });
+    } catch (err) {
+      console.error("Image Export Error:", err);
+      toast.error("Export failed", { id: toastId });
+    }
   }, [meme, searchQuery]);
 
   async function handleDownload() {

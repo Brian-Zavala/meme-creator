@@ -275,7 +275,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
     }
 
     // C. Draw Drawings
-    // TODO: Verify if drawings should be included in stickersOnly. 
+    // TODO: Verify if drawings should be included in stickersOnly.
     // Assuming YES as they are "on top" layers often used with stickers.
     if (meme.drawings && meme.drawings.length > 0) {
         ctx.save();
@@ -365,7 +365,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
             ctx.font = `${size}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            // Determine text color - default black unless dark mode logic needed? 
+            // Determine text color - default black unless dark mode logic needed?
             // Stick to meme creator default (usually just renders the emoji text as is)
             ctx.fillText(sticker.url, 0, 0);
         }
@@ -478,8 +478,19 @@ export async function exportGif(meme, texts, stickers) {
             const { gifProcessors, stickerProcessors } = assets;
 
             // 2. Dimensions
-            const dimensions = calculateDimensions(meme, assets);
-            const { exportWidth, exportHeight } = dimensions;
+            let dimensions = calculateDimensions(meme, assets);
+            let { exportWidth, exportHeight } = dimensions;
+
+            // Scale down large images for reasonable GIF file sizes
+            const MAX_GIF_DIMENSION = 600;
+            if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
+                const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
+                exportWidth = Math.round(exportWidth * scale);
+                exportHeight = Math.round(exportHeight * scale);
+                // Update dimensions object for renderMemeFrame
+                dimensions = { ...dimensions, exportWidth, exportHeight };
+                console.log(`Scaled GIF dimensions to ${exportWidth}x${exportHeight} for file size optimization`);
+            }
 
             // 3. Initialize Encoder
             const base = import.meta.env.BASE_URL || '/';
@@ -499,7 +510,7 @@ export async function exportGif(meme, texts, stickers) {
 
             const gif = new GIF({
                 workers: 4,
-                quality: 10,
+                quality: 20,
                 width: exportWidth,
                 height: exportHeight,
                 workerScript: workerBlobUrl,
@@ -527,9 +538,9 @@ export async function exportGif(meme, texts, stickers) {
                 maxFrames = 1;
             }
 
-            if (maxFrames > 300) {
-                console.warn(`Clamping GIF frames from ${maxFrames} to 300`);
-                maxFrames = 300;
+            if (maxFrames > 60) {
+                console.warn(`Clamping GIF frames from ${maxFrames} to 60 for file size`);
+                maxFrames = 60;
             }
             console.log(`Exporting ${maxFrames} frames...`);
 
@@ -540,7 +551,7 @@ export async function exportGif(meme, texts, stickers) {
 
             // 5. Render Loop
             for (let i = 0; i < maxFrames; i++) {
-                await new Promise(r => setTimeout(r, 10));
+                // Render frame immediately - canvas operations are synchronous
 
                 // Use Refactored Render Function
                 renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
@@ -549,7 +560,7 @@ export async function exportGif(meme, texts, stickers) {
                 });
 
                 gif.addFrame(canvas, {
-                    delay: masterDelay * 10,
+                    delay: masterDelay * 10, // Convert centiseconds to milliseconds
                     copy: true,
                     disposal: 2 // Restore to background (transparent) to prevent ghosting
                 });

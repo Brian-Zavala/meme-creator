@@ -24,6 +24,7 @@ const ModeSelector = lazy(() =>
 );
 const ColorControls = lazy(() => import("./MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("./MemeEditor/MemeFineTune"));
+import { ToastIcon } from "./ui/ToastIcon";
 
 const DEFAULT_FILTERS = {
   contrast: 100,
@@ -760,8 +761,15 @@ export default function Main() {
 
       remixClickCountRef.current.chaos++;
       if (remixClickCountRef.current.chaos === 1 || remixClickCountRef.current.chaos % 5 === 0) {
+        const icon = (
+          <picture>
+            <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a3/512.webp" type="image/webp" />
+            <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a3/512.gif" alt="💣" width="32" height="32" />
+          </picture>
+        );
+
         toast(isExtremeChaos ? "EXTREME CHAOS!" : "CHAOS MODE ACTIVATED!", {
-          icon: isExtremeChaos ? "💥" : "🔥"
+          icon
         });
       }
     } catch (e) {
@@ -803,7 +811,11 @@ export default function Main() {
     });
     remixClickCountRef.current.caption++;
     if (remixClickCountRef.current.caption === 1 || remixClickCountRef.current.caption % 5 === 0) {
-      toast("Caption remixed!", { icon: "💬" });
+      toast("Caption remixed!", {
+        icon: (
+          <ToastIcon src="/animations/speech-bubble.json" />
+        )
+      });
     }
   }
 
@@ -842,7 +854,11 @@ export default function Main() {
     }));
     remixClickCountRef.current.style++;
     if (remixClickCountRef.current.style === 1 || remixClickCountRef.current.style % 5 === 0) {
-      toast("Style shuffled!", { icon: "🎨" });
+      toast("Style shuffled!", {
+        icon: (
+          <ToastIcon src="/animations/performing-arts.json" />
+        )
+      });
     }
   }
 
@@ -870,7 +886,11 @@ export default function Main() {
     });
     remixClickCountRef.current.filter++;
     if (remixClickCountRef.current.filter === 1 || remixClickCountRef.current.filter % 5 === 0) {
-      toast("Filters applied!", { icon: "✨" });
+      toast("Filters applied!", {
+        icon: (
+          <ToastIcon src="/animations/filter-frenzy.json" />
+        )
+      });
     }
   }
 
@@ -899,7 +919,11 @@ export default function Main() {
     });
     remixClickCountRef.current.vibe++;
     if (remixClickCountRef.current.vibe === 1 || remixClickCountRef.current.vibe % 5 === 0) {
-      toast(`${randomVibe.charAt(0).toUpperCase() + randomVibe.slice(1)} vibe applied!`, { icon: "🎭" });
+      toast(`${randomVibe.charAt(0).toUpperCase() + randomVibe.slice(1)} vibe applied!`, {
+        icon: (
+          <ToastIcon src="/animations/performing-arts.json" />
+        )
+      });
     }
   }
 
@@ -928,9 +952,20 @@ export default function Main() {
 
     remixClickCountRef.current.deepfry++;
     if (isTurningOn) {
-      toast("Extreme Deep Fry applied!", { icon: "🍗" });
+      toast("Extreme Deep Fry applied!", {
+        icon: (
+          <picture>
+            <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp" type="image/webp" />
+            <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif" alt="🔥" width="32" height="32" />
+          </picture>
+        )
+      });
     } else {
-      toast("Deep Fry removed", { icon: "🧹" });
+      toast("Deep Fry removed", {
+        icon: (
+          <ToastIcon src="/animations/broom.json" />
+        )
+      });
     }
   }
 
@@ -1063,7 +1098,11 @@ export default function Main() {
         };
       });
     });
-    toast("Filters reset", { icon: "🎨" });
+    toast("Filters reset", {
+      icon: (
+        <ToastIcon src="/animations/performing-arts.json" />
+      )
+    });
   }
 
   function handleStyleChange(event, shouldCommit = false) {
@@ -1241,7 +1280,11 @@ export default function Main() {
       ...prev,
       stickers: prev.stickers.filter((s) => s.id !== id),
     }));
-    toast.error("Sticker removed", { icon: "🗑️" });
+    toast.error("Sticker removed", {
+      icon: (
+        <ToastIcon src="/animations/waste-basket.json" />
+      )
+    });
     setStatusMessage("Sticker removed.");
   }
 
@@ -1298,8 +1341,10 @@ export default function Main() {
       });
 
       toast("Magic logic applied! ✨", {
-        icon: "🪄",
+        icon: null, // Magic doesn't have a direct JSON match in the list, using default toast icon or sparkles
         duration: 2000,
+        // Fallback to sparkles if no magic wand Lottie
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />
       });
       setStatusMessage("Magic captions generated.");
       setIsMagicGenerating(false);
@@ -1335,7 +1380,12 @@ export default function Main() {
           });
           setDraggedId(null);
           if (navigator.vibrate) navigator.vibrate(50);
-          toast("Text Selected!", { icon: "✨", duration: 1000 });
+          toast("Text Selected!", {
+            icon: (
+              <ToastIcon src="/animations/filter-frenzy.json" />
+            ),
+            duration: 1000
+          });
         }, 350);
       }
 

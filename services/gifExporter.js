@@ -316,9 +316,10 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
             const anim = getAnimationById(sticker.animation);
             if (anim && anim.getTransform) {
                 const scale = exportWidth / 800;
-                // Use totalFrames passed from exportGif (default 1)
-                // If totalFrames is 1, t is 0 (start frame)
-                const t = anim.getTransform(frameIndex, totalFrames);
+                // Use ANIMATED_TEXT_FRAMES for animation progress so it loops at original speed
+                // regardless of the GIF's frame count
+                const animFrames = ANIMATED_TEXT_FRAMES;
+                const t = anim.getTransform(frameIndex % animFrames, animFrames);
 
                 animX += (t.offsetX || 0) * scale;
                 animY += (t.offsetY || 0) * scale;
@@ -658,7 +659,9 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         if (textItem.animation && textItem.animation !== 'none') {
             const anim = getAnimationById(textItem.animation);
             if (anim && anim.getTransform) {
-                const transform = anim.getTransform(frameIndex, totalFrames, 0, 1);
+                // Use ANIMATED_TEXT_FRAMES for animation progress so it loops at original speed
+                const animFrames = ANIMATED_TEXT_FRAMES;
+                const transform = anim.getTransform(frameIndex % animFrames, animFrames, 0, 1);
                 animX += (transform.offsetX || 0) * scale;
                 animY += (transform.offsetY || 0) * scale;
                 animRotation += (transform.rotation || 0) * (Math.PI / 180);

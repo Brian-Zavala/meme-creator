@@ -361,7 +361,7 @@ export default function Main() {
       }
     };
 
-    // 6. DEBOUNCE: Wait 100ms before processing. 
+    // 6. DEBOUNCE: Wait 100ms before processing.
     const timerId = setTimeout(() => {
       processDeepFry();
     }, 100);
@@ -726,12 +726,12 @@ export default function Main() {
             : p
         );
 
-        // Random text with wilder rotation (±12°)
+        // Random text with proper tier placement (matches caption remix)
         const newTexts = randomQuote.map((line, idx) => ({
           id: crypto.randomUUID(),
           content: line,
           x: 50,
-          y: idx === 0 ? 10 : 90,
+          y: idx === 0 ? 10 : (idx === 1 ? 50 : 90),
           rotation: 0,
           animation: null,
         }));
@@ -974,7 +974,7 @@ export default function Main() {
 
   const handlePanelPosChange = (id, x, y, isTransient = false) => {
     const updater = isTransient ? updateTransient : updateState;
-    // For transient updates, we use startTransition implicitly if not provided, 
+    // For transient updates, we use startTransition implicitly if not provided,
     // but updateTransient usually handles its own scheduling or is fast enough.
     // However, Main.jsx uses startTransition for transient sometimes.
 

@@ -1,10 +1,28 @@
 import { useState, useEffect } from "react";
 import { preload } from "react-dom";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster, useToasterStore } from "react-hot-toast";
 import Header from "./components/Header";
 import Main from "./components/Main";
 import { WelcomeModal } from "./components/WelcomeModal";
 import { InstructionModal } from "./components/InstructionModal";
+
+const TOAST_LIMIT = 3;
+
+function ToastLimiter() {
+  const { toasts } = useToasterStore();
+
+  useEffect(() => {
+    const visibleToasts = toasts.filter((t) => t.visible);
+    if (visibleToasts.length > TOAST_LIMIT) {
+      // Dismiss oldest toasts beyond the limit
+      visibleToasts
+        .slice(TOAST_LIMIT)
+        .forEach((t) => toast.dismiss(t.id));
+    }
+  }, [toasts]);
+
+  return null;
+}
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
@@ -49,13 +67,22 @@ export default function App() {
       <Toaster
         position="bottom-right"
         toastOptions={{
+          duration: 2000,
           style: {
             background: "#1e293b",
             color: "#fff",
             border: "1px solid #334155",
           },
+          success: { duration: 1500 },
+          error: { duration: 2500 },
         }}
+        containerStyle={{
+          bottom: 16,
+          right: 16,
+        }}
+        gutter={8}
       />
+      <ToastLimiter />
       <Header onOpenInstructions={openInstructions} />
       <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
         <Main />
@@ -66,4 +93,3 @@ export default function App() {
     </div>
   );
 }
-

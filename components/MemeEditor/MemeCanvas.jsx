@@ -661,6 +661,39 @@ const MemeCanvas = forwardRef(({
           // Map animation IDs to CSS class names
           const animationClass = textItem.animation ? `animate-meme-${textItem.animation}` : '';
 
+          // Dynamic Positioning Logic for Action Buttons
+          // Trigger side placement if near Top, Left or Right edges
+          const isNearTop = textItem.y < 20;
+          const isNearLeft = textItem.x < 15;
+          const isNearRight = textItem.x > 85;
+          const shouldUseSidePosition = isNearTop || isNearLeft || isNearRight;
+
+          let btnContainerClasses = "absolute flex items-center z-[60] animate-in zoom-in-95 fade-in";
+          let btnContainerStyle = {
+             gap: 'clamp(12px, 4vw, 24px)',
+             pointerEvents: 'auto'
+          };
+
+          if (isSelected || isEditing) {
+            if (shouldUseSidePosition) {
+               // Side Positioning (Center Vertically)
+               btnContainerStyle.top = '50%';
+               btnContainerStyle.transform = 'translateY(-50%)';
+
+               // Decide Left vs Right side based on canvas position
+               // If on right half -> Buttons go Left
+               // If on left half -> Buttons go Right
+               if (textItem.x > 50) {
+                   btnContainerClasses += " right-full mr-4";
+               } else {
+                   btnContainerClasses += " left-full ml-4";
+               }
+            } else {
+               // Standard Top Positioning
+               btnContainerClasses += " left-1/2 -translate-x-1/2 -top-[52px] md:-top-[68px]";
+            }
+          }
+
           return (
             <h2
               key={textItem.id}
@@ -713,12 +746,8 @@ const MemeCanvas = forwardRef(({
               {(isSelected || isEditing) && (
                 <div
                   data-html2canvas-ignore="true"
-                  className="absolute left-1/2 -translate-x-1/2 flex items-center z-[60] animate-in zoom-in-95 fade-in"
-                  style={{
-                    top: '-52px',
-                    gap: 'clamp(12px, 4vw, 24px)', // Responsive gap: 12px on mobile, up to 24px on desktop
-                    pointerEvents: 'auto'
-                  }}
+                  className={btnContainerClasses}
+                  style={btnContainerStyle}
                 >
                   {/* Delete Button */}
                   <button
@@ -761,7 +790,7 @@ const MemeCanvas = forwardRef(({
                       <Settings2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
-                </div>
+              </div>
               )}
               {/* Text Content Rendering - always visible, styled h2 displays the text */}
               {textItem.animation === 'wave' ? (

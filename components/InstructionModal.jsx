@@ -16,7 +16,7 @@ export function InstructionModal({ isOpen, onClose }) {
         </div>
         <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 gap-6">
-            
+
             <section className="space-y-3">
               <h3 className="text-brand font-bold uppercase text-sm tracking-wider flex items-center gap-2">
                 <Layout className="w-4 h-4" /> Layouts & Images
@@ -35,7 +35,7 @@ export function InstructionModal({ isOpen, onClose }) {
               <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
                 <li><span className="text-white font-medium">Add text</span> using the inputs. A new line appears automatically.</li>
                 <li><span className="text-white font-medium">Animations:</span> Select text to apply animations like Wave, Pulse, or Glitch.</li>
-                <li><span className="text-white font-medium">Long Press:</span> Hold any element to select it for fine-tuning.</li>
+                <li><span className="text-white font-medium">Controls:</span> Hold text to fine-tune. Double-tap stickers to remove.</li>
               </ul>
             </section>
 

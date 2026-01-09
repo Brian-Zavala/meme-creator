@@ -786,26 +786,43 @@ const MemeCanvas = forwardRef(({
 
               {/* Invisible Overlay Input for Direct Editing - captures keystrokes */}
               {isEditing && (
-                <textarea
-                  id={`canvas-input-${textItem.id}`}
-                  data-html2canvas-ignore="true"
-                  value={textItem.content}
-                  onChange={(e) => onTextChange(textItem.id, e.target.value)}
-                  autoFocus
-                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none"
-                  style={{
-                    color: 'transparent',
-                    caretColor: 'transparent',
-                    opacity: 0,
-                    fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
-                    fontSize: `${meme.fontSize * scaleFactor}px`,
-                    letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
-                    lineHeight: 1.2,
-                    padding: hasBg ? '0.25em 0.5em' : '0',
-                    textAlign: "center",
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                />
+                <>
+                  <textarea
+                    id={`canvas-input-${textItem.id}`}
+                    data-html2canvas-ignore="true"
+                    value={textItem.content}
+                    onChange={(e) => onTextChange(textItem.id, e.target.value)}
+                    autoFocus
+                    className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none"
+                    style={{
+                      color: 'transparent',
+                      caretColor: 'transparent',
+                      opacity: 0,
+                      fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
+                      fontSize: `${meme.fontSize * scaleFactor}px`,
+                      letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
+                      lineHeight: 1.2,
+                      padding: hasBg ? '0.25em 0.5em' : '0',
+                      textAlign: "center",
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  />
+                  {/* Blinking cursor indicator when text is empty */}
+                  {!hasContent && (
+                    <div
+                      data-html2canvas-ignore="true"
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    >
+                      <div
+                        className="w-0.5 h-8 bg-brand animate-pulse rounded-full"
+                        style={{
+                          height: `${meme.fontSize * scaleFactor * 0.8}px`,
+                          boxShadow: '0 0 8px var(--color-brand)',
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </h2>
           )

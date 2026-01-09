@@ -1279,7 +1279,7 @@ export default function Main() {
 
     // Focus the newly created text input after React re-renders (no scrolling)
     setTimeout(() => {
-      const inputElement = document.getElementById(`text-input-${newTextId}`);
+      const inputElement = document.getElementById(`canvas-input-${newTextId}`);
       if (inputElement) {
         inputElement.focus({ preventScroll: true });
       }

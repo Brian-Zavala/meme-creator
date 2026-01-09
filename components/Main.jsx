@@ -174,6 +174,7 @@ export default function Main() {
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
   const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
+  const vibeThrottleRef = useRef(0); // Spam protection for vibe-check button
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
@@ -362,10 +363,10 @@ export default function Main() {
       }
     };
 
-    // 6. DEBOUNCE: Wait 100ms before processing.
+    // 6. DEBOUNCE: Wait 400ms before processing (increased from 100ms for spam protection).
     const timerId = setTimeout(() => {
       processDeepFry();
-    }, 100);
+    }, 400);
 
     // Cleanup function
     return () => {
@@ -760,18 +761,15 @@ export default function Main() {
       });
 
       remixClickCountRef.current.chaos++;
-      if (remixClickCountRef.current.chaos === 1 || remixClickCountRef.current.chaos % 5 === 0) {
-        const icon = (
-          <picture>
-            <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a3/512.webp" type="image/webp" />
-            <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a3/512.gif" alt="💣" width="32" height="32" />
-          </picture>
-        );
-
-        toast(isExtremeChaos ? "EXTREME CHAOS!" : "CHAOS MODE ACTIVATED!", {
-          icon
-        });
-      }
+      const chaosIcon = (
+        <picture>
+          <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a3/512.webp" type="image/webp" />
+          <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a3/512.gif" alt="💣" width="32" height="32" />
+        </picture>
+      );
+      toast(isExtremeChaos ? "EXTREME CHAOS!" : "CHAOS MODE ACTIVATED!", {
+        icon: chaosIcon
+      });
     } catch (e) {
       console.error("Chaos failed", e);
       toast.error("Chaos missed!");
@@ -810,13 +808,11 @@ export default function Main() {
       return { ...prev, texts: newTexts };
     });
     remixClickCountRef.current.caption++;
-    if (remixClickCountRef.current.caption === 1 || remixClickCountRef.current.caption % 5 === 0) {
-      toast("Caption remixed!", {
-        icon: (
-          <ToastIcon src="/animations/speech-bubble.json" />
-        )
-      });
-    }
+    toast("Caption remixed!", {
+      icon: (
+        <ToastIcon src="/animations/speech-bubble.json" />
+      )
+    });
   }
 
   function handleStyleShuffle() {
@@ -853,13 +849,11 @@ export default function Main() {
       fontSize: randomSize,
     }));
     remixClickCountRef.current.style++;
-    if (remixClickCountRef.current.style === 1 || remixClickCountRef.current.style % 5 === 0) {
-      toast("Style shuffled!", {
-        icon: (
-          <ToastIcon src="/animations/performing-arts.json" />
-        )
-      });
-    }
+    toast("Style shuffled!", {
+      icon: (
+        <ToastIcon src="/animations/performing-arts.json" />
+      )
+    });
   }
 
   function handleFilterFrenzy() {
@@ -885,20 +879,25 @@ export default function Main() {
       }));
     });
     remixClickCountRef.current.filter++;
-    if (remixClickCountRef.current.filter === 1 || remixClickCountRef.current.filter % 5 === 0) {
-      toast("Filters applied!", {
-        icon: (
-          <ToastIcon src="/animations/filter-frenzy.json" />
-        )
-      });
-    }
+    toast("Filters applied!", {
+      icon: (
+        <ToastIcon src="/animations/filter-frenzy.json" />
+      )
+    });
   }
 
   function handleVibeCheck() {
+    // --- SPAM PROTECTION: 600ms cooldown ---
+    const now = Date.now();
+    if (now - vibeThrottleRef.current < 600) {
+      return; // Ignore rapid clicks
+    }
+    vibeThrottleRef.current = now;
+
     const vibes = {
       retro: { sepia: 40, grayscale: 20, contrast: 110, brightness: 95, saturate: 80, hueRotate: 0, blur: 0, invert: 0, deepFry: 0 },
       neon: { saturate: 200, hueRotate: 180, brightness: 120, contrast: 120, sepia: 0, grayscale: 0, blur: 0, invert: 0, deepFry: 0 },
-      cursed: { deepFry: 40, contrast: 150, saturate: 180, brightness: 110, hueRotate: 15, sepia: 0, grayscale: 0, blur: 0, invert: 0 },
+      cursed: { contrast: 160, saturate: 200, brightness: 115, hueRotate: -20, sepia: 10, grayscale: 0, blur: 0, invert: 0, deepFry: 0 },
       noir: { grayscale: 100, contrast: 130, brightness: 90, saturate: 0, sepia: 0, hueRotate: 0, blur: 0, invert: 0, deepFry: 0 },
       dreamy: { blur: 1, brightness: 115, saturate: 120, sepia: 15, contrast: 95, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 }
     };
@@ -918,13 +917,11 @@ export default function Main() {
       }));
     });
     remixClickCountRef.current.vibe++;
-    if (remixClickCountRef.current.vibe === 1 || remixClickCountRef.current.vibe % 5 === 0) {
-      toast(`${randomVibe.charAt(0).toUpperCase() + randomVibe.slice(1)} vibe applied!`, {
-        icon: (
-          <ToastIcon src="/animations/vibe-check-toast.json" />
-        )
-      });
-    }
+    toast(`${randomVibe.charAt(0).toUpperCase() + randomVibe.slice(1)} vibe applied!`, {
+      icon: (
+        <ToastIcon src="/animations/vibe-check-toast.json" />
+      )
+    });
   }
 
   function handleExtremeDeepFry() {
@@ -1341,9 +1338,7 @@ export default function Main() {
       });
 
       toast("Magic logic applied! ✨", {
-        icon: null, // Magic doesn't have a direct JSON match in the list, using default toast icon or sparkles
         duration: 2000,
-        // Fallback to sparkles if no magic wand Lottie
         icon: <ToastIcon src="/animations/filter-frenzy.json" />
       });
       setStatusMessage("Magic captions generated.");

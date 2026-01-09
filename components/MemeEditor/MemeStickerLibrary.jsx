@@ -6,15 +6,114 @@ import { removeImageBackground } from "../../services/backgroundRemover";
 
 // Moved from MemeInputs.jsx
 const STICKER_CATEGORIES = {
-  "Reactions": ["😂", "💀", "😭", "🤡", "😎", "😡", "😱", "🤔", "🤫", "😴"],
-  "Hands": ["👍", "👎", "👌", "✌️", "🤞", "🤟", "👊", "👏", "🙌", "🙏"],
-  "Love": ["❤️", "💔", "💕", "💖", "😍", "😘", "🥰", "💌", "💘", "💝"],
-  "Animals": ["🐈", "🐕", "🐸", "🙈", "🙉", "🙊", "🐵", "🦄", "🐔", "🐧"],
-  "Objects": ["🔥", "💯", "✨", "🎉", "🍆", "🍑", "💩", "💣", "💎", "💰"]
+  "Faces": [
+    "😂", "💀", "😭", "🤡", "😎", "😡", "😱", "🤔", "🤫", "😴",
+    "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😇", "🙂", "🙃",
+    "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛",
+    "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😏", "😒", "😞", "😔",
+    "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢",
+    "😤", "😠", "🤬", "🤯", "😳", "🥵", "🥶", "😓", "🤗", "😲",
+    "🙄", "😬", "🤥", "😶", "😐", "😑", "😯", "😦", "😧", "😮",
+    "😲", "🥱", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧",
+    "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿", "👹", "👺", "👻",
+    "👽", "👾", "🤖", "💩", "😺", "😸", "😹", "😻", "😼", "😽",
+    "🙀", "😿", "😾"
+  ],
+  "Gestures": [
+    "👍", "👎", "👌", "✌️", "🤞", "🤟", "👊", "👏", "🙌", "🙏",
+    "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋",
+    "🤙", "💪", "🖕", "✍️", "🤳", "💅", "🤝", "🤲", "👐", "✊",
+    "🤛", "🤜", "🤏", "🤌", "🙅", "🙆", "💁", "🙋", "🙇", "🤦",
+    "🤷", "🙎", "🙍", "💇", "💆", "🧖", "💅", "💃", "🕺", "👯"
+  ],
+  "Love & Hearts": [
+    "❤️", "💔", "💕", "💖", "😍", "😘", "🥰", "💌", "💘", "💝",
+    "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💓", "💗",
+    "💞", "💟", "❣️", "💋", "💏", "💑", "💍", "💎", "💐", "🌹"
+  ],
+  "Animals": [
+    "🐈", "🐕", "🐸", "🙈", "🙉", "🙊", "🐵", "🦄", "🐔", "🐧",
+    "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯",
+    "🦁", "cow", "🐷", "🐽", "🐗", "🐵", "🐒", "🐴", "🐎", "🦓",
+    "🦌", "🦒", "🐘", "🦏", "🦛", "🐀", "🐁", "🐿️", "🦔", "🦇",
+    "🐓", "🐣", "🐤", "🐥", "🐦", "🦅", "🦆", "🦢", "🦉", "🦩",
+    "🦚", "🦜", "🐊", "🐢", "🦎", "🐍", "🐲", "🐉", "🦕", "🦖",
+    "🐳", "🐋", "🐬", "🐟", "🐠", "🐡", "🦈", "🐙", "🐚", "🐌",
+    "🦋", "🐛", "🐜", "🐝", "🐞", "🦗", "🕷️", "🕸️", "🦂", "🦟"
+  ],
+  "Food": [
+    "🍎", "🍌", "🍒", "🍇", "🍉", "🍓", "🍑", "🍍", "🥭", "🥑",
+    "🍆", "🥔", "🥕", "🌽", "🌶️", "🥒", "🥬", "🥦", "🍄", "🥜",
+    "🍞", "🥐", "🥖", "🥨", "🥯", "🥞", "🧇", "🧀", "🍖", "🍗",
+    "🥩", "🥓", "🍔", "🍟", "🍕", "🌭", "🥪", "🌮", "🌯", "🥙",
+    "🥚", "🍳", "🥘", "🍲", "🥣", "🥗", "🍿", "🧈", "🧂", "🥫",
+    "🍱", "🍘", "🍙", "🍚", "🍛", "🍜", "🍝", "🍠", "🍢", "🍣",
+    "🍤", "🍥", "🥮", "🍡", "🥟", "🥠", "🥡", "🦀", "🦞", "🦐",
+    "🦑", "🍦", "🍧", "🍨", "🍩", "🍪", "🎂", "🍰", "🧁", "🥧",
+    "🍫", "🍬", "🍭", "🍮", "🍯", "🍼", "🥛", "☕", "🍵", "🍶",
+    "🍾", "🍷", "🍸", "🍹", "🍺", "🍻", "🥂", "🥃", "🥤", "🧃"
+  ],
+  "Activities": [
+    "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱",
+    "🪀", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🥅", "⛳", "🪁",
+    "🏹", "🎣", "🤿", "🥊", "🥋", "🎽", "🛹", "🛼", "🛷", "⛸️",
+    "🥌", "🎿", "⛷️", "🏂", "🪂", "🏋️", "🤼", "🤸", "⛹️", "🤺",
+    "🤾", "🏌️", "🏇", "🧘", "🏄", "🏊", "🤽", "🚣", "🧗", "🚵",
+    "🚴", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖️", "🏵️", "🎗️", "🎫",
+    "🎟️", "🎪", "🤹", "🎭", "🩰", "🎨", "🎬", "🎤", "🎧", "🎼",
+    "🎹", "🥁", "🎷", "🎺", "🎸", "🪕", "🎻", "🎲", "♟️", "🎯",
+    "🎳", "🎮", "🎰", "🧩"
+  ],
+  "Travel": [
+    "🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐",
+    "🚚", "🚛", "🚜", "🏍️", "🛵", "🦽", "🦼", "🚲", "🛴", "🛹",
+    "🚨", "🚔", "🚍", "🚘", "🚖", "🚡", "🚠", "🚟", "🚃", "🚋",
+    "🚞", "🚝", "🚄", "🚅", "🚈", "🚂", "🚆", "🚇", "🚊", "🚉",
+    "✈️", "🛫", "🛬", "🛩️", "💺", "🛰️", "🚀", "🛸", "🚁", "🛶",
+    "⛵", "🚤", "🛥️", "🛳️", "⛴️", "🚢", "⚓", "🚧", "⛽", "🚏",
+    "🚦", "🚥", "🗺️", "🗿", "🗽", "🗼", "🏰", "🏯", "🏟️", "🎡",
+    "🎢", "🎠", "⛲", "⛱️", "🏖️", "🏝️", "🏜️", "🌋", "⛰️", "🏔️",
+    "🗻", "🏕️", "⛺", "🏠", "🏡", "🏘️", "🏚️", "🏗️", "🏭", "🏢",
+    "🏬", "🏣", "🏤", "🏥", "🏦", "🏨", "🏪", "🏫", "🏩", "💒",
+    "🏛️", "⛪", "🕌", "🕍", "🛕", "🕋", "⛩️", "🛤️", "🛣️"
+  ],
+  "Objects": [
+    "🔥", "💯", "✨", "🎉", "🍆", "🍑", "💩", "💣", "💎", "💰",
+    "⌚", "📱", "📲", "💻", "⌨️", "🖥️", "🖨️", "🖱️", "🖲️", "🕹️",
+    "🗜️", "💽", "💾", "💿", "📀", "📼", "📷", "📸", "📹", "🎥",
+    "📽️", "🎞️", "📞", "☎️", "📟", "📠", "📺", "📻", "🎙️", "🎚️",
+    "🎛️", "🧭", "⏱️", "⏲️", "⏰", "🕰️", "⌛", "⏳", "📡", "🔋",
+    "🔌", "💡", "🔦", "🕯️", "🪔", "🧯", "🛢️", "💸", "💵", "💴",
+    "💶", "💷", "🪙", "💳", "🧾", "🛍️", "🛒", "🧴", "🧼", "🧽",
+    "🧹", "🧺", "🧻", "🚽", "🚰", "🚿", "🛁", "🛀", "🔑", "🗝️",
+    "🚪", "🪑", "🛋️", "🛏️", "🛌", "🧸", "🪆", "🖼️", "🪞", "🪟",
+    "👑", "🎩", "👒", "🧢", "⛑️", "📿", "💄", "💍", "🌂", "☂️"
+  ],
+  "Symbols": [
+    "🛑", "🚫", "📛", "🔞", "📵", "🚭", "🚳", "🚱", "🚷", "📵",
+    "⚠️", "🚸", "⛔", "♻️", "✅", "❇️", "✳️", "❎", "🌐", "💠",
+    "Ⓜ️", "🏧", "🚾", "♿", "🅿️", "🛗", "🚹", "🚺", "🚻", "🚼",
+    "🚻", "🚮", "🎦", "📶", "🈁", "🆖", "🆗", "🆙", "🆒", "🆕",
+    "🆓", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣",
+    "8️⃣", "9️⃣", "🔟", "🔢", "#️⃣", "*️⃣", "⏏️", "▶️", "⏸️", "⏯️",
+    "⏹️", "⏺️", "⏭️", "⏮️", "⏩", "⏪", "⏫", "⏬", "◀️", "🔼",
+    "🔽", "➡️", "⬅️", "⬆️", "⬇️", "↗️", "↘️", "↙️", "↖️", "↕️",
+    "↔️", "↪️", "↩️", "⤴️", "⤵️", "🔀", "🔁", "🔂", "🔄", "🔃",
+    "🎵", "🎶", "➕", "➖", "➗", "✖️", "💲", "💱", "™️", "©️",
+    "®️", "〰️", "➰", "➿", "🔚", "🔙", "🔛", "🔝", "🔜", "✔️",
+    "☑️", "🔘", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪",
+    "🟤", "🔺", "🔻", "🔸", "🔹", "🔶", "🔷", "🔳", "🔲", "▪️",
+    "▫️", "◾", "◽", "◼️", "◻️", "🟥", "🟧", "🟨", "🟩", "🟦",
+    "🟪", "⬛", "⬜", "🟫", "🔈", "🔇", "🔉", "🔊", "🔔", "🔕",
+    "📣", "📢", "👁️‍🗨️", "💬", "💭", "🗯️", "♠️", "♣️", "♥️", "♦️",
+    "🃏", "🎴", "🀄", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖",
+    "🕗", "🕘", "🕙", "🕚", "🕛", "🕜", "🕝", "🕞", "🕟", "🕠",
+    "🕡", "🕢", "🕣", "🕤", "🕥", "🕦", "🕧"
+  ]
 };
 
 export default function MemeStickerLibrary({ onAddSticker, onClose }) {
-  const [activeTab, setActiveTab] = useState("emoji"); // 'emoji' | 'tenor'
+  const [activeTab, setActiveTab] = useState("tenor"); // 'tenor' | 'emoji'
   const [query, setQuery] = useState("");
   const [tenorStickers, setTenorStickers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -119,18 +218,18 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
       {/* Tabs */}
       <div className="p-3 border-b border-white/5 flex gap-2 shrink-0">
         <button
-          onClick={() => setActiveTab("emoji")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "emoji" ? "bg-slate-700 text-white" : "hover:bg-slate-800 text-slate-400"
-            }`}
-        >
-          <Smile className="w-4 h-4" /> Emojis
-        </button>
-        <button
           onClick={() => setActiveTab("tenor")}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "tenor" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-slate-800 text-slate-400"
             }`}
         >
           <ImageIcon className="w-4 h-4" /> Tenor
+        </button>
+        <button
+          onClick={() => setActiveTab("emoji")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "emoji" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-slate-800 text-slate-400"
+            }`}
+        >
+          <Smile className="w-4 h-4" /> Emojis
         </button>
       </div>
 
@@ -149,31 +248,6 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
             />
           </label>
         </div>
-
-        {/* EMOJI TAB */}
-        {activeTab === "emoji" && (
-          <div className="space-y-4">
-            {Object.entries(STICKER_CATEGORIES).map(([category, stickers]) => (
-              <div key={category}>
-                <div className="px-1 py-2 flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{category}</span>
-                  <span className="h-px flex-1 bg-slate-800"></span>
-                </div>
-                <div className="grid grid-cols-5 gap-1">
-                  {stickers.map(sticker => (
-                    <button
-                      key={sticker}
-                      onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
-                      className="h-10 flex items-center justify-center text-2xl hover:bg-slate-800 rounded-lg transition-all active:scale-75 hover:scale-110"
-                    >
-                      {sticker}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* TENOR TAB */}
         {activeTab === "tenor" && (
@@ -200,7 +274,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                     className="aspect-square relative bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-brand transition-all active:scale-95 group"
                   >
                     <img
-                      src={`https://wsrv.nl/?url=${encodeURIComponent(sticker.url)}&w=150&h=150&fit=contain`}
+                      src={`https://wsrv.nl/?url=${encodeURIComponent(sticker.url)}&w=150&h=150&fit=contain&n=-1`}
                       alt={sticker.name}
                       className="w-full h-full object-contain p-1 transition-transform group-hover:scale-110"
                       loading="lazy"
@@ -217,6 +291,32 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
             {!loading && tenorStickers.length === 0 && <div className="text-center text-slate-500 text-xs">No stickers found.</div>}
           </div>
         )}
+
+        {/* EMOJI TAB */}
+        {activeTab === "emoji" && (
+          <div className="space-y-4">
+            {Object.entries(STICKER_CATEGORIES).map(([category, stickers]) => (
+              <div key={category}>
+                <div className="px-1 py-2 flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{category}</span>
+                  <span className="h-px flex-1 bg-slate-800"></span>
+                </div>
+                <div className="grid grid-cols-5 gap-1">
+                  {stickers.map(sticker => (
+                    <button
+                      key={sticker}
+                      onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
+                      className="h-10 flex items-center justify-center text-2xl hover:bg-slate-800 rounded-lg transition-all active:scale-75 hover:scale-110"
+                    >
+                      {sticker}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -364,14 +364,28 @@ export default function Main() {
       }
     };
 
-    // 6. DEBOUNCE: Wait 400ms before processing (increased from 100ms for spam protection).
-    const timerId = setTimeout(() => {
-      processDeepFry();
-    }, 400);
+    // 6. DEBOUNCE: Use Scheduler API for prioritized background execution
+    let taskAbortController;
+    
+    if ('scheduler' in window) {
+      taskAbortController = new AbortController();
+      window.scheduler.postTask(() => processDeepFry(), {
+        delay: 400,
+        priority: 'background',
+        signal: taskAbortController.signal
+      }).catch(err => {
+        // Ignore abort errors
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    } else {
+      // Fallback for older browsers
+      const timerId = setTimeout(processDeepFry, 400);
+      taskAbortController = { abort: () => clearTimeout(timerId) };
+    }
 
     // Cleanup function
     return () => {
-      clearTimeout(timerId); // Cancel the timer
+      if (taskAbortController) taskAbortController.abort();
       controller.abort();    // Cancel any running process
     };
   }, [deferredDeepFry, activePanel?.url, activePanel?.id]);
@@ -489,15 +503,40 @@ export default function Main() {
   const handleSearchInput = (e) => {
     const val = e.target.value;
     setSearchQuery(val);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    
+    // Cancel previous task (supports both AbortController and TimeoutID)
+    if (searchTimeoutRef.current) {
+      if (searchTimeoutRef.current.abort) searchTimeoutRef.current.abort();
+      else clearTimeout(searchTimeoutRef.current);
+    }
+
     if (val.length >= 2) {
-      searchTimeoutRef.current = setTimeout(async () => {
-        const autoResults = await getAutocomplete(val);
-        startTransition(() => {
-          setSuggestions(autoResults);
-          setShowSuggestions(true);
-        });
-      }, 300);
+      if ('scheduler' in window) {
+        // Modern: Prioritized Task
+        const controller = new AbortController();
+        searchTimeoutRef.current = controller;
+        
+        window.scheduler.postTask(async () => {
+          const autoResults = await getAutocomplete(val);
+          startTransition(() => {
+            setSuggestions(autoResults);
+            setShowSuggestions(true);
+          });
+        }, { 
+          delay: 300, 
+          priority: 'user-visible',
+          signal: controller.signal 
+        }).catch(() => {}); // Ignore aborts
+      } else {
+        // Fallback: Legacy Timeout
+        searchTimeoutRef.current = setTimeout(async () => {
+          const autoResults = await getAutocomplete(val);
+          startTransition(() => {
+            setSuggestions(autoResults);
+            setShowSuggestions(true);
+          });
+        }, 300);
+      }
     } else {
       startTransition(() => setSuggestions([]));
     }
@@ -1732,7 +1771,7 @@ export default function Main() {
                   setShowMemeSuggestions(true);
                 }}
                 onFocus={() => setShowMemeSuggestions(true)}
-                className="w-full bg-slate-900/50 border-2 border-slate-800 text-white pl-10 pr-10 py-3 rounded-xl focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm"
+                className="w-full bg-slate-900/80 border-2 border-slate-700 text-white pl-10 pr-10 py-3 rounded-xl focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm"
               />
               {memeSearchQuery && (
                 <button

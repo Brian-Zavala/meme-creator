@@ -7,6 +7,8 @@ import MemeStickerLibrary from "./MemeStickerLibrary";
 export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  // Track which text IDs have been rendered before to prevent re-animation
+  const renderedIdsRef = useRef(new Set());
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -87,17 +89,28 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
             const isEditing = textItem.id === editingId;
             const isActive = isSelected || isEditing;
 
+            // Check if this is a new item that hasn't been rendered before
+            const isNew = !renderedIdsRef.current.has(textItem.id);
+            // Mark as rendered after first display
+            if (isNew) {
+              renderedIdsRef.current.add(textItem.id);
+            }
+
             return (
-              <div key={textItem.id} className={`relative group animate-in slide-in-from-left duration-300 ${isActive ? 'ring-2 ring-brand rounded-xl' : ''}`}>
+              <div
+                key={textItem.id}
+                className={`relative group ${isNew ? 'animate-text-entry' : ''} ${isActive ? 'ring-2 ring-brand rounded-xl' : ''}`}
+              >
                 <label htmlFor={`text-input-${textItem.id}`} className="sr-only">
                   {index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text line ${index + 1}`}
                 </label>
                 <input
                   id={`text-input-${textItem.id}`}
                   type="text"
+                  autoComplete="off"
                   placeholder={isActive && !textItem.content ? "✨ Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
                   aria-label={index === 0 ? "Top Text Input" : index === 1 ? "Bottom Text Input" : `Text Input ${index + 1}`}
-                  className={`w-full input-glass rounded-xl px-4 py-3 text-lg focus:outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-yellow-500 ${isActive ? 'bg-brand/10 placeholder:text-brand/60' : ''}`}
+                  className={`w-full bg-slate-800/50 border-2 border-slate-700/50 rounded-xl px-4 py-3 text-lg text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/50 placeholder:text-slate-400 placeholder:font-medium transition-all ${isActive ? 'bg-brand/10 border-brand/50 placeholder:text-brand/70' : ''}`}
                   onChange={(e) => handleTextChange(textItem.id, e.target.value)}
                   onFocus={() => {
                     // Always set editingId when focusing an input - this keeps drawer collapsed

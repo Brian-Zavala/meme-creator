@@ -590,7 +590,7 @@ const MemeCanvas = forwardRef(({
               key={sticker.id}
               onPointerDown={(e) => onPointerDown(e, sticker.id)}
               onDoubleClick={() => onRemoveSticker(sticker.id)}
-              className={`absolute select-none touch-none z-30 flex items-center justify-center transition-transform ${draggedId === sticker.id ? "scale-125 cursor-grabbing" : "cursor-grab"
+              className={`absolute select-none touch-none z-30 flex items-center justify-center transition-transform will-change-transform ${draggedId === sticker.id ? "scale-125 cursor-grabbing" : "cursor-grab"
                 } ${animationClass}`}
               style={{
                 left: `${sticker.x}%`,
@@ -649,7 +649,7 @@ const MemeCanvas = forwardRef(({
             <h2
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
-              className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
+              className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 will-change-transform ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
                 } ${isSelected || isEditing ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
               style={{
                 left: `${textItem.x}%`,
@@ -842,81 +842,84 @@ const MemeCanvas = forwardRef(({
             style={{
               left: `${longPressCursor.x}%`,
               top: `${longPressCursor.y}%`,
-              transform: `translate(-50%, -50%) scale(${0.8 + longPressCursor.progress * 0.4})`,
-              transition: 'transform 0.15s ease-out'
+              transform: `translate(-50%, -50%) scale(${0.85 + longPressCursor.progress * 0.25})`,
+              transition: 'transform 0.12s ease-out'
             }}
           >
-            {/* Outer expanding glow ring */}
+            {/* Subtle background glow */}
             <div
               className="absolute rounded-full"
               style={{
-                width: `${48 + longPressCursor.progress * 32}px`,
-                height: `${48 + longPressCursor.progress * 32}px`,
+                width: `${56 + longPressCursor.progress * 24}px`,
+                height: `${56 + longPressCursor.progress * 24}px`,
                 left: '50%',
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
-                background: `radial-gradient(circle, rgba(255,199,0,${0.1 + longPressCursor.progress * 0.2}) 0%, transparent 70%)`,
+                background: `radial-gradient(circle, oklch(53% 0.187 39 / ${0.08 + longPressCursor.progress * 0.15}) 0%, transparent 70%)`,
                 transition: 'all 0.1s ease-out'
               }}
             />
 
-            {/* Pulsing outer ring */}
-            <div className="absolute w-16 h-16 -ml-8 -mt-8 rounded-full border-2 border-brand/40 animate-ping" />
+            {/* Pulsing outer ring - matches brand color */}
+            <div
+              className="absolute w-14 h-14 -ml-7 -mt-7 rounded-full border-2 animate-ping"
+              style={{ borderColor: 'oklch(53% 0.187 39 / 0.3)' }}
+            />
 
             {/* Progress ring container */}
-            <svg className="absolute w-20 h-20 -ml-10 -mt-10" viewBox="0 0 80 80">
-              {/* Background track */}
+            <svg className="absolute w-16 h-16 -ml-8 -mt-8" viewBox="0 0 64 64">
+              {/* Background track - subtle brand tint */}
               <circle
-                cx="40"
-                cy="40"
-                r="32"
+                cx="32"
+                cy="32"
+                r="28"
                 fill="none"
-                stroke="rgba(255,199,0,0.15)"
+                stroke="oklch(53% 0.187 39 / 0.12)"
                 strokeWidth="3"
               />
-              {/* Progress arc */}
+              {/* Progress arc - brand color with proper fill direction */}
               <circle
-                cx="40"
-                cy="40"
-                r="32"
+                cx="32"
+                cy="32"
+                r="28"
                 fill="none"
-                stroke="url(#longPressGradient)"
+                stroke="oklch(53% 0.187 39)"
                 strokeWidth="4"
                 strokeLinecap="round"
-                strokeDasharray={`${longPressCursor.progress * 201} 201`}
-                transform="rotate(-90 40 40)"
-                style={{ transition: 'stroke-dasharray 0.08s ease-out' }}
+                strokeDasharray="176"
+                strokeDashoffset={176 - (longPressCursor.progress * 176)}
+                transform="rotate(-90 32 32)"
+                style={{ transition: 'stroke-dashoffset 0.06s linear' }}
               />
-              {/* Gradient definition */}
-              <defs>
-                <linearGradient id="longPressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ffc700" />
-                  <stop offset="100%" stopColor="#ff8c00" />
-                </linearGradient>
-              </defs>
             </svg>
 
-            {/* Center animated cursor */}
+            {/* Center cursor - matches actual text input caret styling */}
             <div
-              className="w-1 h-8 rounded-full shadow-lg"
+              className="relative flex items-center justify-center"
               style={{
-                background: 'linear-gradient(180deg, #ffc700 0%, #ff8c00 100%)',
-                boxShadow: '0 0 12px rgba(255,199,0,0.6), 0 0 24px rgba(255,199,0,0.3)',
-                animation: 'pulse 0.8s ease-in-out infinite'
+                width: '4px',
+                height: '28px',
+                borderRadius: '2px',
+                background: 'oklch(53% 0.187 39)',
+                boxShadow: '0 0 8px oklch(53% 0.187 39 / 0.5)',
+                animation: 'blink 1s steps(1) infinite'
               }}
             />
 
-            {/* Floating hint label */}
+            {/* Floating hint label - brand colors */}
             <div
-              className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/95 text-brand text-xs font-bold px-4 py-2 rounded-xl border border-brand/40 backdrop-blur-md shadow-xl"
+              className="absolute left-1/2 whitespace-nowrap text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-lg"
               style={{
-                top: `${32 + longPressCursor.progress * 8}px`,
-                opacity: Math.min(1, longPressCursor.progress * 3),
-                transform: `translateX(-50%) translateY(${(1 - longPressCursor.progress) * -8}px)`,
-                transition: 'opacity 0.2s ease-out, transform 0.2s ease-out'
+                top: `${36 + longPressCursor.progress * 6}px`,
+                opacity: Math.min(1, longPressCursor.progress * 2.5),
+                transform: `translateX(-50%) translateY(${(1 - longPressCursor.progress) * -6}px)`,
+                transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
+                background: 'oklch(15% 0.02 39 / 0.95)',
+                color: 'oklch(53% 0.187 39)',
+                border: '1px solid oklch(53% 0.187 39 / 0.3)'
               }}
             >
-              <span className="mr-1">T</span> Adding text...
+              <span className="mr-1 font-mono">T</span> Adding text...
             </div>
           </div>
         )}

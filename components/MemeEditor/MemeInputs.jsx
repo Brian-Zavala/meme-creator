@@ -1,9 +1,10 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Type, Smile, ChevronDown, HelpCircle, Sparkles, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import MemeStickerLibrary from "./MemeStickerLibrary";
 
-export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers }) {
+export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -19,7 +20,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
 
   const showStickerHelp = (e) => {
     e.stopPropagation();
-    toast("Tip: Double-tap or Long-press a sticker to remove it!", {
+    toast("Tip: Double-tap a sticker to remove it!", {
       icon: (
         <picture>
           <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/512.webp" type="image/webp" />
@@ -60,6 +61,8 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
       <div className="px-6 space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin mb-4" role="group" aria-label="Text Inputs">
         {(() => {
           let lastFilledIndex = -1;
+          let activeIndex = -1;
+
           for (let i = texts.length - 1; i >= 0; i--) {
             if ((texts[i].content || "").trim().length > 0) {
               lastFilledIndex = i;
@@ -67,26 +70,49 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
             }
           }
 
-          const visibleCount = Math.min(Math.max(lastFilledIndex + 2, 2), texts.length);
+          // Find the index of the selected or editing text (for newly created empty texts)
+          const activeId = editingId || selectedId;
+          if (activeId) {
+            activeIndex = texts.findIndex(t => t.id === activeId);
+          }
 
-          return texts.slice(0, visibleCount).map((textItem, index) => (
-            <div key={textItem.id} className="relative group animate-in slide-in-from-left duration-300">
-              <label htmlFor={`text-input-${textItem.id}`} className="sr-only">
-                {index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text line ${index + 1}`}
-              </label>
-              <input
-                id={`text-input-${textItem.id}`}
-                type="text"
-                placeholder={index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
-                className="w-full input-glass rounded-xl px-4 py-3 text-lg focus:outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-yellow-500"
-                onChange={(e) => handleTextChange(textItem.id, e.target.value)}
-                value={textItem.content}
-              />
-              <div className="absolute right-3 top-3.5 text-slate-600 pointer-events-none text-xs bg-slate-800 px-2 py-0.5 rounded uppercase" aria-hidden="true">
-                {index === 0 ? "TOP" : index === 1 ? "BOTTOM" : `#${index + 1}`}
+          // Show at least 2 inputs, or up to lastFilledIndex + 2, or up to the active one
+          const visibleCount = Math.min(
+            Math.max(lastFilledIndex + 2, activeIndex + 1, 2),
+            texts.length
+          );
+
+          return texts.slice(0, visibleCount).map((textItem, index) => {
+            const isSelected = textItem.id === selectedId;
+            const isEditing = textItem.id === editingId;
+            const isActive = isSelected || isEditing;
+
+            return (
+              <div key={textItem.id} className={`relative group animate-in slide-in-from-left duration-300 ${isActive ? 'ring-2 ring-brand rounded-xl' : ''}`}>
+                <label htmlFor={`text-input-${textItem.id}`} className="sr-only">
+                  {index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text line ${index + 1}`}
+                </label>
+                <input
+                  id={`text-input-${textItem.id}`}
+                  type="text"
+                  placeholder={isActive && !textItem.content ? "✨ Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
+                  className={`w-full input-glass rounded-xl px-4 py-3 text-lg focus:outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-yellow-500 ${isActive ? 'bg-brand/10 placeholder:text-brand/60' : ''}`}
+                  onChange={(e) => handleTextChange(textItem.id, e.target.value)}
+                  onFocus={() => {
+                    if (onEditingChange) onEditingChange(textItem.id);
+                  }}
+                  onBlur={() => {
+                    // Only clear editing state if we're not clicking another input (handled by new focus)
+                    // We can rely on handleCanvasPointerDown to clear it when clicking away
+                  }}
+                  value={textItem.content}
+                />
+                <div className="absolute right-3 top-3.5 text-slate-600 pointer-events-none text-xs bg-slate-800 px-2 py-0.5 rounded uppercase" aria-hidden="true">
+                  {isActive ? "NEW" : index === 0 ? "TOP" : index === 1 ? "BOTTOM" : `#${index + 1}`}
+                </div>
               </div>
-            </div>
-          ));
+            );
+          });
         })()}
       </div>
 

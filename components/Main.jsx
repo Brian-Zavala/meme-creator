@@ -1302,6 +1302,10 @@ export default function Main() {
       texts: prev.texts.filter((t) => t.id !== id),
       selectedId: prev.selectedId === id ? null : prev.selectedId,
     }));
+    // Clear editing state if we're deleting the text being edited
+    if (editingId === id) {
+      setEditingId(null);
+    }
     toast.success("Text removed");
     setStatusMessage("Text removed.");
   }

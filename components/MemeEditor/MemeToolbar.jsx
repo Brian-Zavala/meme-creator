@@ -752,6 +752,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     onClick={() => setActiveTool('pen')}
                     className={`p-3 rounded-xl border transition-all ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
                     title="Pen Tool"
+                    aria-label="Use Pen Tool"
                   >
                     <img src="/images/canvas/marker-pen_32.png" className="w-5 h-5 object-contain" alt="Pen" />
                   </button>
@@ -759,6 +760,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     onClick={() => setActiveTool('eraser')}
                     className={`p-3 rounded-xl border transition-all ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
                     title="Eraser Tool"
+                    aria-label="Use Eraser Tool"
                   >
                     <img src="/images/canvas/eraser_32.png" className="w-5 h-5 object-contain" alt="Eraser" />
                   </button>
@@ -766,6 +768,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     onClick={onClearDrawings}
                     className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all"
                     title="Clear All"
+                    aria-label="Clear All Drawings"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>

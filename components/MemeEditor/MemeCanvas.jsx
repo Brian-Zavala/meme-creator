@@ -497,7 +497,7 @@ const MemeCanvas = forwardRef(({
                   ) : (
                     <img
                       src={showUrl}
-                      alt="panel"
+                      alt={meme.name ? `Meme panel: ${meme.name}` : "Meme panel"}
                       className="w-full h-full block pointer-events-none select-none"
                       crossOrigin="anonymous"
                       onLoad={handleMediaLoad}
@@ -571,6 +571,8 @@ const MemeCanvas = forwardRef(({
         {/* === DRAWING LAYER (Global) === */}
         <canvas
           ref={drawCanvasRef}
+          role="img"
+          aria-label="Drawing Canvas Layer"
           className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' ? 'cursor-pen pointer-events-auto' : activeTool === 'eraser' ? 'cursor-eraser pointer-events-auto' : 'pointer-events-none'}`}
           onPointerDown={handleDrawStart}
           onPointerMove={handleDrawMove}
@@ -689,50 +691,59 @@ const MemeCanvas = forwardRef(({
                   />
                 </svg>
               )}
-              {/* Delete Button - show for selected OR editing texts */}
+              {/* Action Buttons Container - positioned together with proper spacing */}
               {(isSelected || isEditing) && (
-                <button
+                <div
                   data-html2canvas-ignore="true"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (onRemoveText) onRemoveText(textItem.id);
+                  className="absolute left-1/2 -translate-x-1/2 flex items-center z-[60] animate-in zoom-in-95 fade-in"
+                  style={{
+                    top: '-52px',
+                    gap: 'clamp(12px, 4vw, 24px)', // Responsive gap: 12px on mobile, up to 24px on desktop
+                    pointerEvents: 'auto'
                   }}
-                  onPointerUp={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (onRemoveText) onRemoveText(textItem.id);
-                  }}
-                  className="absolute -top-14 -left-4 p-2.5 rounded-xl bg-red-500/80 backdrop-blur-md text-white border border-red-400/50 shadow-lg transition-all duration-200 z-[60] hover:bg-red-500 hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
-                  style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
-                  title="Delete Text"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-              {/* Settings/Edit Button - only shows during marching ants (selected, not editing) */}
-              {isSelected && !isEditing && (
-                <button
-                  data-html2canvas-ignore="true"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    // Enter edit mode for this text
-                    if (onStartEditing) onStartEditing(textItem.id);
-                    if (navigator.vibrate) navigator.vibrate(30);
-                  }}
-                  onPointerUp={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (onStartEditing) onStartEditing(textItem.id);
-                    if (navigator.vibrate) navigator.vibrate(30);
-                  }}
-                  className="absolute -top-14 -right-4 p-2.5 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 z-[60] hover:bg-brand hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
-                  style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
-                  title="Edit Text"
-                >
-                  <Settings2 className="w-4 h-4" />
-                </button>
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (onRemoveText) onRemoveText(textItem.id);
+                    }}
+                    onPointerUp={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (onRemoveText) onRemoveText(textItem.id);
+                    }}
+                    className="p-2 sm:p-2.5 md:p-3 rounded-xl bg-red-500/80 backdrop-blur-md text-white border border-red-400/50 shadow-lg transition-all duration-200 hover:bg-red-500 hover:scale-110 active:scale-90"
+                    style={{ touchAction: 'manipulation', minWidth: '40px', minHeight: '40px' }}
+                    title="Delete Text"
+                  >
+                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+
+                  {/* Settings/Edit Button - only shows when selected, not editing */}
+                  {!isEditing && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (onStartEditing) onStartEditing(textItem.id);
+                        if (navigator.vibrate) navigator.vibrate(30);
+                      }}
+                      onPointerUp={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (onStartEditing) onStartEditing(textItem.id);
+                        if (navigator.vibrate) navigator.vibrate(30);
+                      }}
+                      className="p-2 sm:p-2.5 md:p-3 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 hover:bg-brand hover:scale-110 active:scale-90"
+                      style={{ touchAction: 'manipulation', minWidth: '40px', minHeight: '40px' }}
+                      title="Edit Text"
+                    >
+                      <Settings2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  )}
+                </div>
               )}
               {/* Text Content Rendering - always visible, styled h2 displays the text */}
               {textItem.animation === 'wave' ? (

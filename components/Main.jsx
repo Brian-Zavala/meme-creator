@@ -1870,6 +1870,7 @@ export default function Main() {
               onRemoveText={removeText}
               onTextChange={handleTextChange}
               onAddTextAtPosition={addTextAtPosition}
+              onStartEditing={setEditingId}
               onCanvasPointerDown={handleCanvasPointerDown}
 
               // New Props

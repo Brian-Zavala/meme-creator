@@ -697,7 +697,7 @@ const MemeCanvas = forwardRef(({
                     if (onRemoveText) onRemoveText(textItem.id);
                   }}
                   className="absolute -top-14 -left-4 p-2.5 rounded-xl bg-red-500/80 backdrop-blur-md text-white border border-red-400/50 shadow-lg transition-all duration-200 z-[60] hover:bg-red-500 hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
-                  style={{ pointerEvents: 'auto' }}
+                  style={{ pointerEvents: 'auto', touchAction: 'auto' }}
                   title="Delete Text"
                 >
                   <Trash2 className="w-4 h-4" />

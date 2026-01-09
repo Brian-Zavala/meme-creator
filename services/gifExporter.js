@@ -177,7 +177,7 @@ async function loadMemeAssets(meme, stickers) {
  */
 function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
     const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
-    const { exportWidth, exportHeight, contentHeight, contentOffsetY } = dimensions;
+    const { exportWidth, exportHeight, contentHeight, contentOffsetY, baseWidth = 800 } = dimensions;
     const { stickersOnly = false, totalFrames = 1 } = options;
 
     // A. Clear & Background
@@ -286,7 +286,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
             if (!d.points || d.points.length < 2) return;
             ctx.beginPath();
             ctx.strokeStyle = d.color;
-            ctx.lineWidth = d.width * (exportWidth / 800);
+            ctx.lineWidth = d.width * (exportWidth / baseWidth);
             ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
 
             ctx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
@@ -299,10 +299,13 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
     }
 
     // D. Draw Stickers
+    // Use scaleFactor based on exportWidth / baseWidth (same as MemeCanvas uses containerWidth / 800)
+    const scaleFactor = exportWidth / baseWidth;
+
     for (const sticker of (stickers || [])) {
         const x = (sticker.x / 100) * exportWidth;
         const y = (sticker.y / 100) * exportHeight;
-        const size = (meme.stickerSize || 60) * (exportWidth / 800);
+        const size = (meme.stickerSize || 60) * scaleFactor;
 
         // Animation Transform
         let animX = x;
@@ -315,14 +318,13 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         if (sticker.animation && sticker.animation !== 'none') {
             const anim = getAnimationById(sticker.animation);
             if (anim && anim.getTransform) {
-                const scale = exportWidth / 800;
                 // Use ANIMATED_TEXT_FRAMES for animation progress so it loops at original speed
                 // regardless of the GIF's frame count
                 const animFrames = ANIMATED_TEXT_FRAMES;
                 const t = anim.getTransform(frameIndex % animFrames, animFrames);
 
-                animX += (t.offsetX || 0) * scale;
-                animY += (t.offsetY || 0) * scale;
+                animX += (t.offsetX || 0) * scaleFactor;
+                animY += (t.offsetY || 0) * scaleFactor;
                 animRotation += (t.rotation || 0) * (Math.PI / 180);
 
                 const s = t.scale || 1;
@@ -388,6 +390,7 @@ function calculateDimensions(meme, assets) {
     let containerAspect = 1;
     let exportWidth = 800; // Default base resolution
     let exportHeight = 800;
+    const baseWidth = 800; // Reference width for scaling calculations (matches MemeCanvas)
     const { gifProcessors, staticImages } = assets;
 
     // Check if we actually have any valid panels
@@ -434,7 +437,7 @@ function calculateDimensions(meme, assets) {
     const contentHeight = exportHeight;
     exportHeight = contentHeight + contentOffsetY + contentOffsetBottom;
 
-    return { exportWidth, exportHeight, contentHeight, contentOffsetY, contentOffsetBottom };
+    return { exportWidth, exportHeight, contentHeight, contentOffsetY, contentOffsetBottom, baseWidth };
 }
 
 

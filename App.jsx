@@ -6,7 +6,7 @@ import Main from "./components/Main";
 import { WelcomeModal } from "./components/WelcomeModal";
 import { InstructionModal } from "./components/InstructionModal";
 
-const TOAST_LIMIT = 3;
+const TOAST_LIMIT = 2;
 
 function ToastLimiter() {
   const { toasts } = useToasterStore();

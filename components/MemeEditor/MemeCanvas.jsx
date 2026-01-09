@@ -703,15 +703,8 @@ const MemeCanvas = forwardRef(({
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
-              {/* Blinking cursor for empty text being edited */}
-              {!hasContent && isEditing ? (
-                <div
-                  data-html2canvas-ignore="true"
-                  className="flex items-center justify-center w-full h-full"
-                >
-                  <div className="w-0.5 h-6 bg-brand animate-pulse rounded-full shadow-lg shadow-brand/50" />
-                </div>
-              ) : textItem.animation === 'wave' ? (
+              {/* Text Content Rendering */}
+              {textItem.animation === 'wave' ? (
                 textItem.content.split('\n').map((line, lineIdx) => {
                   // Split line into words (preserving spaces as separators)
                   const words = line.split(/(\s+)/);
@@ -755,7 +748,7 @@ const MemeCanvas = forwardRef(({
                 textItem.content
               )}
 
-              {/* Overlay Input for Direct Editing */}
+              {/* Overlay Input for Direct Editing - transparent text to avoid duplication */}
               {isEditing && (
                 <textarea
                   id={`canvas-input-${textItem.id}`}
@@ -766,7 +759,8 @@ const MemeCanvas = forwardRef(({
                   className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none text-center"
                   style={{
                     color: 'transparent',
-                    caretColor: meme.textColor,
+                    WebkitTextFillColor: 'transparent', // Prevents duplicate text on mobile
+                    caretColor: 'var(--color-brand)', // Use brand color for better visibility
                     fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
                     fontSize: `${meme.fontSize * scaleFactor}px`,
                     letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
@@ -774,14 +768,14 @@ const MemeCanvas = forwardRef(({
                     padding: hasBg ? '0.25em 0.5em' : '0',
                     textAlign: "center",
                   }}
-                  onPointerDown={(e) => e.stopPropagation()} // Allow clicking into the textarea
+                  onPointerDown={(e) => e.stopPropagation()}
                 />
               )}
             </h2>
           )
         })}
 
-        {/* Long-press cursor indicator */}
+        {/* Long-press cursor indicator - enhanced with smooth animations */}
         {longPressCursor && (
           <div
             data-html2canvas-ignore="true"
@@ -789,42 +783,81 @@ const MemeCanvas = forwardRef(({
             style={{
               left: `${longPressCursor.x}%`,
               top: `${longPressCursor.y}%`,
-              transform: 'translate(-50%, -50%)'
+              transform: `translate(-50%, -50%) scale(${0.8 + longPressCursor.progress * 0.4})`,
+              transition: 'transform 0.15s ease-out'
             }}
           >
-            {/* Outer pulsing ring */}
-            <div className="absolute inset-0 w-16 h-16 -ml-8 -mt-8 rounded-full border-2 border-brand/50 animate-ping" />
+            {/* Outer expanding glow ring */}
+            <div
+              className="absolute rounded-full"
+              style={{
+                width: `${48 + longPressCursor.progress * 32}px`,
+                height: `${48 + longPressCursor.progress * 32}px`,
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: `radial-gradient(circle, rgba(255,199,0,${0.1 + longPressCursor.progress * 0.2}) 0%, transparent 70%)`,
+                transition: 'all 0.1s ease-out'
+              }}
+            />
 
-            {/* Progress ring */}
-            <svg className="absolute w-16 h-16 -ml-8 -mt-8" viewBox="0 0 64 64">
+            {/* Pulsing outer ring */}
+            <div className="absolute w-16 h-16 -ml-8 -mt-8 rounded-full border-2 border-brand/40 animate-ping" />
+
+            {/* Progress ring container */}
+            <svg className="absolute w-20 h-20 -ml-10 -mt-10" viewBox="0 0 80 80">
+              {/* Background track */}
               <circle
-                cx="32"
-                cy="32"
-                r="28"
+                cx="40"
+                cy="40"
+                r="32"
                 fill="none"
-                stroke="rgba(255,199,0,0.2)"
-                strokeWidth="4"
+                stroke="rgba(255,199,0,0.15)"
+                strokeWidth="3"
               />
+              {/* Progress arc */}
               <circle
-                cx="32"
-                cy="32"
-                r="28"
+                cx="40"
+                cy="40"
+                r="32"
                 fill="none"
-                stroke="var(--color-brand)"
+                stroke="url(#longPressGradient)"
                 strokeWidth="4"
                 strokeLinecap="round"
-                strokeDasharray={`${longPressCursor.progress * 176} 176`}
-                transform="rotate(-90 32 32)"
-                className="transition-all duration-75"
+                strokeDasharray={`${longPressCursor.progress * 201} 201`}
+                transform="rotate(-90 40 40)"
+                style={{ transition: 'stroke-dasharray 0.08s ease-out' }}
               />
+              {/* Gradient definition */}
+              <defs>
+                <linearGradient id="longPressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ffc700" />
+                  <stop offset="100%" stopColor="#ff8c00" />
+                </linearGradient>
+              </defs>
             </svg>
 
-            {/* Center blinking cursor */}
-            <div className="w-1 h-8 bg-brand rounded-full animate-pulse shadow-lg shadow-brand/50" />
+            {/* Center animated cursor */}
+            <div
+              className="w-1 h-8 rounded-full shadow-lg"
+              style={{
+                background: 'linear-gradient(180deg, #ffc700 0%, #ff8c00 100%)',
+                boxShadow: '0 0 12px rgba(255,199,0,0.6), 0 0 24px rgba(255,199,0,0.3)',
+                animation: 'pulse 0.8s ease-in-out infinite'
+              }}
+            />
 
-            {/* Hint text */}
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 text-brand text-xs font-bold px-3 py-1.5 rounded-full border border-brand/30 backdrop-blur-sm shadow-lg">
-              ✨ Creating text...
+            {/* Floating hint label */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/95 text-brand text-xs font-bold px-4 py-2 rounded-xl border border-brand/40 backdrop-blur-md shadow-xl"
+              style={{
+                top: `${32 + longPressCursor.progress * 8}px`,
+                opacity: Math.min(1, longPressCursor.progress * 3),
+                transform: `translateX(-50%) translateY(${(1 - longPressCursor.progress) * -8}px)`,
+                transition: 'opacity 0.2s ease-out, transform 0.2s ease-out'
+              }}
+            >
+              <span className="mr-1">T</span> Adding text...
             </div>
           </div>
         )}

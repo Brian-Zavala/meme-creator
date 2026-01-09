@@ -19,6 +19,7 @@ const MemeCanvas = forwardRef(({
   onRemoveText,
   onTextChange,
   onAddTextAtPosition,
+  onStartEditing,
   onCanvasPointerDown,
   activePanelId,
   onPanelSelect,
@@ -709,32 +710,26 @@ const MemeCanvas = forwardRef(({
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
-              {/* Settings Button - only shows during marching ants (selected, not editing) */}
+              {/* Settings/Edit Button - only shows during marching ants (selected, not editing) */}
               {isSelected && !isEditing && (
                 <button
                   data-html2canvas-ignore="true"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    // Scroll to fine-tuner section
-                    const fineTuner = document.querySelector('[data-fine-tuner]');
-                    if (fineTuner) {
-                      fineTuner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                    // Enter edit mode for this text
+                    if (onStartEditing) onStartEditing(textItem.id);
                     if (navigator.vibrate) navigator.vibrate(30);
                   }}
                   onPointerUp={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    const fineTuner = document.querySelector('[data-fine-tuner]');
-                    if (fineTuner) {
-                      fineTuner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                    if (onStartEditing) onStartEditing(textItem.id);
                     if (navigator.vibrate) navigator.vibrate(30);
                   }}
                   className="absolute -top-14 -right-4 p-2.5 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 z-[60] hover:bg-brand hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
                   style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
-                  title="Edit Text Settings"
+                  title="Edit Text"
                 >
                   <Settings2 className="w-4 h-4" />
                 </button>

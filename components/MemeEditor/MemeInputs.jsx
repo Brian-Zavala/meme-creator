@@ -96,10 +96,16 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                   id={`text-input-${textItem.id}`}
                   type="text"
                   placeholder={isActive && !textItem.content ? "✨ Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
+                  aria-label={index === 0 ? "Top Text Input" : index === 1 ? "Bottom Text Input" : `Text Input ${index + 1}`}
                   className={`w-full input-glass rounded-xl px-4 py-3 text-lg focus:outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-yellow-500 ${isActive ? 'bg-brand/10 placeholder:text-brand/60' : ''}`}
                   onChange={(e) => handleTextChange(textItem.id, e.target.value)}
                   onFocus={() => {
-                    if (onEditingChange) onEditingChange(textItem.id);
+                    // Only trigger editing state if this isn't a new empty text being edited on canvas
+                    // or if this text already has content (meaning it's an existing text)
+                    const hasContent = (textItem.content || "").trim().length > 0;
+                    if (onEditingChange && hasContent) {
+                      onEditingChange(textItem.id);
+                    }
                   }}
                   onBlur={() => {
                     // Only clear editing state if we're not clicking another input (handled by new focus)

@@ -24,6 +24,9 @@ export function ModeSelector({ mode, onModeChange }) {
     <div className="relative w-full z-[60]" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label="Select Content Mode"
         className={`w-full rounded-xl bg-slate-900/50 border border-slate-700 p-3 flex items-center justify-center relative transition-all active:scale-[0.99] ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
       >
         <div className="flex items-center gap-3">
@@ -36,9 +39,15 @@ export function ModeSelector({ mode, onModeChange }) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 w-full bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col p-1">
+        <div 
+            className="absolute top-full mt-2 left-0 w-full bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col p-1"
+            role="listbox"
+            aria-label="Content Mode Options"
+        >
             <button
                 onClick={() => handleSelect("image")}
+                role="option"
+                aria-selected={mode === "image"}
                 className={`flex items-center gap-3 w-full p-3 rounded-lg transition-colors group ${mode === "image" ? "bg-slate-800" : "hover:bg-brand"}`}
             >
                 <ImageIcon className={`w-5 h-5 ${mode === "image" ? "text-brand" : "text-slate-400 group-hover:text-white"}`} />
@@ -50,6 +59,8 @@ export function ModeSelector({ mode, onModeChange }) {
             
             <button
                 onClick={() => handleSelect("video")}
+                role="option"
+                aria-selected={mode === "video"}
                 className={`flex items-center gap-3 w-full p-3 rounded-lg transition-colors group ${mode === "video" ? "bg-slate-800" : "hover:bg-brand"}`}
             >
                 <Video className={`w-5 h-5 ${mode === "video" ? "text-brand" : "text-slate-400 group-hover:text-white"}`} />

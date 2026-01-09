@@ -82,7 +82,7 @@ function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
   );
 }
 
-export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange }) {
+export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange, editingId }) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
   const [showSliders, setShowSliders] = useState(false); // Collapsed by default on mobile
@@ -105,7 +105,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
     });
   };
 
-  const isCollapsed = activeTab === 'text' && !hasText && !hasStickers;
+  // Check if user is actively editing a NEW text on canvas (one that doesn't have content yet)
+  // In this case, we want to keep the drawer collapsed until they finish editing
+  const isActivelyEditingNewText = editingId && meme.texts.some(t => t.id === editingId && !(t.content || "").trim());
+
+  const isCollapsed = (activeTab === 'text' && !hasText && !hasStickers) || isActivelyEditingNewText;
   const wasCollapsedRef = useRef(isCollapsed);
 
   // Notify parent when drawer TRANSITIONS from collapsed to expanded

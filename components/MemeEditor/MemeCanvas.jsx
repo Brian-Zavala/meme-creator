@@ -1,5 +1,5 @@
 import { forwardRef, useRef, useEffect, useState } from "react";
-import { Loader2, Plus, Image as ImageIcon, Video, Upload, X } from "lucide-react";
+import { Loader2, Plus, Image as ImageIcon, Video, Upload, X, Trash2 } from "lucide-react";
 import { getAnimationById } from "../../constants/textAnimations";
 
 const MemeCanvas = forwardRef(({
@@ -8,6 +8,7 @@ const MemeCanvas = forwardRef(({
   isProcessing,
   draggedId,
   selectedId,
+  editingId,
   activeTool,
   onDrawCommit,
   onFineTune,
@@ -15,6 +16,9 @@ const MemeCanvas = forwardRef(({
   onCenterText,
   onPointerDown,
   onRemoveSticker,
+  onRemoveText,
+  onTextChange,
+  onAddTextAtPosition,
   onCanvasPointerDown,
   activePanelId,
   onPanelSelect,
@@ -31,6 +35,13 @@ const MemeCanvas = forwardRef(({
   const currentPathRef = useRef([]);
   const [dragOverPanel, setDragOverPanel] = useState(null);
   const [draggingPanel, setDraggingPanel] = useState(null);
+
+  // Long-press cursor indicator state
+  const [longPressCursor, setLongPressCursor] = useState(null); // { x, y, progress }
+
+  // Long-press to add text refs
+  const canvasLongPressTimerRef = useRef(null);
+  const longPressStartPosRef = useRef(null);
 
   // If we have an override (Deep Fry preview), it only applies to the ACTIVE panel for now visually
 
@@ -116,6 +127,9 @@ const MemeCanvas = forwardRef(({
   const handlePanelPointerDown = (e, panel) => {
     // Check conditions: Not single mode, No text selected, Not drawing
     const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser'].includes(activeTool);
+
+    // Also trigger long-press start (timer will be cancelled if drag moves too far)
+    handleCanvasLongPressStart(e);
 
     if (canDrag && panel.url) { // Only if has image
       e.preventDefault(); // Prevent default drag behavior (and scrolling)
@@ -241,6 +255,105 @@ const MemeCanvas = forwardRef(({
     }
   };
 
+  // Long-press to add text handlers
+  const handleCanvasLongPressStart = (e) => {
+    // Don't trigger if drawing, if there's already a selected element, or if in editing mode
+    if (activeTool === 'pen' || activeTool === 'eraser' || selectedId || editingId) return;
+
+    // Check if we're on the canvas area using closest() to handle clicks on panels
+    const canvasElement = e.target.closest('[data-meme-canvas]');
+    if (!canvasElement) return;
+
+    // Get position relative to the MAIN canvas
+    const canvasRect = canvasElement.getBoundingClientRect();
+    const x = ((e.clientX - canvasRect.left) / canvasRect.width) * 100;
+    const y = ((e.clientY - canvasRect.top) / canvasRect.height) * 100;
+
+    longPressStartPosRef.current = { x, y, clientX: e.clientX, clientY: e.clientY };
+
+    // Store all timer IDs
+    canvasLongPressTimerRef.current = {
+      delayTimerId: null,
+      timerId: null,
+      progressInterval: null
+    };
+
+    // Wait 300ms before showing the progress indicator (prevents flash on quick taps)
+    canvasLongPressTimerRef.current.delayTimerId = setTimeout(() => {
+      if (!longPressStartPosRef.current) return;
+
+      // Show the cursor indicator after delay
+      setLongPressCursor({ x, y, progress: 0 });
+
+      // Animate progress over remaining 1.7 seconds (2s total - 0.3s delay)
+      const startTime = Date.now();
+      const remainingTime = 1700;
+
+      canvasLongPressTimerRef.current.progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / remainingTime, 1);
+        setLongPressCursor(prev => prev ? { ...prev, progress } : null);
+        if (progress >= 1) {
+          clearInterval(canvasLongPressTimerRef.current?.progressInterval);
+        }
+      }, 50);
+    }, 300);
+
+    // Start 2 second timer for text creation
+    canvasLongPressTimerRef.current.timerId = setTimeout(() => {
+      if (longPressStartPosRef.current && onAddTextAtPosition) {
+        if (navigator.vibrate) navigator.vibrate(50);
+        onAddTextAtPosition(longPressStartPosRef.current.x, longPressStartPosRef.current.y);
+      }
+      if (canvasLongPressTimerRef.current?.progressInterval) {
+        clearInterval(canvasLongPressTimerRef.current.progressInterval);
+      }
+      setLongPressCursor(null);
+      longPressStartPosRef.current = null;
+    }, 2000);
+  };
+
+  const handleCanvasLongPressMove = (e) => {
+    // If moved too far, cancel the long press
+    if (longPressStartPosRef.current && canvasLongPressTimerRef.current) {
+      const dx = e.clientX - longPressStartPosRef.current.clientX;
+      const dy = e.clientY - longPressStartPosRef.current.clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 10) {
+        if (canvasLongPressTimerRef.current.delayTimerId) {
+          clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
+        }
+        if (canvasLongPressTimerRef.current.timerId) {
+          clearTimeout(canvasLongPressTimerRef.current.timerId);
+        }
+        if (canvasLongPressTimerRef.current.progressInterval) {
+          clearInterval(canvasLongPressTimerRef.current.progressInterval);
+        }
+        canvasLongPressTimerRef.current = null;
+        longPressStartPosRef.current = null;
+        setLongPressCursor(null);
+      }
+    }
+  };
+
+  const handleCanvasLongPressEnd = () => {
+    if (canvasLongPressTimerRef.current) {
+      if (canvasLongPressTimerRef.current.delayTimerId) {
+        clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
+      }
+      if (canvasLongPressTimerRef.current.timerId) {
+        clearTimeout(canvasLongPressTimerRef.current.timerId);
+      }
+      if (canvasLongPressTimerRef.current.progressInterval) {
+        clearInterval(canvasLongPressTimerRef.current.progressInterval);
+      }
+      canvasLongPressTimerRef.current = null;
+    }
+    longPressStartPosRef.current = null;
+    setLongPressCursor(null);
+  };
+
   return (
     <div
       ref={containerRef}
@@ -261,7 +374,15 @@ const MemeCanvas = forwardRef(({
 
       <div
         ref={ref}
-        onPointerDown={onCanvasPointerDown}
+        data-meme-canvas="true"
+        onPointerDown={(e) => {
+          onCanvasPointerDown();
+          handleCanvasLongPressStart(e);
+        }}
+        onPointerMove={handleCanvasLongPressMove}
+        onPointerUp={handleCanvasLongPressEnd}
+        onPointerLeave={handleCanvasLongPressEnd}
+        onPointerCancel={handleCanvasLongPressEnd}
         className="relative overflow-hidden shadow-2xl mx-auto"
         style={{
           backgroundColor: '#000000',
@@ -334,8 +455,8 @@ const MemeCanvas = forwardRef(({
                     onDrop(file, panel.id);
                   }
                 }}
-                className={`absolute overflow-hidden transition-all duration-200 border-2 border-slate-800/50 hover:border-slate-600 
-                            ${dragOverPanel === panel.id ? 'bg-brand/20' : ''} 
+                className={`absolute overflow-hidden transition-all duration-200 border-2 border-slate-800/50 hover:border-slate-600
+                            ${dragOverPanel === panel.id ? 'bg-brand/20' : ''}
                             ${canDrag ? 'cursor-move' : ''}
                         `}
                 style={{
@@ -361,8 +482,8 @@ const MemeCanvas = forwardRef(({
                         objectFit: panel.objectFit || "cover",
                         objectPosition: `${panel.posX ?? 50}% ${panel.posY ?? 50}%`,
                         filter: `
-                                          contrast(${panel.filters?.contrast ?? 100}%) 
-                                          brightness(${panel.filters?.brightness ?? 100}%) 
+                                          contrast(${panel.filters?.contrast ?? 100}%)
+                                          brightness(${panel.filters?.brightness ?? 100}%)
                                           blur(${panel.filters?.blur ?? 0}px)
                                           grayscale(${panel.filters?.grayscale ?? 0}%)
                                           sepia(${panel.filters?.sepia ?? 0}%)
@@ -383,8 +504,8 @@ const MemeCanvas = forwardRef(({
                         objectFit: panel.objectFit || "cover",
                         objectPosition: `${panel.posX ?? 50}% ${panel.posY ?? 50}%`,
                         filter: `
-                                          contrast(${panel.filters?.contrast ?? 100}%) 
-                                          brightness(${panel.filters?.brightness ?? 100}%) 
+                                          contrast(${panel.filters?.contrast ?? 100}%)
+                                          brightness(${panel.filters?.brightness ?? 100}%)
                                           blur(${panel.filters?.blur ?? 0}px)
                                           grayscale(${panel.filters?.grayscale ?? 0}%)
                                           sepia(${panel.filters?.sepia ?? 0}%)
@@ -508,10 +629,15 @@ const MemeCanvas = forwardRef(({
 
         {/* === TEXT LAYER (Global) === */}
         {meme.texts.map((textItem) => {
-          if (!(textItem.content || "").trim()) return null;
+          const isSelected = selectedId === textItem.id;
+          const isEditing = editingId === textItem.id;
+          const hasContent = (textItem.content || "").trim();
+
+          // Show empty placeholder cursor for texts being edited
+          if (!hasContent && !isSelected && !isEditing) return null;
+
           const stroke = Math.max(1, (meme.fontSize * scaleFactor) / 25);
           const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
-          const isSelected = selectedId === textItem.id;
 
           // Map animation IDs to CSS class names
           const animationClass = textItem.animation ? `animate-meme-${textItem.animation}` : '';
@@ -521,7 +647,7 @@ const MemeCanvas = forwardRef(({
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
               className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
-                } ${isSelected ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
+                } ${isSelected || isEditing ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
               style={{
                 left: `${textItem.x}%`,
                 top: `${textItem.y}%`,
@@ -536,14 +662,18 @@ const MemeCanvas = forwardRef(({
                 letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                 maxWidth: `${meme.maxWidth}%`,
                 fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
-                WebkitTextStroke: `${stroke * 2}px ${meme.textShadow}`,
+                WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
                 paintOrder: "stroke fill",
-                filter: "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))",
+                filter: hasContent ? "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))" : "none",
                 border: draggedId === textItem.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
                 borderRadius: "0.2em",
+                // Min size for empty editing text placeholder
+                minWidth: !hasContent && isEditing ? '80px' : 'auto',
+                minHeight: !hasContent && isEditing ? '40px' : 'auto',
               }}
             >
-              {isSelected && (
+              {/* Marching ants border - only for SELECTED texts, NOT during editing */}
+              {isSelected && !isEditing && (
                 <svg data-html2canvas-ignore="true" className="absolute inset-[-6px] w-[calc(100%+12px)] h-[calc(100%+12px)] pointer-events-none overflow-visible" xmlns="http://www.w3.org/2000/svg">
                   <rect
                     width="100%"
@@ -558,7 +688,30 @@ const MemeCanvas = forwardRef(({
                   />
                 </svg>
               )}
-              {textItem.animation === 'wave' ? (
+              {/* Delete Button - show for selected OR editing texts */}
+              {(isSelected || isEditing) && (
+                <button
+                  data-html2canvas-ignore="true"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onRemoveText) onRemoveText(textItem.id);
+                  }}
+                  className="absolute -top-14 -left-4 p-2.5 rounded-xl bg-red-500/80 backdrop-blur-md text-white border border-red-400/50 shadow-lg transition-all duration-200 z-[60] hover:bg-red-500 hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
+                  style={{ pointerEvents: 'auto' }}
+                  title="Delete Text"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              {/* Blinking cursor for empty text being edited */}
+              {!hasContent && isEditing ? (
+                <div
+                  data-html2canvas-ignore="true"
+                  className="flex items-center justify-center w-full h-full"
+                >
+                  <div className="w-0.5 h-6 bg-brand animate-pulse rounded-full shadow-lg shadow-brand/50" />
+                </div>
+              ) : textItem.animation === 'wave' ? (
                 textItem.content.split('\n').map((line, lineIdx) => {
                   // Split line into words (preserving spaces as separators)
                   const words = line.split(/(\s+)/);
@@ -601,10 +754,82 @@ const MemeCanvas = forwardRef(({
               ) : (
                 textItem.content
               )}
+
+              {/* Overlay Input for Direct Editing */}
+              {isEditing && (
+                <textarea
+                  id={`canvas-input-${textItem.id}`}
+                  data-html2canvas-ignore="true"
+                  value={textItem.content}
+                  onChange={(e) => onTextChange(textItem.id, e.target.value)}
+                  autoFocus
+                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none text-center"
+                  style={{
+                    color: 'transparent',
+                    caretColor: meme.textColor,
+                    fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
+                    fontSize: `${meme.fontSize * scaleFactor}px`,
+                    letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
+                    lineHeight: 1.2,
+                    padding: hasBg ? '0.25em 0.5em' : '0',
+                    textAlign: "center",
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()} // Allow clicking into the textarea
+                />
+              )}
             </h2>
           )
         })}
+
+        {/* Long-press cursor indicator */}
+        {longPressCursor && (
+          <div
+            data-html2canvas-ignore="true"
+            className="absolute z-50 pointer-events-none"
+            style={{
+              left: `${longPressCursor.x}%`,
+              top: `${longPressCursor.y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
+          >
+            {/* Outer pulsing ring */}
+            <div className="absolute inset-0 w-16 h-16 -ml-8 -mt-8 rounded-full border-2 border-brand/50 animate-ping" />
+
+            {/* Progress ring */}
+            <svg className="absolute w-16 h-16 -ml-8 -mt-8" viewBox="0 0 64 64">
+              <circle
+                cx="32"
+                cy="32"
+                r="28"
+                fill="none"
+                stroke="rgba(255,199,0,0.2)"
+                strokeWidth="4"
+              />
+              <circle
+                cx="32"
+                cy="32"
+                r="28"
+                fill="none"
+                stroke="var(--color-brand)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={`${longPressCursor.progress * 176} 176`}
+                transform="rotate(-90 32 32)"
+                className="transition-all duration-75"
+              />
+            </svg>
+
+            {/* Center blinking cursor */}
+            <div className="w-1 h-8 bg-brand rounded-full animate-pulse shadow-lg shadow-brand/50" />
+
+            {/* Hint text */}
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 text-brand text-xs font-bold px-3 py-1.5 rounded-full border border-brand/30 backdrop-blur-sm shadow-lg">
+              ✨ Creating text...
+            </div>
+          </div>
+        )}
       </div>
+
 
       {loading && (
         <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center z-50 backdrop-blur-sm gap-4">

@@ -165,6 +165,7 @@ export default function Main() {
   const [draggedId, setDraggedId] = useState(null);
   const [activeTool, setActiveTool] = useState("move");
   const [flashColor, setFlashColor] = useState(null);
+  const [editingId, setEditingId] = useState(null); // Track actively edited text (shows blinking cursor)
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
   const globalLastTapRef = useRef(0);
@@ -1265,6 +1266,34 @@ export default function Main() {
     });
   }
 
+  function addTextAtPosition(x, y) {
+    const newTextId = crypto.randomUUID();
+    updateState((prev) => ({
+      ...prev,
+      texts: [...prev.texts, { id: newTextId, content: "", x, y, rotation: 0, animation: null }],
+      selectedId: null, // Don't select - we're in editing mode
+    }));
+
+    // Set editing mode for the new text (shows blinking cursor, no marching ants)
+    setEditingId(newTextId);
+
+    // Focus the newly created text input after React re-renders (no scrolling)
+    setTimeout(() => {
+      const inputElement = document.getElementById(`text-input-${newTextId}`);
+      if (inputElement) {
+        inputElement.focus({ preventScroll: true });
+      }
+    }, 100);
+
+    toast("Type your meme text below!", {
+      icon: (
+        <ToastIcon src="/animations/filter-frenzy.json" />
+      ),
+      duration: 2500
+    });
+    setStatusMessage("Text added at position.");
+  }
+
   function addSticker(urlOrEmoji, type = "emoji", isAnimated = false) {
     updateState((prev) => ({
       ...prev,
@@ -1285,10 +1314,21 @@ export default function Main() {
     setStatusMessage("Sticker removed.");
   }
 
+  function removeText(id) {
+    updateState((prev) => ({
+      ...prev,
+      texts: prev.texts.filter((t) => t.id !== id),
+      selectedId: prev.selectedId === id ? null : prev.selectedId,
+    }));
+    toast.success("Text removed");
+    setStatusMessage("Text removed.");
+  }
+
   function handleCanvasPointerDown() {
     startTransition(() => {
       updateState((prev) => ({ ...prev, selectedId: null }));
     });
+    setEditingId(null); // Exit editing mode when clicking on canvas
     globalLastTapRef.current = 0;
   }
 
@@ -1306,6 +1346,16 @@ export default function Main() {
   const handleFineTuneCommit = () => {
     updateState((prev) => prev);
   };
+
+  function handleCenterText() {
+    if (!meme.selectedId) return;
+    updateState((prev) => ({
+      ...prev,
+      texts: prev.texts.map((t) =>
+        t.id === meme.selectedId ? { ...t, x: 50, y: 50 } : t
+      ),
+    }));
+  }
 
   function generateMagicCaption() {
     setIsMagicGenerating(true);
@@ -1618,6 +1668,9 @@ export default function Main() {
           onChaos={handleChaos}
           hasStickers={meme.stickers.length > 0}
           onExportStickers={handleExportStickers}
+          selectedId={meme.selectedId}
+          editingId={editingId}
+          onEditingChange={setEditingId}
         />
         <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
           <MemeActions
@@ -1824,6 +1877,7 @@ export default function Main() {
               isProcessing={isProcessing}
               draggedId={draggedId}
               selectedId={meme.selectedId}
+              editingId={editingId}
               activeTool={activeTool}
               onDrawCommit={handleDrawCommit}
               onFineTune={handleFineTune}
@@ -1831,6 +1885,9 @@ export default function Main() {
               onCenterText={handleCenterText}
               onPointerDown={handlePointerDown}
               onRemoveSticker={removeSticker}
+              onRemoveText={removeText}
+              onTextChange={handleTextChange}
+              onAddTextAtPosition={addTextAtPosition}
               onCanvasPointerDown={handleCanvasPointerDown}
 
               // New Props

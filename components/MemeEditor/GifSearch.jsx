@@ -24,7 +24,7 @@ export function GifSearch({
           onKeyDown={onKeyDown} 
           placeholder={placeholder}
           aria-label="Search for GIFs"
-          className="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:ring-2 focus:ring-yellow-500 outline-none placeholder:text-xs md:placeholder:text-sm" 
+          className="w-full bg-slate-900/80 border-2 border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm transition-all" 
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" aria-hidden="true" />
         {searchQuery && (

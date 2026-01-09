@@ -219,6 +219,21 @@ body {
   @apply bg-white/10 border-brand ring-1 ring-brand;
 }
 
+/* Glass Panel Utility */
+.glass-panel {
+  @apply bg-slate-900/80 border border-slate-700/50 backdrop-blur-md shadow-xl;
+}
+
+/* Brand Button Utility */
+.btn-brand {
+  @apply bg-brand text-white border border-brand hover:bg-brand-dark transition-all active:scale-95 shadow-lg shadow-brand/20;
+}
+
+/* Touch Target Utility for Mobile */
+.touch-target {
+  @apply min-w-[44px] min-h-[44px] flex items-center justify-center;
+}
+
 /* Marching Ants Animation for SVG Border */
 @keyframes march {
   to {

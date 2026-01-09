@@ -105,11 +105,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
     });
   };
 
-  // Check if user is actively editing a NEW text on canvas (one that doesn't have content yet)
-  // In this case, we want to keep the drawer collapsed until they finish editing
-  const isActivelyEditingNewText = editingId && meme.texts.some(t => t.id === editingId && !(t.content || "").trim());
+  // Keep drawer collapsed while user is actively editing ANY text on canvas
+  // The drawer should only expand when user clicks away (which clears editingId)
+  const isActivelyEditing = !!editingId;
 
-  const isCollapsed = (activeTab === 'text' && !hasText && !hasStickers) || isActivelyEditingNewText;
+  const isCollapsed = (activeTab === 'text' && !hasText && !hasStickers) || isActivelyEditing;
   const wasCollapsedRef = useRef(isCollapsed);
 
   // Notify parent when drawer TRANSITIONS from collapsed to expanded
@@ -133,7 +133,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
   return (
     <div
-      className="flex flex-col bg-slate-900 border-b border-slate-800 backdrop-blur-md z-20 relative rounded-t-2xl"
+      className="flex flex-col glass-panel border-b-0 z-20 relative rounded-t-2xl"
       role="region"
       aria-label="Editing Tools"
     >
@@ -149,9 +149,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           onClick={() => handleTabChange("text")}
           role="tab"
           aria-selected={activeTab === "text"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${activeTab === "text"
-            ? "text-white bg-slate-800"
-            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 touch-target ${activeTab === "text"
+            ? "text-white bg-white/10"
+            : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
             }`}
         >
           <Type className={`w-4 h-4 transition-transform duration-300 ${activeTab === "text" ? "scale-110" : "scale-100"}`} />
@@ -164,9 +164,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           onClick={() => handleTabChange("image")}
           role="tab"
           aria-selected={activeTab === "image"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${activeTab === "image"
-            ? "text-white bg-slate-800"
-            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 touch-target ${activeTab === "image"
+            ? "text-white bg-white/10"
+            : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
             }`}
         >
           <ImageIcon className={`w-4 h-4 transition-transform duration-300 ${activeTab === "image" ? "scale-110" : "scale-100"}`} />
@@ -179,9 +179,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           onClick={() => handleTabChange("draw")}
           role="tab"
           aria-selected={activeTab === "draw"}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 ${activeTab === "draw"
-            ? "text-white bg-slate-800"
-            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 touch-target ${activeTab === "draw"
+            ? "text-white bg-white/10"
+            : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
             }`}
         >
           <Pencil className={`w-4 h-4 transition-transform duration-300 ${activeTab === "draw" ? "scale-110" : "scale-100"}`} />
@@ -233,9 +233,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         }
                       }, 50);
                     }}
-                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 ${meme.paddingTop > 0
-                      ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20"
-                      : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 touch-target ${meme.paddingTop > 0
+                      ? "btn-brand"
+                      : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
                       }`}
                     style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                   >
@@ -264,9 +264,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         }
                       }, 50);
                     }}
-                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 ${(meme.paddingBottom || 0) > 0
-                      ? "bg-brand text-white border-brand shadow-lg shadow-orange-900/20"
-                      : "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 touch-target ${(meme.paddingBottom || 0) > 0
+                      ? "btn-brand"
+                      : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
                       }`}
                     style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                   >

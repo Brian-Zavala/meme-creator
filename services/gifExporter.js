@@ -232,8 +232,15 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
 
             let sourceCanvas = null;
             let srcW = 0, srcH = 0;
+            // Check for PRE-FRIED static asset first
+            let isPreFried = false;
 
-            if (gifProcessors[panel.id]) {
+            if (assets.friedImages && assets.friedImages[panel.id]) {
+                sourceCanvas = assets.friedImages[panel.id];
+                srcW = sourceCanvas.width;
+                srcH = sourceCanvas.height;
+                isPreFried = true;
+            } else if (gifProcessors[panel.id]) {
                 const proc = gifProcessors[panel.id];
                 const frameIdx = frameIndex % proc.numFrames;
                 const result = proc.renderFrame(frameIdx);
@@ -282,7 +289,8 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
 
                 ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
 
-                if ((f.deepFry || 0) > 0) {
+                // Only apply per-frame deep fry if it wasn't pre-calculated
+                if (!isPreFried && (f.deepFry || 0) > 0) {
                     applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
                 }
 
@@ -404,8 +412,8 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
  */
 function calculateDimensions(meme, assets) {
     let containerAspect = 1;
-    let exportWidth = 800; // Default base resolution
-    let exportHeight = 800;
+    let exportWidth = 1600; // Default base resolution (2x Quality)
+    let exportHeight = 1600;
     const baseWidth = 800; // Reference width for scaling calculations (matches MemeCanvas)
     const { gifProcessors, staticImages } = assets;
 
@@ -440,9 +448,9 @@ function calculateDimensions(meme, assets) {
         }
     } else {
         // No panels (Empty Canvas / Sticker Only mode)
-        console.log("No valid panels found, defaulting to 800x800 square canvas");
-        exportWidth = 800;
-        exportHeight = 800;
+        console.log("No valid panels found, defaulting to 1600x1600 square canvas");
+        exportWidth = 1600;
+        exportHeight = 1600;
         containerAspect = 1;
     }
 
@@ -486,6 +494,41 @@ export async function exportStickersAsPng(meme, stickers) {
     });
 }
 
+/**
+ * NEW: Export Full Meme as PNG (Standard "Download Image")
+ * Replaces html2canvas to ensure standard filters & deep fry interactions work 1:1 with GIF logic
+ */
+export async function exportImageAsPng(meme, texts, stickers) {
+    // 1. Load Assets
+    const assets = await loadMemeAssets(meme, stickers);
+
+    // 1b. Cache Deep Fry if needed (reuse existing optimization logic inside exportGif or just renderFrame)
+    // Actually, renderMemeFrame will call applyDeepFry per-frame. For a single frame export, caching isn't strictly necessary for speed,
+    // but consistency is key. We can just run renderMemeFrame once.
+    // However, we should manually populate friedImages if we want to use the EXACT same path,
+    // but simpler: renderMemeFrame handles on-the-fly deep fry if cache is missing.
+    // So we just call renderMemeFrame.
+
+    // 2. Dimensions
+    const dimensions = calculateDimensions(meme, assets);
+    const { exportWidth, exportHeight } = dimensions;
+
+    // 3. Render Frame 0
+    const canvas = document.createElement('canvas');
+    canvas.width = exportWidth;
+    canvas.height = exportHeight;
+    const ctx = canvas.getContext('2d');
+
+    renderMemeFrame(ctx, meme, stickers, texts, 0, assets, dimensions, { stickersOnly: false });
+
+    // 4. Export as Blob
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        }, 'image/png');
+    });
+}
+
 
 /**
  * Exports a meme as an animated GIF
@@ -500,6 +543,47 @@ export async function exportGif(meme, texts, stickers) {
             // 2. Dimensions
             let dimensions = calculateDimensions(meme, assets);
             let { exportWidth, exportHeight } = dimensions;
+
+            // --- OPTIMIZATION: Pre-Calculate Deep Fry for Static Images ---
+            const friedImages = {}; // Map of panelId -> Canvas
+
+            // Only strictly needed if we have panels with deep fry > 0
+            const hasDeepFry = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
+
+            if (hasDeepFry && !meme.stickersOnly) {
+                console.log("Pre-calculating deep fry for static panels...");
+                const { staticImages } = assets;
+
+                for (const panel of meme.panels) {
+                    // Only cache for: Static Images + Has Fry Level > 0
+                    if (staticImages[panel.id] && (panel.filters?.deepFry || 0) > 0) {
+                        try {
+                            const rawImg = staticImages[panel.id];
+                            const w = rawImg.width;
+                            const h = rawImg.height;
+
+                            // Create offscreen canvas for this fried asset
+                            const c = document.createElement('canvas');
+                            c.width = w;
+                            c.height = h;
+                            const cx = c.getContext('2d');
+
+                            // Draw original
+                            cx.drawImage(rawImg, 0, 0);
+
+                            // Apply Fry (O(Pixels) cost PAID ONCE)
+                            applyDeepFry(cx, 0, 0, w, h, panel.filters.deepFry);
+
+                            friedImages[panel.id] = c;
+                        } catch (e) {
+                            console.warn("Failed to pre-fry image:", e);
+                        }
+                    }
+                }
+            }
+            // Add to assets so renderMemeFrame can find them
+            assets.friedImages = friedImages;
+            // -------------------------------------------------------------
 
             // Scale down large images for reasonable GIF file sizes
             const MAX_GIF_DIMENSION = 600;

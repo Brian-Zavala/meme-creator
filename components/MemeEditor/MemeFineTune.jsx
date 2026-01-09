@@ -1,16 +1,8 @@
 import { RefreshCcw, RotateCw } from "lucide-react";
+import OptimizedSlider from "../ui/OptimizedSlider";
 
 export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommit, onCenterText }) {
   if (!selectedText) return null;
-
-  const getSliderStyle = (value, min, max) => {
-    const val = ((value - min) / (max - min)) * 100;
-    const color = 'var(--color-brand)';
-    const track = 'rgb(30 41 59)';
-    return {
-      background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
-    };
-  };
 
   return (
     <div
@@ -33,36 +25,26 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
             {/* Position X */}
             <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-slate-400 w-4 text-center">X</span>
-                <input
-                    type="range"
+                <OptimizedSlider
                     min="0" max="100" step="0.5"
                     value={selectedText.x}
-                    onChange={(e) => {
-                        if (navigator.vibrate) navigator.vibrate(5);
-                        onFineTune('x', e.target.value);
-                    }}
-                    onMouseUp={onFineTuneCommit}
-                    onTouchEnd={onFineTuneCommit}
+                    onChange={(e) => onFineTune('x', e.target.value)}
+                    onCommit={onFineTuneCommit}
+                    trackColor="rgb(30 41 59)"
                     className="range-slider flex-1 h-1.5 rounded-full cursor-pointer"
-                    style={getSliderStyle(selectedText.x, 0, 100)}
                 />
             </div>
 
             {/* Position Y */}
             <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-slate-400 w-4 text-center">Y</span>
-                <input
-                    type="range"
+                <OptimizedSlider
                     min="0" max="100" step="0.5"
                     value={selectedText.y}
-                    onChange={(e) => {
-                        if (navigator.vibrate) navigator.vibrate(5);
-                        onFineTune('y', e.target.value);
-                    }}
-                    onMouseUp={onFineTuneCommit}
-                    onTouchEnd={onFineTuneCommit}
+                    onChange={(e) => onFineTune('y', e.target.value)}
+                    onCommit={onFineTuneCommit}
+                    trackColor="rgb(30 41 59)"
                     className="range-slider flex-1 h-1.5 rounded-full cursor-pointer"
-                    style={getSliderStyle(selectedText.y, 0, 100)}
                 />
             </div>
         </div>
@@ -78,23 +60,18 @@ export default function MemeFineTune({ selectedText, onFineTune, onFineTuneCommi
             }`} />
 
             <div className="relative flex-1 h-1.5">
-                <input
-                    type="range"
+                <OptimizedSlider
                     min="0" max="360" step="1"
                     disabled={selectedText.animation && selectedText.animation !== 'none'}
                     value={selectedText.rotation || 0}
-                    onChange={(e) => {
-                        if (navigator.vibrate) navigator.vibrate(5);
-                        onFineTune('rotation', e.target.value);
-                    }}
-                    onMouseUp={onFineTuneCommit}
-                    onTouchEnd={onFineTuneCommit}
+                    onChange={(e) => onFineTune('rotation', e.target.value)}
+                    onCommit={onFineTuneCommit}
+                    trackColor="rgb(30 41 59)"
                     className={`range-slider w-full h-full rounded-full absolute inset-0 ${
                         selectedText.animation && selectedText.animation !== 'none'
                             ? 'cursor-not-allowed opacity-50 grayscale'
                             : 'cursor-pointer'
                     }`}
-                    style={getSliderStyle(selectedText.rotation || 0, 0, 360)}
                 />
 
                 {selectedText.animation && selectedText.animation !== 'none' && (

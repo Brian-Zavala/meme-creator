@@ -421,29 +421,42 @@ body {
 
 }
 
-/* --- CHAOS MODE MAGMA EFFECT --- */
+/* --- CHAOS MODE MAGMA EFFECT (GPU Optimized) --- */
 .magma-bg {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.magma-bg::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  z-index: -1;
   background: linear-gradient(-45deg,
       #ee7752,
       #e73c7e,
       #23a6d5,
       #23d5ab);
   background: linear-gradient(-45deg, #ff0000, #ff7300, #fffb00, #4800ff);
-  background-size: 400% 400%;
-  animation: magmaFlow 3s ease infinite;
+  background-size: 50% 50%;
+  animation: magmaFlow 3s linear infinite;
+  will-change: transform;
 }
 
 @keyframes magmaFlow {
   0% {
-    background-position: 0% 50%;
+    transform: translate(0, 0) rotate(0deg);
   }
 
   50% {
-    background-position: 100% 50%;
+    transform: translate(-10%, -10%) rotate(2deg);
   }
 
   100% {
-    background-position: 0% 50%;
+    transform: translate(0, 0) rotate(0deg);
   }
 }
 

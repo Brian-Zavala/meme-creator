@@ -1,5 +1,5 @@
 import { forwardRef, useRef, useEffect, useState } from "react";
-import { Loader2, Plus, Image as ImageIcon, Video, Upload, X, Trash2 } from "lucide-react";
+import { Loader2, Plus, Image as ImageIcon, Video, Upload, X, Trash2, Settings2 } from "lucide-react";
 import { getAnimationById } from "../../constants/textAnimations";
 
 const MemeCanvas = forwardRef(({
@@ -703,52 +703,74 @@ const MemeCanvas = forwardRef(({
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
-              {/* Text Content Rendering */}
-              {textItem.animation === 'wave' ? (
-                textItem.content.split('\n').map((line, lineIdx) => {
-                  // Split line into words (preserving spaces as separators)
-                  const words = line.split(/(\s+)/);
-                  let globalCharIdx = 0;
+              {/* Settings Button - only shows during marching ants (selected, not editing) */}
+              {isSelected && !isEditing && (
+                <button
+                  data-html2canvas-ignore="true"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Scroll to fine-tuner section
+                    const fineTuner = document.querySelector('[data-fine-tuner]');
+                    if (fineTuner) {
+                      fineTuner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    if (navigator.vibrate) navigator.vibrate(30);
+                  }}
+                  className="absolute -top-14 -right-4 p-2.5 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 z-[60] hover:bg-brand hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
+                  style={{ pointerEvents: 'auto', touchAction: 'auto' }}
+                  title="Edit Text Settings"
+                >
+                  <Settings2 className="w-4 h-4" />
+                </button>
+              )}
+              {/* Text Content Rendering - hide when editing to avoid duplicate */}
+              {!isEditing && (
+                textItem.animation === 'wave' ? (
+                  textItem.content.split('\n').map((line, lineIdx) => {
+                    // Split line into words (preserving spaces as separators)
+                    const words = line.split(/(\s+)/);
+                    let globalCharIdx = 0;
 
-                  return (
-                    <span key={lineIdx} style={{ display: 'block' }}>
-                      {words.map((word, wordIdx) => {
-                        // If it's whitespace, render a regular space (allows wrapping)
-                        if (/^\s+$/.test(word)) {
+                    return (
+                      <span key={lineIdx} style={{ display: 'block' }}>
+                        {words.map((word, wordIdx) => {
+                          // If it's whitespace, render a regular space (allows wrapping)
+                          if (/^\s+$/.test(word)) {
+                            globalCharIdx += word.length;
+                            return ' ';
+                          }
+
+                          // For actual words, wrap in inline-block to keep together
+                          const chars = word.split('').map((char, charInWordIdx) => {
+                            const charDelay = globalCharIdx + charInWordIdx;
+                            return (
+                              <span
+                                key={charInWordIdx}
+                                className="animate-meme-wave-char"
+                                style={{ animationDelay: `${charDelay * 0.1}s` }}
+                              >
+                                {char}
+                              </span>
+                            );
+                          });
                           globalCharIdx += word.length;
-                          return ' ';
-                        }
 
-                        // For actual words, wrap in inline-block to keep together
-                        const chars = word.split('').map((char, charInWordIdx) => {
-                          const charDelay = globalCharIdx + charInWordIdx;
                           return (
-                            <span
-                              key={charInWordIdx}
-                              className="animate-meme-wave-char"
-                              style={{ animationDelay: `${charDelay * 0.1}s` }}
-                            >
-                              {char}
+                            <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+                              {chars}
                             </span>
                           );
-                        });
-                        globalCharIdx += word.length;
-
-                        return (
-                          <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
-                            {chars}
-                          </span>
-                        );
-                      })}
-                      {line.length === 0 && <span>&nbsp;</span>}
-                    </span>
-                  );
-                })
-              ) : (
-                textItem.content
+                        })}
+                        {line.length === 0 && <span>&nbsp;</span>}
+                      </span>
+                    );
+                  })
+                ) : (
+                  textItem.content
+                )
               )}
 
-              {/* Overlay Input for Direct Editing - transparent text to avoid duplication */}
+              {/* Overlay Input for Direct Editing - now shows styled text */}
               {isEditing && (
                 <textarea
                   id={`canvas-input-${textItem.id}`}
@@ -756,17 +778,19 @@ const MemeCanvas = forwardRef(({
                   value={textItem.content}
                   onChange={(e) => onTextChange(textItem.id, e.target.value)}
                   autoFocus
-                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none text-center"
+                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none text-center uppercase tracking-tighter"
                   style={{
-                    color: 'transparent',
-                    WebkitTextFillColor: 'transparent', // Prevents duplicate text on mobile
-                    caretColor: 'var(--color-brand)', // Use brand color for better visibility
+                    color: meme.textColor,
+                    WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
+                    paintOrder: 'stroke fill',
+                    caretColor: 'var(--color-brand)',
                     fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
                     fontSize: `${meme.fontSize * scaleFactor}px`,
                     letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                     lineHeight: 1.2,
                     padding: hasBg ? '0.25em 0.5em' : '0',
                     textAlign: "center",
+                    filter: hasContent ? "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))" : "none",
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                 />

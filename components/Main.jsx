@@ -376,25 +376,7 @@ export default function Main() {
     };
   }, [deferredDeepFry, activePanel?.url, activePanel?.id]);
 
-  useEffect(() => {
-    if (meme.selectedId && fineTuneRef.current) {
-      const timer = setTimeout(() => {
-        const elementRect = fineTuneRef.current.getBoundingClientRect();
-        const elementTop = elementRect.top + window.scrollY;
-        const elementHeight = elementRect.height;
-        const windowHeight = window.innerHeight;
-
-        const isMobile = window.innerWidth < 768;
-        const targetScroll = isMobile ? elementTop - (windowHeight - elementHeight - 20) : elementTop - 150;
-
-        window.scroll({
-          top: Math.max(0, targetScroll),
-          behavior: "smooth",
-        });
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [meme.selectedId]);
+  // NOTE: Auto-scroll to fine-tuner removed - users can use the settings icon button to scroll manually
 
   const triggerFlash = (color) => {
     setFlashColor(color);
@@ -1902,7 +1884,7 @@ export default function Main() {
           </div>
           {selectedText && (
             <Suspense fallback={null}>
-              <div ref={fineTuneRef}>
+              <div ref={fineTuneRef} data-fine-tuner>
                 <MemeFineTune
                   selectedText={selectedText}
                   onFineTune={handleFineTune}

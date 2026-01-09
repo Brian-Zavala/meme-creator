@@ -1651,7 +1651,9 @@ export default function Main() {
           hasStickers={meme.stickers.length > 0}
           onExportStickers={handleExportStickers}
           selectedId={meme.selectedId}
-          editingId={editingId}
+          // Only pass editingId if the text has content (not a new empty text from canvas)
+          // This prevents the input panel from expanding while user types on canvas
+          editingId={editingId && meme.texts.find(t => t.id === editingId)?.content?.trim() ? editingId : null}
           onEditingChange={setEditingId}
         />
         <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>

@@ -44,6 +44,22 @@ const MemeCanvas = forwardRef(({
   const canvasLongPressTimerRef = useRef(null);
   const longPressStartPosRef = useRef(null);
 
+  // Robustly set caret position when editing starts
+  useEffect(() => {
+    if (editingId) {
+      // Use requestAnimationFrame to ensure DOM is ready after React render
+      requestAnimationFrame(() => {
+        const textarea = document.getElementById(`canvas-input-${editingId}`);
+        if (textarea) {
+          textarea.focus();
+          // Set caret to the end of the text content
+          const len = textarea.value.length;
+          textarea.setSelectionRange(len, len);
+        }
+      });
+    }
+  }, [editingId]);
+
   // If we have an override (Deep Fry preview), it only applies to the ACTIVE panel for now visually
 
   const handleMediaLoad = (e) => {
@@ -664,6 +680,8 @@ const MemeCanvas = forwardRef(({
                 fontSize: `${meme.fontSize * scaleFactor}px`,
                 letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                 maxWidth: `${meme.maxWidth}%`,
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
                 fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
                 WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
                 paintOrder: "stroke fill",
@@ -794,14 +812,14 @@ const MemeCanvas = forwardRef(({
               {isEditing && (
                 <span
                   data-html2canvas-ignore="true"
-                  className="inline-block animate-pulse align-middle"
+                  className="inline-block align-middle animate-caret-blink"
                   style={{
-                    width: '3px',
-                    height: `${meme.fontSize * scaleFactor}px`,
+                    width: '4px',
+                    height: `${meme.fontSize * scaleFactor * 1.1}px`,
                     backgroundColor: 'var(--color-brand)',
-                    boxShadow: '0 0 8px var(--color-brand)',
+                    boxShadow: '0 0 12px var(--color-brand), 0 0 24px var(--color-brand), 0 0 4px rgba(255,255,255,0.8)',
                     borderRadius: '2px',
-                    marginLeft: '2px',
+                    marginLeft: '4px',
                     verticalAlign: 'middle',
                   }}
                 />

@@ -60,7 +60,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
       </div>
 
       {/* Scrolling Text Inputs area */}
-      <div className="px-6 space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin mb-4" role="group" aria-label="Text Inputs">
+      <div className="px-6 py-2 space-y-4 max-h-[300px] overflow-y-auto pr-4 scrollbar-thin mb-4" role="group" aria-label="Text Inputs">
         {(() => {
           let lastFilledIndex = -1;
           let activeIndex = -1;

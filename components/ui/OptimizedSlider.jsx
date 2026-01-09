@@ -22,6 +22,10 @@ export default function OptimizedSlider({
   const [isDragging, setIsDragging] = useState(false);
 
   const inputRef = useRef(null);
+  const glowRef = useRef(null);
+  const fillBaseRef = useRef(null);
+  const fillPatternRef = useRef(null);
+
   const animationRef = useRef(null);
   const offsetRef = useRef(0);
   const localValueRef = useRef(localValue);
@@ -42,15 +46,16 @@ export default function OptimizedSlider({
     }
   }, [value, isDragging, isPending, localValue]);
 
-  // Initial Paint (Static)
+  // Initial Paint (Static) & Updates
   useEffect(() => {
-    if (!isDragging) {
-      updateBackground(localValue, false);
-    }
-  }, [localValue, min, max, filledColor, trackColor, isDragging]);
+    updateVisuals(localValueRef.current);
+  }, [localValue, min, max, filledColor, trackColor]);
 
   // Animation Loop
+  // We strictly manage the "Flow" (offset) and "Opacity" classes here.
   useEffect(() => {
+    // If not dragging, ensure we clean up animation but state stays "static"
+    // The CSS transitions on the elements handles the smooth fade out.
     if (!isDragging) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -60,14 +65,10 @@ export default function OptimizedSlider({
     }
 
     const animate = () => {
-      // Speed of flow
-      offsetRef.current += 2; // Move right for "flow" effect
-
-      // Reset logic to prevent massive numbers (Pattern length is 160px)
-      // We use modulo in the updating function effectively, but keeping offset bounded is good.
+      offsetRef.current += 3;
       if (offsetRef.current > 16000) offsetRef.current = 0;
 
-      updateBackground(localValueRef.current, true);
+      updateVisuals(localValueRef.current);
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -78,53 +79,42 @@ export default function OptimizedSlider({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isDragging, min, max, filledColor, trackColor]); // Removed localValue to prevent restart
+  }, [isDragging, min, max, filledColor, trackColor]);
 
-  const updateBackground = (currentVal, animating) => {
-    if (!inputRef.current) return;
-
+  const updateVisuals = (currentVal) => {
     let val = 0;
     if (max !== min) {
       val = ((currentVal - min) / (max - min)) * 100;
     }
 
-    // Static State: Simple filled bar + track
-    if (!animating) {
-      inputRef.current.style.background = `linear-gradient(to right, ${filledColor} 0%, ${filledColor} ${val}%, ${trackColor} ${val}%, ${trackColor} 100%)`;
-      inputRef.current.style.backgroundSize = "100% 100%";
-      inputRef.current.style.backgroundPosition = "0 0";
-      return;
-    }
+    const off = offsetRef.current % 160;
 
-    // ANIMATING: Plasma Flow Effect
-    // To ensure the pattern moves correctly within the clipped area (val%) without moving the clip area itself:
-    // 1. We fix background-position at 0 0.
-    // 2. We set background-size of the first layer (fill) to `${val}% 100%`.
-    // 3. We animate the gradient stops themselves by adding the offset.
+    // --- Dynamic Styles ---
+    // 1. Fill Widths
+    if (fillBaseRef.current) fillBaseRef.current.style.width = `${val}%`;
+    if (fillPatternRef.current) fillPatternRef.current.style.width = `${val}%`;
+    if (glowRef.current) glowRef.current.style.width = `${val}%`;
 
-    const off = offsetRef.current % 160; // Pattern repeats every 160px
+    // 2. Pattern Position (Flow)
+    const pos = `${offsetRef.current}px 0`;
+    if (fillPatternRef.current) fillPatternRef.current.style.backgroundPosition = pos;
+    if (glowRef.current) glowRef.current.style.backgroundPosition = pos;
 
+    // 3. Pattern Definition (Color Mix)
+    // We define this once or dynamic? It depends on filledColor prop.
+    // It's effectively constant unless filledColor changes.
+    // We can set it inline.
     const plasmaGradient = `repeating-linear-gradient(
       90deg,
-      ${filledColor} ${0 + off}px,
-      color-mix(in srgb, ${filledColor}, white 20%) ${40 + off}px,
-      color-mix(in srgb, ${filledColor}, white 60%) ${80 + off}px,
-      color-mix(in srgb, ${filledColor}, white 20%) ${120 + off}px,
-      ${filledColor} ${160 + off}px
+      ${filledColor} ${0}px,
+      color-mix(in srgb, ${filledColor}, white 15%) ${40}px,
+      color-mix(in srgb, ${filledColor}, white 40%) ${80}px,
+      color-mix(in srgb, ${filledColor}, white 15%) ${120}px,
+      ${filledColor} ${160}px
     )`;
 
-    const trackGradient = `linear-gradient(${trackColor}, ${trackColor})`;
-
-    inputRef.current.style.backgroundImage = `${plasmaGradient}, ${trackGradient}`;
-
-    // Layer 1 (Plasma): width = val%, height = 100%
-    // Layer 2 (Track): width = 100%, height = 100%
-    inputRef.current.style.backgroundSize = `${val}% 100%, 100% 100%`;
-
-    // Fix position at 0
-    inputRef.current.style.backgroundPosition = `0 0, 0 0`;
-
-    inputRef.current.style.backgroundRepeat = `no-repeat, no-repeat`;
+    if (fillPatternRef.current) fillPatternRef.current.style.backgroundImage = plasmaGradient;
+    if (glowRef.current) glowRef.current.style.backgroundImage = plasmaGradient;
   };
 
   const handleChange = (e) => {
@@ -152,40 +142,83 @@ export default function OptimizedSlider({
   };
 
   return (
-    <input
-      ref={inputRef}
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      name={name}
-      value={localValue}
-      onChange={handleChange}
-      onMouseDown={(e) => {
-          setIsDragging(true);
-          // Don't reset offset to 0 to keep flow continuous or reset?
-          // Resetting might feel jumpy if you click multiple times.
-          // Let's NOT reset offsetRef.current = 0; allow continuous flow phase.
-          if (props.onMouseDown) props.onMouseDown(e);
-      }}
-      onTouchStart={(e) => {
-          setIsDragging(true);
-          if (props.onTouchStart) props.onTouchStart(e);
-      }}
-      onMouseUp={(e) => {
-        setIsDragging(false);
-        if (onCommit) onCommit(e);
-        if (props.onMouseUp) props.onMouseUp(e);
-      }}
-      onTouchEnd={(e) => {
-        setIsDragging(false);
-        if (onCommit) onCommit(e);
-        if (props.onTouchEnd) props.onTouchEnd(e);
-      }}
-      className={className}
-      title={title}
-      disabled={disabled}
-      {...props}
-    />
+    <div className={`relative flex items-center group ${className || ''}`} style={{ isolate: 'isolate' }}>
+      {/* --- VISUAL LAYERS (Pointer events none) --- */}
+
+      {/* 1. Track Background (Full Width) */}
+      <div
+        className="absolute top-0 left-0 w-full h-full rounded-full pointer-events-none"
+        style={{ background: trackColor }}
+      />
+
+      {/* 2. Glow Layer (Backing, Fades In) */}
+      <div
+        ref={glowRef}
+        className={`absolute top-0 left-0 h-full rounded-full pointer-events-none transition-opacity duration-300 ease-out ${isDragging ? 'opacity-70' : 'opacity-0'}`}
+        style={{
+          zIndex: 0,
+          filter: 'blur(8px)',
+          backgroundSize: '160px 100%', // Pattern size
+          backgroundRepeat: 'repeat-x'
+        }}
+      />
+
+      {/* 3. Base Fill (Solid Color, Always Visible) */}
+      <div
+        ref={fillBaseRef}
+        className="absolute top-0 left-0 h-full rounded-full pointer-events-none"
+        style={{
+            zIndex: 1,
+            background: filledColor
+        }}
+      />
+
+      {/* 4. Pattern Fill (Plasma, Fades In on Drag) */}
+      <div
+        ref={fillPatternRef}
+        className={`absolute top-0 left-0 h-full rounded-full pointer-events-none transition-opacity duration-300 ease-out ${isDragging ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+            zIndex: 2,
+            backgroundSize: '160px 100%', // Pattern size
+            backgroundRepeat: 'repeat-x'
+        }}
+      />
+
+      {/* --- INTERACTION LAYER (Input) --- */}
+      <input
+        ref={inputRef}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        name={name}
+        value={localValue}
+        onChange={handleChange}
+        onMouseDown={(e) => {
+            setIsDragging(true);
+            // offsetRef.current = 0; // Keep flow continuous
+            if (props.onMouseDown) props.onMouseDown(e);
+        }}
+        onTouchStart={(e) => {
+            setIsDragging(true);
+            if (props.onTouchStart) props.onTouchStart(e);
+        }}
+        onMouseUp={(e) => {
+          setIsDragging(false);
+          if (onCommit) onCommit(e);
+          if (props.onMouseUp) props.onMouseUp(e);
+        }}
+        onTouchEnd={(e) => {
+          setIsDragging(false);
+          if (onCommit) onCommit(e);
+          if (props.onTouchEnd) props.onTouchEnd(e);
+        }}
+        // Input is transparent, just providing the thumb and interaction area
+        className="w-full h-full opacity-100 cursor-pointer touch-none bg-transparent appearance-none focus:outline-none range-slider relative z-10"
+        title={title}
+        disabled={disabled}
+        {...props}
+      />
+    </div>
   );
 }

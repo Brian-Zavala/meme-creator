@@ -1363,11 +1363,8 @@ export default function Main() {
         }
         lastTapRef.current = { id, time: now };
 
-        longPressTimerRef.current = setTimeout(() => {
-          removeSticker(id);
-          setDraggedId(null);
-          if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-        }, 600);
+        lastTapRef.current = { id, time: now };
+
       } else if (isText) {
         longPressTimerRef.current = setTimeout(() => {
           startTransition(() => {

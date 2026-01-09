@@ -1465,7 +1465,17 @@ export default function Main() {
 
     const toastId = toast.loading("Generating...");
     try {
-      const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
+      // MOBILE FIX: Enhanced options for iOS/Android consistency
+      const canvas = await html2canvas(memeRef.current, {
+        useCORS: true,
+        backgroundColor: "#000000",
+        scale: 2,
+        allowTaint: false,
+        foreignObjectRendering: false, // More consistent on mobile browsers
+        logging: false,
+        imageTimeout: 15000, // Longer timeout for slow mobile connections
+        removeContainer: true,
+      });
       const finalDataUrl = canvas.toDataURL("image/png");
 
       const safeName = (meme.name || 'meme')
@@ -1538,7 +1548,17 @@ export default function Main() {
     if (!memeRef.current) return;
 
     try {
-      const canvas = await html2canvas(memeRef.current, { useCORS: true, backgroundColor: "#000000", scale: 2 });
+      // MOBILE FIX: Enhanced options for iOS/Android consistency
+      const canvas = await html2canvas(memeRef.current, {
+        useCORS: true,
+        backgroundColor: "#000000",
+        scale: 2,
+        allowTaint: false,
+        foreignObjectRendering: false,
+        logging: false,
+        imageTimeout: 15000,
+        removeContainer: true,
+      });
       const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
       const file = new File([blob], `meme.png`, { type: "image/png" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {

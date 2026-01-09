@@ -54,6 +54,9 @@ async function createGifProcessor(url) {
 
                 if (frameIndex === 0 && currentFrameIndex !== -1) {
                     // Reset state for loop
+                    // MOBILE FIX: Use fillRect with transparent before clear to ensure
+                    // canvas is in a known state on all platforms (iOS Safari fix)
+                    ctx.globalCompositeOperation = 'source-over';
                     ctx.clearRect(0, 0, width, height);
                     previousInfo = null;
                     savedState = null;
@@ -181,15 +184,21 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
     const { stickersOnly = false, totalFrames = 1 } = options;
 
     // A. Clear & Background
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.clearRect(0, 0, exportWidth, exportHeight);
+    // MOBILE FIX: Ensure canvas context is valid before proceeding
+    if (!ctx || typeof ctx.fillRect !== 'function') {
+        console.error('Canvas context unavailable - possible memory issue on mobile');
+        return;
+    }
 
-    // Only fill background if NOT in stickersOnly mode
+    ctx.globalCompositeOperation = 'source-over';
+
+    // MOBILE FIX: For regular export, fill FIRST then content - prevents transparent flash on iOS
+    // For stickersOnly mode, we need true transparency so clear only
     if (!stickersOnly) {
         const paddingTop = meme.paddingTop || 0;
         const paddingBottom = meme.paddingBottom || 0;
 
-        // Black background
+        // Black background FIRST (before any clear) - iOS Safari fix
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, exportWidth, exportHeight);
 
@@ -206,6 +215,9 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
             ctx.fillStyle = meme.paddingBottomColor || '#ffffff';
             ctx.fillRect(0, exportHeight - bottomBarHeight, exportWidth, bottomBarHeight);
         }
+    } else {
+        // STICKERS ONLY: Need true transparency - clear to transparent
+        ctx.clearRect(0, 0, exportWidth, exportHeight);
     }
 
     // B. Draw Panels (Skip if stickersOnly)
@@ -239,6 +251,11 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
                 ctx.beginPath();
                 ctx.rect(px, py, pw, ph);
                 ctx.clip();
+
+                // MOBILE FIX: Ensure panel area has opaque background before drawing
+                // Prevents transparency bleed-through on iOS/Android
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(px, py, pw, ph);
 
                 const f = panel.filters || {};
                 const filterStr = `
@@ -318,10 +335,9 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         if (sticker.animation && sticker.animation !== 'none') {
             const anim = getAnimationById(sticker.animation);
             if (anim && anim.getTransform) {
-                // Use ANIMATED_TEXT_FRAMES for animation progress so it loops at original speed
-                // regardless of the GIF's frame count
-                const animFrames = ANIMATED_TEXT_FRAMES;
-                const t = anim.getTransform(frameIndex % animFrames, animFrames);
+                // FIX: Use totalFrames (actual GIF loop length) instead of ANIMATED_TEXT_FRAMES
+                // This ensures animation completes exactly once per GIF loop
+                const t = anim.getTransform(frameIndex, totalFrames);
 
                 animX += (t.offsetX || 0) * scaleFactor;
                 animY += (t.offsetY || 0) * scaleFactor;
@@ -671,9 +687,9 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         if (textItem.animation && textItem.animation !== 'none') {
             const anim = getAnimationById(textItem.animation);
             if (anim && anim.getTransform) {
-                // Use ANIMATED_TEXT_FRAMES for animation progress so it loops at original speed
-                const animFrames = ANIMATED_TEXT_FRAMES;
-                const transform = anim.getTransform(frameIndex % animFrames, animFrames, 0, 1);
+                // FIX: Use totalFrames (actual GIF loop length) instead of ANIMATED_TEXT_FRAMES
+                // This ensures animation completes exactly once per GIF loop
+                const transform = anim.getTransform(frameIndex, totalFrames, 0, 1);
                 animX += (transform.offsetX || 0) * scale;
                 animY += (transform.offsetY || 0) * scale;
                 animRotation += (transform.rotation || 0) * (Math.PI / 180);

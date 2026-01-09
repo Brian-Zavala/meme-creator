@@ -24,6 +24,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
+import OptimizedSlider from "../ui/OptimizedSlider";
 
 const ColorControls = lazy(() => import("./ColorControls"));
 
@@ -136,15 +137,6 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
     }
     wasCollapsedRef.current = isCollapsed;
   }, [isCollapsed, onDrawerExpand]);
-
-  const getSliderStyle = (value, min, max) => {
-    const val = ((value - min) / (max - min)) * 100;
-    const color = 'var(--color-brand)';
-    const track = 'rgba(255, 255, 255, 0.2)';
-    return {
-      background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
-    };
-  };
 
   return (
     <div
@@ -394,17 +386,12 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 {hasStickers && (
                   <div className="w-full flex items-center gap-4 animate-in slide-in-from-top-1 fade-in duration-300">
                     <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <input
-                      type="range" min="5" max="250" name="stickerSize"
+                    <OptimizedSlider
+                      min="5" max="250" name="stickerSize"
                       value={meme.stickerSize || 60}
-                      onChange={(e) => {
-                        if (navigator.vibrate) navigator.vibrate(5);
-                        handleStyleChange(e);
-                      }}
-                      onMouseUp={handleStyleCommit}
-                      onTouchEnd={handleStyleCommit}
+                      onChange={handleStyleChange}
+                      onCommit={handleStyleCommit}
                       className="range-slider w-full cursor-pointer rounded-full opacity-90 h-2"
-                      style={getSliderStyle(meme.stickerSize || 60, 5, 250)}
                       title="Sticker Size"
                     />
                   </div>
@@ -457,17 +444,12 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                   )}
                                   <div className="flex items-center gap-4 w-full">
                                     <Type className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                                    <input
-                                      type="range" min="2" max="120" name="fontSize"
+                                    <OptimizedSlider
+                                      min="2" max="120" name="fontSize"
                                       value={meme.fontSize}
-                                      onChange={(e) => {
-                                        if (navigator.vibrate) navigator.vibrate(5);
-                                        handleStyleChange(e);
-                                      }}
-                                      onMouseUp={handleStyleCommit}
-                                      onTouchEnd={handleStyleCommit}
+                                      onChange={handleStyleChange}
+                                      onCommit={handleStyleCommit}
                                       className="range-slider w-full cursor-pointer rounded-full h-2"
-                                      style={getSliderStyle(meme.fontSize, 2, 120)}
                                       title="Font Size"
                                     />
                                   </div>
@@ -497,17 +479,12 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                   )}
                                   <div className="flex items-center gap-4 w-full">
                                     <MoveHorizontal className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                                    <input
-                                      type="range" min="20" max="100" name="maxWidth"
+                                    <OptimizedSlider
+                                      min="20" max="100" name="maxWidth"
                                       value={meme.maxWidth}
-                                      onChange={(e) => {
-                                        if (navigator.vibrate) navigator.vibrate(5);
-                                        handleStyleChange(e);
-                                      }}
-                                      onMouseUp={handleStyleCommit}
-                                      onTouchEnd={handleStyleCommit}
+                                      onChange={handleStyleChange}
+                                      onCommit={handleStyleCommit}
                                       className="range-slider w-full cursor-pointer rounded-full h-2"
-                                      style={getSliderStyle(meme.maxWidth, 20, 100)}
                                       title="Text Width (Wrap)"
                                     />
                                   </div>
@@ -533,17 +510,12 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                   )}
                                   <div className="flex items-center gap-4 w-full">
                                     <ArrowLeftRight className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                                    <input
-                                      type="range" min="-5" max="50" step="1" name="letterSpacing"
+                                    <OptimizedSlider
+                                      min="-5" max="50" step="1" name="letterSpacing"
                                       value={meme.letterSpacing || 0}
-                                      onChange={(e) => {
-                                        if (navigator.vibrate) navigator.vibrate(5);
-                                        handleStyleChange(e);
-                                      }}
-                                      onMouseUp={handleStyleCommit}
-                                      onTouchEnd={handleStyleCommit}
+                                      onChange={handleStyleChange}
+                                      onCommit={handleStyleCommit}
                                       className="range-slider w-full cursor-pointer rounded-full h-2"
-                                      style={getSliderStyle(meme.letterSpacing || 0, -5, 50)}
                                       title="Letter Spacing"
                                     />
                                   </div>
@@ -592,31 +564,23 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   <div className="flex-1 w-full flex flex-col gap-5">
                     <div className="flex items-center gap-3">
                       <Contrast className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="200" name="contrast"
+                      <OptimizedSlider
+                        min="0" max="200" name="contrast"
                         value={meme.filters?.contrast ?? 100}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.contrast ?? 100, 0, 200)}
                         title="Contrast"
                       />
                     </div>
                     <div className="flex items-center gap-3">
                       <Sun className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="200" name="brightness"
+                      <OptimizedSlider
+                        min="0" max="200" name="brightness"
                         value={meme.filters?.brightness ?? 100}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.brightness ?? 100, 0, 200)}
                         title="Brightness"
                       />
                     </div>
@@ -627,31 +591,23 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   <div className="flex-1 w-full flex flex-col gap-5">
                     <div className="flex items-center gap-3">
                       <Blur className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="10" step="0.5" name="blur"
+                      <OptimizedSlider
+                        min="0" max="10" step="0.5" name="blur"
                         value={meme.filters?.blur ?? 0}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.blur ?? 0, 0, 10)}
                         title="Blur"
                       />
                     </div>
                     <div className="flex items-center gap-3">
                       <Grayscale className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="100" name="grayscale"
+                      <OptimizedSlider
+                        min="0" max="100" name="grayscale"
                         value={meme.filters?.grayscale ?? 0}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.grayscale ?? 0, 0, 100)}
                         title="Grayscale"
                       />
                     </div>
@@ -662,31 +618,23 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   <div className="flex-1 w-full flex flex-col gap-5">
                     <div className="flex items-center gap-3">
                       <Sepia className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="100" name="sepia"
+                      <OptimizedSlider
+                        min="0" max="100" name="sepia"
                         value={meme.filters?.sepia ?? 0}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.sepia ?? 0, 0, 100)}
                         title="Sepia"
                       />
                     </div>
                     <div className="flex items-center gap-3">
                       <Saturate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="300" name="saturate"
+                      <OptimizedSlider
+                        min="0" max="300" name="saturate"
                         value={meme.filters?.saturate ?? 100}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.saturate ?? 100, 0, 300)}
                         title="Saturation"
                       />
                     </div>
@@ -697,31 +645,23 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   <div className="flex-1 w-full flex flex-col gap-5">
                     <div className="flex items-center gap-3">
                       <HueRotate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="360" name="hueRotate"
+                      <OptimizedSlider
+                        min="0" max="360" name="hueRotate"
                         value={meme.filters?.hueRotate ?? 0}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.hueRotate ?? 0, 0, 360)}
                         title="Hue Rotate"
                       />
                     </div>
                     <div className="flex items-center gap-3">
                       <Invert className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <input
-                        type="range" min="0" max="100" name="invert"
+                      <OptimizedSlider
+                        min="0" max="100" name="invert"
                         value={meme.filters?.invert ?? 0}
-                        onChange={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(5);
-                          handleFilterChange(e);
-                        }}
-                        onMouseUp={handleStyleCommit} onTouchEnd={handleStyleCommit}
+                        onChange={handleFilterChange}
+                        onCommit={handleStyleCommit}
                         className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        style={getSliderStyle(meme.filters?.invert ?? 0, 0, 100)}
                         title="Invert"
                       />
                     </div>
@@ -742,19 +682,14 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </div>
                   <div className="flex items-center gap-4 w-full">
                     <Flame className={`w-5 h-5 transition-colors ${meme.filters?.deepFry > 0 ? 'text-red-500 animate-pulse' : 'text-slate-600'}`} />
-                    <input
-                      type="range" min="0" max="100" name="deepFry"
+                    <OptimizedSlider
+                      min="0" max="100" name="deepFry"
                       value={meme.filters?.deepFry ?? 0}
-                      onChange={(e) => {
-                        if (navigator.vibrate) navigator.vibrate(5);
-                        handleFilterChange(e);
-                      }}
-                      onMouseUp={handleStyleCommit}
-                      onTouchEnd={handleStyleCommit}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      filledColor="#ef4444"
+                      trackColor="rgba(255, 255, 255, 0.1)"
                       className="range-slider w-full cursor-pointer h-2 rounded-full accent-red-500"
-                      style={{
-                        background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) ${(meme.filters?.deepFry ?? 0)}%, rgba(255, 255, 255, 0.1) 100%)`
-                      }}
                       title="Deep Fry Level"
                     />
                   </div>
@@ -769,7 +704,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 <div className="flex gap-4">
                   <button
                     onClick={() => setActiveTool('pen')}
-                    className={`p-3 rounded-xl border transition-all ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
                     title="Pen Tool"
                     aria-label="Use Pen Tool"
                   >
@@ -777,7 +712,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </button>
                   <button
                     onClick={() => setActiveTool('eraser')}
-                    className={`p-3 rounded-xl border transition-all ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
                     title="Eraser Tool"
                     aria-label="Use Eraser Tool"
                   >
@@ -785,7 +720,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </button>
                   <button
                     onClick={onClearDrawings}
-                    className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all"
+                    className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all flex items-center justify-center"
                     title="Clear All"
                     aria-label="Clear All Drawings"
                   >
@@ -817,12 +752,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Stroke Width</span>
                       <span className="text-[10px] font-bold text-slate-400 font-mono">{meme.drawWidth}px</span>
                     </div>
-                    <input
-                      type="range" min="1" max="50" name="drawWidth"
+                    <OptimizedSlider
+                      min="1" max="50" name="drawWidth"
                       value={meme.drawWidth || 5}
-                      onChange={(e) => handleStyleChange(e)}
+                      onChange={handleStyleChange}
                       className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      style={getSliderStyle(meme.drawWidth || 5, 1, 50)}
                     />
                   </div>
                 </div>

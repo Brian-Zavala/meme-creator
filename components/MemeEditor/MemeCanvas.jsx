@@ -570,7 +570,7 @@ const MemeCanvas = forwardRef(({
                       e.stopPropagation();
                       if (onClearPanel) onClearPanel(panel.id);
                     }}
-                    className={`absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md border border-white/10 shadow-lg transition-all duration-200 z-30 group/btn
+                    className={`absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md border border-white/10 shadow-lg transition-all duration-200 z-30 group/btn flex items-center justify-center
                                     ${isActive ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 -translate-y-2 scale-90 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100'}
                                     hover:bg-red-500 hover:border-red-400 hover:rotate-90 active:scale-90
                                 `}
@@ -732,7 +732,7 @@ const MemeCanvas = forwardRef(({
                       e.preventDefault();
                       if (onRemoveText) onRemoveText(textItem.id);
                     }}
-                    className="p-2 sm:p-2.5 md:p-3 rounded-xl bg-red-500/80 backdrop-blur-md text-white border border-red-400/50 shadow-lg transition-all duration-200 hover:bg-red-500 hover:scale-110 active:scale-90"
+                    className="flex items-center justify-center p-2 sm:p-2.5 md:p-3 rounded-xl bg-red-500/80 backdrop-blur-md text-white border border-red-400/50 shadow-lg transition-all duration-200 hover:bg-red-500 hover:scale-110 active:scale-90"
                     style={{ touchAction: 'manipulation', minWidth: '40px', minHeight: '40px' }}
                     title="Delete Text"
                   >
@@ -754,7 +754,7 @@ const MemeCanvas = forwardRef(({
                         if (onStartEditing) onStartEditing(textItem.id);
                         if (navigator.vibrate) navigator.vibrate(30);
                       }}
-                      className="p-2 sm:p-2.5 md:p-3 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 hover:bg-brand hover:scale-110 active:scale-90"
+                      className="flex items-center justify-center p-2 sm:p-2.5 md:p-3 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 hover:bg-brand hover:scale-110 active:scale-90"
                       style={{ touchAction: 'manipulation', minWidth: '40px', minHeight: '40px' }}
                       title="Edit Text"
                     >

@@ -1,5 +1,6 @@
 import { Palette, Paintbrush as Brush } from "lucide-react";
 import { useEffect, useState } from "react";
+import OptimizedSlider from "../ui/OptimizedSlider";
 
 export default function ColorControls({ meme, handleStyleChange, handleStyleCommit }) {
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
@@ -53,23 +54,6 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
     handleStyleChange({ currentTarget: { name, value: finalColor } }, false);
   };
 
-  const getSliderStyle = (opacity) => {
-    const val = parseInt(opacity, 10) || 0;
-    const color = 'var(--color-brand)';
-    const track = 'rgba(255, 255, 255, 0.2)';
-    return {
-      background: `linear-gradient(to right, ${color} 0%, ${color} ${val}%, ${track} ${val}%, ${track} 100%)`
-    };
-  };
-
-  const getVerticalSliderBg = (value) => {
-    const color = 'var(--color-brand)';
-    const empty = 'rgb(30 41 59)';
-    return {
-      background: `linear-gradient(to top, ${color} 0%, ${color} ${value}%, ${empty} ${value}%, ${empty} 100%)`
-    };
-  };
-
   return (
     <div
       className="w-full md:w-auto flex flex-row flex-nowrap items-end md:items-center justify-evenly md:justify-end gap-2 sm:gap-6 md:gap-8 min-w-0 animate-in slide-in-from-right duration-500 px-2 md:px-0 pb-2 pt-10 md:pt-2 shrink-0 overflow-visible no-scrollbar"
@@ -104,17 +88,12 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
         </div>
         {hasText && (
           <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
-            <input
-              type="range" min="0" max="100"
+            <OptimizedSlider
+              min="0" max="100"
               value={getOpacity(meme.textColor)}
-              onChange={(e) => {
-                if (navigator.vibrate) navigator.vibrate(5);
-                changeOpacity('textColor', e.target.value, false);
-              }}
-              onMouseUp={(e) => changeOpacity('textColor', e.target.value, true)}
-              onTouchEnd={(e) => changeOpacity('textColor', e.target.value, true)}
+              onChange={(e) => changeOpacity('textColor', e.target.value, false)}
+              onCommit={(e) => changeOpacity('textColor', e.target.value, true)}
               className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-              style={getSliderStyle(getOpacity(meme.textColor))}
               title="Text Opacity"
             />
           </div>
@@ -149,17 +128,12 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
         </div>
         {hasText && (
           <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
-            <input
-              type="range" min="0" max="100"
+            <OptimizedSlider
+              min="0" max="100"
               value={getOpacity(meme.textShadow || '#000000')}
-              onChange={(e) => {
-                if (navigator.vibrate) navigator.vibrate(5);
-                changeOpacity('textShadow', e.target.value, false);
-              }}
-              onMouseUp={(e) => changeOpacity('textShadow', e.target.value, true)}
-              onTouchEnd={(e) => changeOpacity('textShadow', e.target.value, true)}
+              onChange={(e) => changeOpacity('textShadow', e.target.value, false)}
+              onCommit={(e) => changeOpacity('textShadow', e.target.value, true)}
               className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-              style={getSliderStyle(getOpacity(meme.textShadow || '#000000'))}
               title="Outline Opacity"
             />
           </div>
@@ -194,17 +168,12 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             </div>
           </div>
           <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
-            <input
-              type="range" min="0" max="100"
+            <OptimizedSlider
+              min="0" max="100"
               value={getOpacity(meme.textBgColor)}
-              onChange={(e) => {
-                if (navigator.vibrate) navigator.vibrate(5);
-                changeOpacity('textBgColor', e.target.value, false);
-              }}
-              onMouseUp={(e) => changeOpacity('textBgColor', e.target.value, true)}
-              onTouchEnd={(e) => changeOpacity('textBgColor', e.target.value, true)}
+              onChange={(e) => changeOpacity('textBgColor', e.target.value, false)}
+              onCommit={(e) => changeOpacity('textBgColor', e.target.value, true)}
               className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
-              style={getSliderStyle(getOpacity(meme.textBgColor))}
               title="Background Opacity"
             />
           </div>

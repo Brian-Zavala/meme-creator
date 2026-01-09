@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo } from "react";
-import html2canvas from "html2canvas-pro";
 import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "./Confetti";
 import useHistory from "../hooks/useHistory";
 import { searchTenor, registerShare, getAutocomplete, getCategories } from "../services/tenor";
-import { exportGif, exportStickersAsPng } from "../services/gifExporter";
+import { exportGif, exportStickersAsPng, exportImageAsPng } from "../services/gifExporter";
 import { hasAnimatedText } from "../constants/textAnimations";
 import { deepFryImage } from "../services/imageProcessor";
 import { MEME_QUOTES } from "../constants/memeQuotes";
@@ -284,7 +283,13 @@ export default function Main() {
   }, []);
 
 
-  const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
+  // --- PERFORMANCE: O(1) Lookups ---
+  // Convert arrays to Maps for faster access during render/effects
+  const panelMap = useMemo(() => new Map(meme.panels.map(p => [p.id, p])), [meme.panels]);
+  const textMap = useMemo(() => new Map(meme.texts.map(t => [t.id, t])), [meme.texts]);
+  const stickerMap = useMemo(() => new Map(meme.stickers.map(s => [s.id, s])), [meme.stickers]);
+
+  const activePanel = panelMap.get(meme.activePanelId) || meme.panels[0];
   const deferredDeepFry = useDeferredValue(activePanel?.filters?.deepFry);
 
   // ------------------------------------------------------
@@ -676,7 +681,7 @@ export default function Main() {
         const chaosKeywords = [
           "funny", "cat", "fail", "chaos", "reaction", "coding",
           "meme", "bruh", "shocked", "rage", "crying", "dance",
-          "explosion", "fire", "based", "sus"
+          "explosion", "fire", "based", "sus", "cursed", "skibidi"
         ];
         const keyword = chaosKeywords[Math.floor(Math.random() * chaosKeywords.length)];
         const results = await searchTenor(keyword);
@@ -702,39 +707,41 @@ export default function Main() {
       const quotes = MEME_QUOTES[randomCategory];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-      // 3. Determine if EXTREME CHAOS mode (15% chance)
-      const isExtremeChaos = Math.random() < 0.15;
+      // 3. CHAOS EVENTS (Special wild combinations)
+      // 20% chance of a named chaos event
+      const eventRoll = Math.random();
+      let chaosFilters = { ...DEFAULT_FILTERS };
+      let eventName = null;
 
-      // 4. Generate chaos filters
-      let chaosFilters;
-      if (isExtremeChaos) {
-        // EXTREME CHAOS: Stack multiple intense filters
-        chaosFilters = {
-          ...DEFAULT_FILTERS,
-          deepFry: 15 + Math.floor(Math.random() * 15), // 15-30
-          hueRotate: Math.floor(Math.random() * 180), // Wild colors
-          brightness: 70 + Math.floor(Math.random() * 60), // 70-130
-          contrast: 120 + Math.floor(Math.random() * 40), // 120-160
-          saturate: 150 + Math.floor(Math.random() * 100) // 150-250
-        };
+      if (eventRoll < 0.05) {
+        // THE VOID
+        eventName = "THE VOID";
+        chaosFilters = { ...DEFAULT_FILTERS, invert: 100, grayscale: 100, contrast: 150, brightness: 80 };
+      } else if (eventRoll < 0.10) {
+        // RAINBOW SEIZURE
+        eventName = "RAINBOW SEIZURE";
+        chaosFilters = { ...DEFAULT_FILTERS, hueRotate: Math.floor(Math.random() * 360), saturate: 300, contrast: 120 };
+      } else if (eventRoll < 0.15) {
+        // DEEP FRYER EXPLODED
+        eventName = "DEEP FRYER EXPLODED";
+        chaosFilters = { ...DEFAULT_FILTERS, deepFry: 40, saturate: 200, contrast: 150, sepia: 50, hueRotate: -30 };
+      } else if (eventRoll < 0.20) {
+        // CURSED IMAGE
+        eventName = "CURSED IMAGE";
+        chaosFilters = { ...DEFAULT_FILTERS, blur: 2, contrast: 200, brightness: 90, hueRotate: 180, saturate: 50 };
       } else {
-        // Normal chaos: Randomized but more moderate
+        // Standard Randomized Chaos
         chaosFilters = {
           ...DEFAULT_FILTERS,
-          // 40% chance of deep fry, levels 5-25
           deepFry: Math.random() < 0.4 ? 5 + Math.floor(Math.random() * 20) : 0,
-          // 25% chance hue rotate, 0-180°
-          hueRotate: Math.random() < 0.25 ? Math.floor(Math.random() * 180) : 0,
-          // 60% chance brightness shift, 90-130
-          brightness: Math.random() < 0.6 ? 90 + Math.floor(Math.random() * 40) : 100,
-          // 60% chance contrast shift, 80-140
-          contrast: Math.random() < 0.6 ? 80 + Math.floor(Math.random() * 60) : 100,
-          // 30% chance saturation shift, 50-200
-          saturate: Math.random() < 0.3 ? 50 + Math.floor(Math.random() * 150) : 100
+          hueRotate: Math.random() < 0.3 ? Math.floor(Math.random() * 360) : 0,
+          brightness: Math.random() < 0.6 ? 80 + Math.floor(Math.random() * 60) : 100,
+          contrast: Math.random() < 0.6 ? 80 + Math.floor(Math.random() * 80) : 100,
+          saturate: Math.random() < 0.4 ? 50 + Math.floor(Math.random() * 200) : 100
         };
       }
 
-      // 5. Update State
+      // 4. Update State
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
           p.id === prev.activePanelId
@@ -751,17 +758,20 @@ export default function Main() {
             : p
         );
 
-        // Random text with proper tier placement (matches caption remix)
+        // Random text with mixed fonts/styles (Chaos Text)
+        const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Permanent Marker", "Cinzel"];
+        const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000", "#000000"];
+
         const newTexts = randomQuote.map((line, idx) => ({
           id: crypto.randomUUID(),
           content: line,
-          x: 50,
-          y: idx === 0 ? 10 : (idx === 1 ? 50 : 90),
-          rotation: 0,
+          x: 50 + (Math.random() * 10 - 5), // Slight jiggle
+          y: idx === 0 ? 10 + (Math.random() * 10 - 5) : (idx === 1 ? 50 : 90 + (Math.random() * 10 - 5)),
+          rotation: Math.floor(Math.random() * 20 - 10), // Random rotation -10 to 10
           animation: null,
         }));
 
-        // Add empty text input to enable conditional rendering for additional inputs
+        // Add empty text input
         newTexts.push({
           id: crypto.randomUUID(),
           content: "",
@@ -771,8 +781,7 @@ export default function Main() {
           animation: null,
         });
 
-        // Random font size between 24-40
-        const chaosFontSize = 24 + Math.floor(Math.random() * 16);
+        const chaosFontSize = 24 + Math.floor(Math.random() * 20);
 
         return {
           ...prev,
@@ -780,6 +789,9 @@ export default function Main() {
           mode: isVideo ? "video" : "image",
           texts: newTexts,
           fontSize: chaosFontSize,
+          fontFamily: fonts[Math.floor(Math.random() * fonts.length)],
+          textColor: colors[Math.floor(Math.random() * colors.length)],
+          textShadow: "#000000" // Keep shadow consistent for readability
         };
       });
 
@@ -790,7 +802,7 @@ export default function Main() {
           <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a3/512.gif" alt="💣" width="32" height="32" />
         </picture>
       );
-      toast(isExtremeChaos ? "EXTREME CHAOS!" : "CHAOS MODE ACTIVATED!", {
+      toast(eventName ? `${eventName} ACTIVATED!` : "CHAOS MODE ACTIVATED!", {
         icon: chaosIcon
       });
     } catch (e) {
@@ -806,20 +818,30 @@ export default function Main() {
 
   // Pre-generate all unique style combinations for the deck
   const allStyles = useMemo(() => {
+    // Curated Chaos Palettes for better aesthetics
+    const palettes = [
+      { name: "Neon", colors: ["#00ff00", "#ff00ff", "#00ffff", "#ffff00"], shadows: ["#000000", "#ff00ff", "#0000ff"] },
+      { name: "Goth", colors: ["#ffffff", "#ff0000", "#a0a0a0", "#800080"], shadows: ["#000000", "#300000"] },
+      { name: "Pastel", colors: ["#ffb3ba", "#baffc9", "#bae1ff", "#ffffba"], shadows: ["#666666", "#000000"] },
+      { name: "Classic", colors: ["#ffffff"], shadows: ["#000000"] },
+      { name: "Warning", colors: ["#ffff00", "#ff6600", "#000000"], shadows: ["#000000", "#ffff00"] }
+    ];
+
     const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Pacifico", "Permanent Marker", "Cinzel", "Montserrat", "Roboto"];
-    const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000", "#000000"];
-    const shadows = ["#000000", "#1a1a1a", "#ff0000", "#0000ff", "transparent", "#ffffff"];
-    
+
     const styles = [];
     for (const font of fonts) {
-      for (const color of colors) {
-         for (const shadow of shadows) {
-            // Filter out invisible text (same color as shadow) unless shadow is transparent
-            if (color === shadow && shadow !== 'transparent') continue;
-            styles.push({ fontFamily: font, textColor: color, textShadow: shadow });
-         }
+      for (const palette of palettes) {
+         const color = palette.colors[Math.floor(Math.random() * palette.colors.length)];
+         const shadow = palette.shadows[Math.floor(Math.random() * palette.shadows.length)];
+
+         // Fix visibility
+         if (color === shadow) continue;
+
+         styles.push({ fontFamily: font, textColor: color, textShadow: shadow, paletteName: palette.name });
       }
     }
+    // Shuffle logic below will mix them up
     return styles;
   }, []);
   const [styleDeck, setStyleDeck] = useState([]);
@@ -860,20 +882,24 @@ export default function Main() {
 
   function handleStyleShuffle() {
     // Get unique style combo from deck
+    console.log("Shuffle Clicked!", { deckSize: styleDeck.length, totalStyles: allStyles.length });
     const nextStyle = getNextItem(allStyles, styleDeck, setStyleDeck);
+    console.log("Next Style Drawn:", nextStyle);
 
-    // Calculate safe font size based on text length to prevent overflow
-    // (MemeCanvas scaling handles device width, this handles content density)
+    if (!nextStyle) {
+        console.error("Shuffle Error: No style returned from getNextItem");
+        return;
+    }
+
+    // Calculate safe font size based on text length
     const maxTextLength = Math.max(...meme.texts.map(t => (t.content || "").length), 0);
     let maxSafeSize = 60;
     if (maxTextLength > 100) maxSafeSize = 25;
     else if (maxTextLength > 50) maxSafeSize = 35;
     else if (maxTextLength > 20) maxSafeSize = 50;
 
-    // Ensure we don't go below readable minimum
     const minSafeSize = Math.max(20, maxSafeSize - 15);
-    
-    // Randomize spacing and size dynamically as they don't define "style identity" as much as font/color
+
     const maxSpacing = maxTextLength > 30 ? 2 : 10;
     const randomSpacing = Math.floor(Math.random() * maxSpacing);
     const randomSize = minSafeSize + Math.floor(Math.random() * (maxSafeSize - minSafeSize));
@@ -887,7 +913,7 @@ export default function Main() {
       fontSize: randomSize,
     }));
     remixClickCountRef.current.style++;
-    toast("Style shuffled!", {
+    toast(`Style: ${nextStyle.paletteName} ${nextStyle.fontFamily}`, {
       icon: (
         <ToastIcon src="/animations/performing-arts.json" />
       )
@@ -895,10 +921,11 @@ export default function Main() {
   }
 
   function handleFilterFrenzy() {
-    // Chaos Archetypes: Distinct strategies for "Frenzy" so it's not just gray mud
+    // Chaos Archetypes: Distinct strategies for "Frenzy"
     const strategies = [
       // 1. The "Nuked" (High Saturation, High Contrast, Deep Fry)
       () => ({
+        name: "Nuked",
         contrast: 150 + Math.floor(Math.random() * 50),
         saturate: 200 + Math.floor(Math.random() * 100),
         brightness: 100 + Math.floor(Math.random() * 50),
@@ -908,6 +935,7 @@ export default function Main() {
       }),
       // 2. The "Cursed" (Inverted, Weird Hue)
       () => ({
+        name: "Cursed",
         invert: 100,
         hueRotate: Math.floor(Math.random() * 360),
         contrast: 120,
@@ -918,6 +946,7 @@ export default function Main() {
       }),
       // 3. The "Ghost" (High Brightness, Blur, Low Saturation)
       () => ({
+        name: "Ghost",
         brightness: 140 + Math.floor(Math.random() * 40),
         blur: 1 + Math.random() * 2,
         saturate: Math.floor(Math.random() * 50),
@@ -926,16 +955,48 @@ export default function Main() {
       }),
       // 4. The "Crunchy" (High Contrast, Sharpen via artifacts)
       () => ({
+        name: "Crunchy",
         contrast: 200,
         brightness: 100,
         grayscale: 100,
         deepFry: 50,
         saturate: 0
+      }),
+      // 5. "Thermal Vision" (Invert + Hue Shift + High Contrast)
+      () => ({
+        name: "Thermal",
+        invert: 100,
+        hueRotate: 180,
+        contrast: 150,
+        saturate: 200,
+        brightness: 100,
+        deepFry: 0
+      }),
+      // 6. "Night Vision" (Green Tint + Grain vibe)
+      () => ({
+        name: "Night Vision",
+        sepia: 100,
+        hueRotate: 90, // Greenish
+        contrast: 120,
+        brightness: 110,
+        saturate: 150,
+        deepFry: 5 // Add slight grain
+      }),
+      // 7. "Bad Photocopy" (High Contrast B&W)
+      () => ({
+        name: "Photocopy",
+        grayscale: 100,
+        contrast: 300,
+        brightness: 120,
+        deepFry: 10, // Artifacts
+        saturate: 0
       })
     ];
 
     const pickStrategy = strategies[Math.floor(Math.random() * strategies.length)];
-    const chaoticFilters = { ...DEFAULT_FILTERS, ...pickStrategy() };
+    const strategy = pickStrategy();
+    const { name, ...filters } = strategy;
+    const chaoticFilters = { ...DEFAULT_FILTERS, ...filters };
 
     startTransition(() => {
       updateState((prev) => ({
@@ -948,7 +1009,7 @@ export default function Main() {
       }));
     });
     remixClickCountRef.current.filter++;
-    toast("Filter Frenzy applied!", {
+    toast(`${name} Mode applied!`, {
       icon: (
         <ToastIcon src="/animations/filter-frenzy.json" />
       )
@@ -956,28 +1017,38 @@ export default function Main() {
   }
 
   function handleVibeCheck() {
-    // --- SPAM PROTECTION: 600ms cooldown ---
+    // --- SPAM PROTECTION: 400ms cooldown (reduced for snappiness) ---
     const now = Date.now();
-    if (now - vibeThrottleRef.current < 600) {
-      return; // Ignore rapid clicks
+    if (now - vibeThrottleRef.current < 400) {
+      return;
     }
     vibeThrottleRef.current = now;
 
     // Researched aesthetic recipes (CSS Filters)
     const vibes = {
+      // Classics
       vintage: { sepia: 80, saturate: 120, contrast: 110, brightness: 90, blur: 0, grayscale: 0, invert: 0, deepFry: 0, hueRotate: 0 },
       cyberpunk: { contrast: 150, saturate: 180, hueRotate: 280, brightness: 120, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 },
       noir: { grayscale: 100, contrast: 180, brightness: 70, blur: 0, sepia: 0, invert: 0, deepFry: 0, hueRotate: 0, saturate: 100 },
       dreamy: { blur: 1.5, brightness: 130, saturate: 80, contrast: 90, grayscale: 0, invert: 0, deepFry: 0, hueRotate: 0, sepia: 0 },
       vaporwave: { hueRotate: 200, saturate: 150, contrast: 120, brightness: 110, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 },
-      alien: { invert: 100, hueRotate: 180, contrast: 120, blur: 0, grayscale: 0, brightness: 100, deepFry: 0, saturate: 100, sepia: 0 },
-      matrix: { saturate: 150, hueRotate: 90, brightness: 90, contrast: 150, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 },
-      arctic: { saturate: 90, hueRotate: 180, brightness: 115, contrast: 110, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 }
+
+      // Instagram-ish Classics
+      clarendon: { contrast: 120, saturate: 125, brightness: 110, sepia: 15, hueRotate: 0, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      gingham: { sepia: 20, contrast: 90, brightness: 110, hueRotate: -10, saturate: 100, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      lofi: { contrast: 150, saturate: 110, brightness: 90, sepia: 0, hueRotate: 0, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+
+      // 2025 Mobile Trends
+      y2k: { brightness: 120, contrast: 110, saturate: 130, hueRotate: -20, blur: 0.5, sepia: 20, grayscale: 0, invert: 0, deepFry: 0 }, // Pinkish gloss
+      vhs: { sepia: 50, saturate: 250, contrast: 120, brightness: 90, blur: 0.5, hueRotate: -30, grayscale: 0, invert: 0, deepFry: 5 }, // Grainy warm
+      goldenHour: { sepia: 40, saturate: 160, brightness: 110, contrast: 110, hueRotate: -10, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      radioactive: { hueRotate: 90, saturate: 200, contrast: 150, brightness: 100, sepia: 0, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      goth: { saturate: 0, contrast: 150, brightness: 80, hueRotate: 270, sepia: 0, blur: 0, grayscale: 80, invert: 0, deepFry: 0 }, // Purple tint dark
+      deepFriedLite: { deepFry: 15, saturate: 200, contrast: 150, brightness: 100, sepia: 0, blur: 0, grayscale: 0, invert: 0, hueRotate: 0 }
     };
-    
+
     const vibeNames = Object.keys(vibes);
     const randomVibe = vibeNames[Math.floor(Math.random() * vibeNames.length)];
-    // Merge with defaults to ensure safety, though preset objects are complete
     const filters = { ...DEFAULT_FILTERS, ...vibes[randomVibe] };
 
     startTransition(() => {
@@ -991,7 +1062,11 @@ export default function Main() {
       }));
     });
     remixClickCountRef.current.vibe++;
-    toast(`${randomVibe.charAt(0).toUpperCase() + randomVibe.slice(1)} vibe applied!`, {
+
+    // Nice formatted name
+    const formatName = randomVibe.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+
+    toast(`${formatName} vibe applied!`, {
       icon: (
         <ToastIcon src="/animations/vibe-check-toast.json" />
       )
@@ -1556,7 +1631,7 @@ export default function Main() {
         URL.revokeObjectURL(url);
       }, 100);
       triggerFireworks();
-      toast.success("Downloaded!", { id: toastId });
+      toast.success("Downloaded!", { id: toastId, duration: 5000 });
     } catch (err) {
       console.error("GIF Export Error:", err);
       toast.error("Export failed", { id: toastId });
@@ -1597,18 +1672,9 @@ export default function Main() {
 
     const toastId = toast.loading("Generating...");
     try {
-      // MOBILE FIX: Enhanced options for iOS/Android consistency
-      const canvas = await html2canvas(memeRef.current, {
-        useCORS: true,
-        backgroundColor: "#000000",
-        scale: 2,
-        allowTaint: false,
-        foreignObjectRendering: false, // More consistent on mobile browsers
-        logging: false,
-        imageTimeout: 15000, // Longer timeout for slow mobile connections
-        removeContainer: true,
-      });
-      const finalDataUrl = canvas.toDataURL("image/png");
+      // REPLACED: html2canvas with native renderer for filter consistency
+      const blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
+      const finalDataUrl = URL.createObjectURL(blob);
 
       const safeName = (meme.name || 'meme')
         .replace(/[^\w\s-]/g, '')
@@ -2046,4 +2112,20 @@ export default function Main() {
       </div>
     </main>
   );
+}
+
+/* --- HELPERS --- */
+function getNextItem(allItems, deck, setDeck) {
+  let currentDeck = [...deck];
+  if (currentDeck.length === 0) {
+    // Refill and shuffle
+    currentDeck = [...allItems];
+    for (let i = currentDeck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
+    }
+  }
+  const item = currentDeck.pop();
+  setDeck(currentDeck);
+  return item;
 }

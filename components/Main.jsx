@@ -176,6 +176,8 @@ export default function Main() {
   const canvasContainerRef = useRef(null);
   const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
   const vibeThrottleRef = useRef(0); // Spam protection for vibe-check button
+  const vibeIndexRef = useRef(0); // Cycle through vibes
+  const filterFrenzyIndexRef = useRef(0); // Cycle through chaos strategies
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
@@ -366,7 +368,7 @@ export default function Main() {
 
     // 6. DEBOUNCE: Use Scheduler API for prioritized background execution
     let taskAbortController;
-    
+
     if ('scheduler' in window) {
       taskAbortController = new AbortController();
       window.scheduler.postTask(() => processDeepFry(), {
@@ -503,7 +505,7 @@ export default function Main() {
   const handleSearchInput = (e) => {
     const val = e.target.value;
     setSearchQuery(val);
-    
+
     // Cancel previous task (supports both AbortController and TimeoutID)
     if (searchTimeoutRef.current) {
       if (searchTimeoutRef.current.abort) searchTimeoutRef.current.abort();
@@ -515,17 +517,17 @@ export default function Main() {
         // Modern: Prioritized Task
         const controller = new AbortController();
         searchTimeoutRef.current = controller;
-        
+
         window.scheduler.postTask(async () => {
           const autoResults = await getAutocomplete(val);
           startTransition(() => {
             setSuggestions(autoResults);
             setShowSuggestions(true);
           });
-        }, { 
-          delay: 300, 
+        }, {
+          delay: 300,
           priority: 'user-visible',
-          signal: controller.signal 
+          signal: controller.signal
         }).catch(() => {}); // Ignore aborts
       } else {
         // Fallback: Legacy Timeout
@@ -733,7 +735,6 @@ export default function Main() {
       }
 
       // 5. Update State
-      triggerFlash("red");
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
           p.id === prev.activePanelId
@@ -803,6 +804,27 @@ export default function Main() {
   const allCaptions = useMemo(() => Object.values(MEME_QUOTES).flat(), []);
   const [captionDeck, setCaptionDeck] = useState([]);
 
+  // Pre-generate all unique style combinations for the deck
+  const allStyles = useMemo(() => {
+    const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Pacifico", "Permanent Marker", "Cinzel", "Montserrat", "Roboto"];
+    const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000", "#000000"];
+    const shadows = ["#000000", "#1a1a1a", "#ff0000", "#0000ff", "transparent", "#ffffff"];
+    
+    const styles = [];
+    for (const font of fonts) {
+      for (const color of colors) {
+         for (const shadow of shadows) {
+            // Filter out invisible text (same color as shadow) unless shadow is transparent
+            if (color === shadow && shadow !== 'transparent') continue;
+            styles.push({ fontFamily: font, textColor: color, textShadow: shadow });
+         }
+      }
+    }
+    return styles;
+  }, []);
+  const [styleDeck, setStyleDeck] = useState([]);
+
+
   function handleCaptionRemix() {
     // Generate new captions, preserve current media AND animations
     if (allCaptions.length === 0) return;
@@ -810,7 +832,6 @@ export default function Main() {
     // Use deck system to ensure no repeats until all are shown
     const randomQuote = getNextItem(allCaptions, captionDeck, setCaptionDeck);
 
-    triggerFlash("green");
     updateState((prev) => {
       // Preserve existing animation from texts that have one
       const existingAnimations = prev.texts
@@ -838,9 +859,8 @@ export default function Main() {
   }
 
   function handleStyleShuffle() {
-    const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Pacifico", "Permanent Marker"];
-    const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000"];
-    const shadows = ["#000000", "#1a1a1a", "#ff0000", "#0000ff", "transparent"];
+    // Get unique style combo from deck
+    const nextStyle = getNextItem(allStyles, styleDeck, setStyleDeck);
 
     // Calculate safe font size based on text length to prevent overflow
     // (MemeCanvas scaling handles device width, this handles content density)
@@ -852,21 +872,17 @@ export default function Main() {
 
     // Ensure we don't go below readable minimum
     const minSafeSize = Math.max(20, maxSafeSize - 15);
-
-    const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomShadow = shadows[Math.floor(Math.random() * shadows.length)];
-    // Reduce spacing for longer text
+    
+    // Randomize spacing and size dynamically as they don't define "style identity" as much as font/color
     const maxSpacing = maxTextLength > 30 ? 2 : 10;
     const randomSpacing = Math.floor(Math.random() * maxSpacing);
     const randomSize = minSafeSize + Math.floor(Math.random() * (maxSafeSize - minSafeSize));
 
-    triggerFlash("green");
     updateState((prev) => ({
       ...prev,
-      fontFamily: randomFont,
-      textColor: randomColor,
-      textShadow: randomShadow,
+      fontFamily: nextStyle.fontFamily,
+      textColor: nextStyle.textColor,
+      textShadow: nextStyle.textShadow,
       letterSpacing: randomSpacing,
       fontSize: randomSize,
     }));
@@ -879,29 +895,60 @@ export default function Main() {
   }
 
   function handleFilterFrenzy() {
-    const randomFilters = {
-      ...DEFAULT_FILTERS,
-      contrast: 80 + Math.floor(Math.random() * 60),
-      brightness: 80 + Math.floor(Math.random() * 50),
-      hueRotate: Math.floor(Math.random() * 360),
-      saturate: 50 + Math.floor(Math.random() * 150),
-      grayscale: Math.random() < 0.2 ? Math.floor(Math.random() * 50) : 0,
-      sepia: Math.random() < 0.15 ? Math.floor(Math.random() * 40) : 0,
-    };
+    // Chaos Archetypes: Distinct strategies for "Frenzy" so it's not just gray mud
+    const strategies = [
+      // 1. The "Nuked" (High Saturation, High Contrast, Deep Fry)
+      () => ({
+        contrast: 150 + Math.floor(Math.random() * 50),
+        saturate: 200 + Math.floor(Math.random() * 100),
+        brightness: 100 + Math.floor(Math.random() * 50),
+        hueRotate: Math.floor(Math.random() * 360),
+        deepFry: 20 + Math.floor(Math.random() * 30),
+        blur: 0
+      }),
+      // 2. The "Cursed" (Inverted, Weird Hue)
+      () => ({
+        invert: 100,
+        hueRotate: Math.floor(Math.random() * 360),
+        contrast: 120,
+        brightness: 110,
+        saturate: 100,
+        grayscale: 0,
+        deepFry: 0
+      }),
+      // 3. The "Ghost" (High Brightness, Blur, Low Saturation)
+      () => ({
+        brightness: 140 + Math.floor(Math.random() * 40),
+        blur: 1 + Math.random() * 2,
+        saturate: Math.floor(Math.random() * 50),
+        contrast: 80,
+        deepFry: 0
+      }),
+      // 4. The "Crunchy" (High Contrast, Sharpen via artifacts)
+      () => ({
+        contrast: 200,
+        brightness: 100,
+        grayscale: 100,
+        deepFry: 50,
+        saturate: 0
+      })
+    ];
 
-    triggerFlash("green");
+    const pickStrategy = strategies[Math.floor(Math.random() * strategies.length)];
+    const chaoticFilters = { ...DEFAULT_FILTERS, ...pickStrategy() };
+
     startTransition(() => {
       updateState((prev) => ({
         ...prev,
         panels: prev.panels.map(p =>
           p.id === prev.activePanelId
-            ? { ...p, filters: randomFilters, processedImage: null, processedDeepFryLevel: 0 }
+            ? { ...p, filters: chaoticFilters, processedImage: null, processedDeepFryLevel: 0 }
             : p
         )
       }));
     });
     remixClickCountRef.current.filter++;
-    toast("Filters applied!", {
+    toast("Filter Frenzy applied!", {
       icon: (
         <ToastIcon src="/animations/filter-frenzy.json" />
       )
@@ -916,18 +963,23 @@ export default function Main() {
     }
     vibeThrottleRef.current = now;
 
+    // Researched aesthetic recipes (CSS Filters)
     const vibes = {
-      retro: { sepia: 40, grayscale: 20, contrast: 110, brightness: 95, saturate: 80, hueRotate: 0, blur: 0, invert: 0, deepFry: 0 },
-      neon: { saturate: 200, hueRotate: 180, brightness: 120, contrast: 120, sepia: 0, grayscale: 0, blur: 0, invert: 0, deepFry: 0 },
-      cursed: { contrast: 160, saturate: 200, brightness: 115, hueRotate: -20, sepia: 10, grayscale: 0, blur: 0, invert: 0, deepFry: 0 },
-      noir: { grayscale: 100, contrast: 130, brightness: 90, saturate: 0, sepia: 0, hueRotate: 0, blur: 0, invert: 0, deepFry: 0 },
-      dreamy: { blur: 1, brightness: 115, saturate: 120, sepia: 15, contrast: 95, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 }
+      vintage: { sepia: 80, saturate: 120, contrast: 110, brightness: 90, blur: 0, grayscale: 0, invert: 0, deepFry: 0, hueRotate: 0 },
+      cyberpunk: { contrast: 150, saturate: 180, hueRotate: 280, brightness: 120, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 },
+      noir: { grayscale: 100, contrast: 180, brightness: 70, blur: 0, sepia: 0, invert: 0, deepFry: 0, hueRotate: 0, saturate: 100 },
+      dreamy: { blur: 1.5, brightness: 130, saturate: 80, contrast: 90, grayscale: 0, invert: 0, deepFry: 0, hueRotate: 0, sepia: 0 },
+      vaporwave: { hueRotate: 200, saturate: 150, contrast: 120, brightness: 110, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 },
+      alien: { invert: 100, hueRotate: 180, contrast: 120, blur: 0, grayscale: 0, brightness: 100, deepFry: 0, saturate: 100, sepia: 0 },
+      matrix: { saturate: 150, hueRotate: 90, brightness: 90, contrast: 150, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 },
+      arctic: { saturate: 90, hueRotate: 180, brightness: 115, contrast: 110, blur: 0, grayscale: 0, invert: 0, deepFry: 0, sepia: 0 }
     };
+    
     const vibeNames = Object.keys(vibes);
     const randomVibe = vibeNames[Math.floor(Math.random() * vibeNames.length)];
-    const filters = vibes[randomVibe];
+    // Merge with defaults to ensure safety, though preset objects are complete
+    const filters = { ...DEFAULT_FILTERS, ...vibes[randomVibe] };
 
-    triggerFlash("green");
     startTransition(() => {
       updateState((prev) => ({
         ...prev,
@@ -947,7 +999,6 @@ export default function Main() {
   }
 
   function handleExtremeDeepFry() {
-    triggerFlash("red");
     startTransition(() => {
       updateState((prev) => {
         const activePanelId = prev.activePanelId;
@@ -1263,6 +1314,8 @@ export default function Main() {
 
   function handleReset() {
     triggerFlash("red");
+    setActiveTool("move");
+    setEditingId(null);
     startTransition(() => {
       updateState((prev) => ({
         ...prev,
@@ -1282,6 +1335,10 @@ export default function Main() {
         drawWidth: 5,
         textColor: "#ffffff",
         textBgColor: "transparent",
+        textShadow: "#000000",
+        letterSpacing: 0,
+        maxWidth: 100,
+        stickerSize: 60,
         panels: prev.panels.map(p => ({ ...p, filters: { ...DEFAULT_FILTERS } }))
       }));
     });

@@ -87,6 +87,8 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
   const [isPending, startTransition] = useTransition();
   const [showSliders, setShowSliders] = useState(false); // Collapsed by default on mobile
   const [showTextStyling, setShowTextStyling] = useState(true); // Default open for better discovery
+  // Track if drawer has been opened after text was added - stays true until all text removed
+  const [drawerHasOpened, setDrawerHasOpened] = useState(false);
   const hasStickers = meme.stickers && meme.stickers.length > 0;
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
   const hasAnimatedText = meme.texts.some(t => t.animation && t.animation !== 'none');
@@ -109,12 +111,25 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
   // The drawer should only expand when user clicks away (which clears editingId)
   const isActivelyEditing = !!editingId;
 
-  const isCollapsed = (activeTab === 'text' && !hasText && !hasStickers) || isActivelyEditing;
+  // Reset drawerHasOpened when all text AND stickers are removed
+  useEffect(() => {
+    if (!hasText && !hasStickers) {
+      setDrawerHasOpened(false);
+    }
+  }, [hasText, hasStickers]);
+
+  // Determine if drawer should be collapsed:
+  // - Collapse if no text/stickers on text tab
+  // - Collapse if actively editing AND drawer hasn't been opened yet (first text being added)
+  // - Once drawer has opened, keep it open even while editing subsequent texts
+  const isCollapsed = (activeTab === 'text' && !hasText && !hasStickers) || (isActivelyEditing && !drawerHasOpened);
   const wasCollapsedRef = useRef(isCollapsed);
 
   // Notify parent when drawer TRANSITIONS from collapsed to expanded
+  // Also mark that drawer has opened (sticky state) so it stays open for subsequent edits
   useEffect(() => {
     if (wasCollapsedRef.current && !isCollapsed && onDrawerExpand) {
+      setDrawerHasOpened(true); // Mark as opened - stays open until all text removed
       const timer = setTimeout(() => onDrawerExpand(), 150);
       wasCollapsedRef.current = isCollapsed;
       return () => clearTimeout(timer);

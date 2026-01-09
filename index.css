@@ -83,6 +83,22 @@ body {
   }
 }
 
+/* Enhanced caret blink - more noticeable with glow pulse */
+@keyframes caret-blink {
+  0%, 45% {
+    opacity: 1;
+    box-shadow: 0 0 12px var(--color-brand), 0 0 24px var(--color-brand), 0 0 4px rgba(255,255,255,0.8);
+  }
+  50%, 100% {
+    opacity: 0;
+    box-shadow: 0 0 0 var(--color-brand);
+  }
+}
+
+.animate-caret-blink {
+  animation: caret-blink 530ms steps(1) infinite;
+}
+
 @keyframes roll-down {
   0% {
     opacity: 0;

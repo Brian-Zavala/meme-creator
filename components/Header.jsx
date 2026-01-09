@@ -30,6 +30,7 @@ export default function Header({ onOpenInstructions }) {
           onClick={onOpenInstructions}
           className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
           title="How to use"
+          aria-label="Open instructions"
         >
           <HelpCircle className="w-6 h-6" />
         </button>

@@ -694,10 +694,16 @@ const MemeCanvas = forwardRef(({
                   data-html2canvas-ignore="true"
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
+                    if (onRemoveText) onRemoveText(textItem.id);
+                  }}
+                  onPointerUp={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
                     if (onRemoveText) onRemoveText(textItem.id);
                   }}
                   className="absolute -top-14 -left-4 p-2.5 rounded-xl bg-red-500/80 backdrop-blur-md text-white border border-red-400/50 shadow-lg transition-all duration-200 z-[60] hover:bg-red-500 hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
-                  style={{ pointerEvents: 'auto', touchAction: 'auto' }}
+                  style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
                   title="Delete Text"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -709,6 +715,7 @@ const MemeCanvas = forwardRef(({
                   data-html2canvas-ignore="true"
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     // Scroll to fine-tuner section
                     const fineTuner = document.querySelector('[data-fine-tuner]');
                     if (fineTuner) {
@@ -716,8 +723,17 @@ const MemeCanvas = forwardRef(({
                     }
                     if (navigator.vibrate) navigator.vibrate(30);
                   }}
+                  onPointerUp={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const fineTuner = document.querySelector('[data-fine-tuner]');
+                    if (fineTuner) {
+                      fineTuner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    if (navigator.vibrate) navigator.vibrate(30);
+                  }}
                   className="absolute -top-14 -right-4 p-2.5 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 z-[60] hover:bg-brand hover:scale-110 active:scale-90 animate-in zoom-in-95 fade-in"
-                  style={{ pointerEvents: 'auto', touchAction: 'auto' }}
+                  style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
                   title="Edit Text Settings"
                 >
                   <Settings2 className="w-4 h-4" />

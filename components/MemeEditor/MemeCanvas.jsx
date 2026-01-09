@@ -723,54 +723,52 @@ const MemeCanvas = forwardRef(({
                   <Settings2 className="w-4 h-4" />
                 </button>
               )}
-              {/* Text Content Rendering - hide when editing to avoid duplicate */}
-              {!isEditing && (
-                textItem.animation === 'wave' ? (
-                  textItem.content.split('\n').map((line, lineIdx) => {
-                    // Split line into words (preserving spaces as separators)
-                    const words = line.split(/(\s+)/);
-                    let globalCharIdx = 0;
+              {/* Text Content Rendering - always visible, styled h2 displays the text */}
+              {textItem.animation === 'wave' ? (
+                textItem.content.split('\n').map((line, lineIdx) => {
+                  // Split line into words (preserving spaces as separators)
+                  const words = line.split(/(\s+)/);
+                  let globalCharIdx = 0;
 
-                    return (
-                      <span key={lineIdx} style={{ display: 'block' }}>
-                        {words.map((word, wordIdx) => {
-                          // If it's whitespace, render a regular space (allows wrapping)
-                          if (/^\s+$/.test(word)) {
-                            globalCharIdx += word.length;
-                            return ' ';
-                          }
-
-                          // For actual words, wrap in inline-block to keep together
-                          const chars = word.split('').map((char, charInWordIdx) => {
-                            const charDelay = globalCharIdx + charInWordIdx;
-                            return (
-                              <span
-                                key={charInWordIdx}
-                                className="animate-meme-wave-char"
-                                style={{ animationDelay: `${charDelay * 0.1}s` }}
-                              >
-                                {char}
-                              </span>
-                            );
-                          });
+                  return (
+                    <span key={lineIdx} style={{ display: 'block' }}>
+                      {words.map((word, wordIdx) => {
+                        // If it's whitespace, render a regular space (allows wrapping)
+                        if (/^\s+$/.test(word)) {
                           globalCharIdx += word.length;
+                          return ' ';
+                        }
 
+                        // For actual words, wrap in inline-block to keep together
+                        const chars = word.split('').map((char, charInWordIdx) => {
+                          const charDelay = globalCharIdx + charInWordIdx;
                           return (
-                            <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
-                              {chars}
+                            <span
+                              key={charInWordIdx}
+                              className="animate-meme-wave-char"
+                              style={{ animationDelay: `${charDelay * 0.1}s` }}
+                            >
+                              {char}
                             </span>
                           );
-                        })}
-                        {line.length === 0 && <span>&nbsp;</span>}
-                      </span>
-                    );
-                  })
-                ) : (
-                  textItem.content
-                )
+                        });
+                        globalCharIdx += word.length;
+
+                        return (
+                          <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+                            {chars}
+                          </span>
+                        );
+                      })}
+                      {line.length === 0 && <span>&nbsp;</span>}
+                    </span>
+                  );
+                })
+              ) : (
+                textItem.content
               )}
 
-              {/* Overlay Input for Direct Editing - now shows styled text */}
+              {/* Invisible Overlay Input for Direct Editing - captures keystrokes */}
               {isEditing && (
                 <textarea
                   id={`canvas-input-${textItem.id}`}
@@ -778,19 +776,17 @@ const MemeCanvas = forwardRef(({
                   value={textItem.content}
                   onChange={(e) => onTextChange(textItem.id, e.target.value)}
                   autoFocus
-                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none text-center uppercase tracking-tighter"
+                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none"
                   style={{
-                    color: meme.textColor,
-                    WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
-                    paintOrder: 'stroke fill',
-                    caretColor: 'var(--color-brand)',
+                    color: 'transparent',
+                    caretColor: 'transparent',
+                    opacity: 0,
                     fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
                     fontSize: `${meme.fontSize * scaleFactor}px`,
                     letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                     lineHeight: 1.2,
                     padding: hasBg ? '0.25em 0.5em' : '0',
                     textAlign: "center",
-                    filter: hasContent ? "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))" : "none",
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                 />

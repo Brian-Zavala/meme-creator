@@ -1833,6 +1833,7 @@ export default function Main() {
             onDrawerExpand={handleToolbarExpand}
             onAnimationChange={handleAnimationChange}
             onStickerAnimationChange={handleStickerAnimationChange}
+            editingId={editingId}
           />
           <button
             onClick={() => {

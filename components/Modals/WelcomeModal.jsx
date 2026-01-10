@@ -1,5 +1,5 @@
 import { Sparkles, Layout, Zap, Share2, Film } from "lucide-react";
-import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
+import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 
 export function WelcomeModal({ isOpen, onClose }) {
   useLockBodyScroll(isOpen);

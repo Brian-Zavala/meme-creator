@@ -9,6 +9,21 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
   const dropdownRef = useRef(null);
   // Track which text IDs have been rendered before to prevent re-animation
   const renderedIdsRef = useRef(new Set());
+  const inputRefs = useRef({});
+
+  // When selectedId or editingId changes, focus the corresponding input without scrolling
+  useEffect(() => {
+    const activeId = editingId || selectedId;
+    if (activeId && inputRefs.current[activeId]) {
+      // Don't steal focus if user is already typing in the on-canvas direct input
+      const currentActiveId = document.activeElement?.id || "";
+      const isDirectlyEditingOnCanvas = currentActiveId.startsWith('canvas-input-');
+
+      if (!isDirectlyEditingOnCanvas) {
+        inputRefs.current[activeId].focus({ preventScroll: true });
+      }
+    }
+  }, [selectedId, editingId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -106,6 +121,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                 </label>
                 <input
                   id={`text-input-${textItem.id}`}
+                  ref={(el) => (inputRefs.current[textItem.id] = el)}
                   type="text"
                   autoComplete="off"
                   placeholder={isActive && !textItem.content ? "✨ Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}

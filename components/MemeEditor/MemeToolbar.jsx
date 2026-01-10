@@ -87,7 +87,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
   const [showSliders, setShowSliders] = useState(false); // Collapsed by default on mobile
-  const [showTextStyling, setShowTextStyling] = useState(true); // Default open for better discovery
+  const [showTextStyling, setShowTextStyling] = useState(false); // Collapsed by default
   // Track if drawer has been opened after text was added - stays true until all text removed
   const [drawerHasOpened, setDrawerHasOpened] = useState(false);
   const hasStickers = meme.stickers && meme.stickers.length > 0;

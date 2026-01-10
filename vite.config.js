@@ -58,7 +58,19 @@ export default defineConfig({
         theme_color: '#ffffff',
         icons: [
           {
-            src: '/images/favicons/icons8-feels-guy-ios-17-filled-96.png',
+            src: '/images/favicons/android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/images/favicons/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/images/favicons/favicon-96x96.png',
             sizes: '96x96',
             type: 'image/png',
             purpose: 'any'

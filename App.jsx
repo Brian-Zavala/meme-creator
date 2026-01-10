@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { preload } from "react-dom";
 import toast, { Toaster, useToasterStore } from "react-hot-toast";
-import Header from "./components/Header";
-import Main from "./components/Main";
-import { WelcomeModal } from "./components/WelcomeModal";
-import { InstructionModal } from "./components/InstructionModal";
+import Header from "./components/Layout/Header";
+import Main from "./components/Layout/Main";
+import { WelcomeModal } from "./components/Modals/WelcomeModal";
+import { InstructionModal } from "./components/Modals/InstructionModal";
 
 const TOAST_LIMIT = 2;
 

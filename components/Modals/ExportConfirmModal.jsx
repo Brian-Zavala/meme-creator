@@ -1,5 +1,5 @@
 import { Film, Image as ImageIcon, Sparkles } from "lucide-react";
-import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
+import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 
 /**
  * Modal to confirm export format when static image has animated content

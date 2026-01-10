@@ -51,7 +51,7 @@ const MemeCanvas = forwardRef(({
       requestAnimationFrame(() => {
         const textarea = document.getElementById(`canvas-input-${editingId}`);
         if (textarea) {
-          textarea.focus();
+          textarea.focus({ preventScroll: true });
           // Set caret to the end of the text content
           const len = textarea.value.length;
           textarea.setSelectionRange(len, len);
@@ -861,7 +861,6 @@ const MemeCanvas = forwardRef(({
                   data-html2canvas-ignore="true"
                   value={textItem.content}
                   onChange={(e) => onTextChange(textItem.id, e.target.value)}
-                  autoFocus
                   className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none"
                   style={{
                     color: 'transparent',

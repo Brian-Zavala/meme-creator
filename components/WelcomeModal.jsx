@@ -1,4 +1,4 @@
-import { Sparkles, Layout, Zap, Share2 } from "lucide-react";
+import { Sparkles, Layout, Zap, Share2, Film } from "lucide-react";
 import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 
 export function WelcomeModal({ isOpen, onClose }) {
@@ -15,18 +15,28 @@ export function WelcomeModal({ isOpen, onClose }) {
           </h2>
         </div>
         <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-          
+
           {/* New Features Grid */}
           <div className="grid grid-cols-2 gap-4">
              <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
                 <Layout className="w-6 h-6 text-brand" />
                 <h3 className="text-white font-bold text-sm">Comic Layouts</h3>
-                <p className="text-slate-400 text-xs">Tell a story with multi-panel grids. Tap any slot to upload!</p>
+                <p className="text-slate-400 text-xs">Create stories with multi-panel grids. Tap any ghost slot to upload!</p>
              </div>
              <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
-                <Zap className="w-6 h-6 text-yellow-400" />
-                <h3 className="text-white font-bold text-sm">Animations</h3>
-                <p className="text-slate-400 text-xs">Make text wave, glitch, or pulse. Export as high-quality GIF.</p>
+                <Sparkles className="w-6 h-6 text-yellow-400" />
+                <h3 className="text-white font-bold text-sm">Magic AI</h3>
+                <p className="text-slate-400 text-xs">Stuck? Let AI generate hilarious captions matching your image.</p>
+             </div>
+             <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
+                <Zap className="w-6 h-6 text-blue-400" />
+                <h3 className="text-white font-bold text-sm">Vibe Check</h3>
+                <p className="text-slate-400 text-xs">Deep Fry, Chaos Mode, and Skibidi filters for ultimate dankness.</p>
+             </div>
+             <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
+                <Film className="w-6 h-6 text-green-400" />
+                <h3 className="text-white font-bold text-sm">Animated GIFs</h3>
+                <p className="text-slate-400 text-xs">Create smooth GIFs with animated text & stickers. Export in seconds!</p>
              </div>
           </div>
 

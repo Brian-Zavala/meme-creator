@@ -7,7 +7,7 @@ export function InstructionModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed pb-16 inset-0 z-[200] flex items-center justify-center p-4 pt-36 sm:pt-4 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500"
       role="dialog"
       aria-modal="true"
@@ -28,8 +28,8 @@ export function InstructionModal({ isOpen, onClose }) {
               </h3>
               <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
                 <li><span className="text-white font-medium">Multi-Panel:</span> Choose a grid layout from the toolbar.</li>
-                <li><span className="text-white font-medium">Tap to Swap:</span> Tap any image slot to upload or search for a new image.</li>
-                <li><span className="text-white font-medium">Drag to Pan:</span> Touch and drag an image within its frame to adjust the crop.</li>
+                <li><span className="text-white font-medium">Ghost Slots:</span> Tap any empty "Ghost" slot to upload or search for an image.</li>
+                <li><span className="text-white font-medium">Drag to Pan:</span> Touch and drag an image within its frame to adjust position/crop.</li>
               </ul>
             </section>
 
@@ -38,19 +38,19 @@ export function InstructionModal({ isOpen, onClose }) {
                 <Type className="w-4 h-4" /> Text & Stickers
               </h3>
               <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
-                <li><span className="text-white font-medium">Add text</span> using the inputs. A new line appears automatically.</li>
-                <li><span className="text-white font-medium">Animations:</span> Select text to apply animations like Wave, Pulse, or Glitch.</li>
-                <li><span className="text-white font-medium">Controls:</span> Hold text to fine-tune. Double-tap stickers to remove.</li>
+                <li><span className="text-white font-medium">Long Press:</span> Hold anywhere on the canvas to add text instantly.</li>
+                <li><span className="text-white font-medium">Double Tap:</span> Quickly tap any sticker twice to remove it.</li>
+                <li><span className="text-white font-medium">Smart Delete:</span> Remove buttons now automatically jump to the side to stay visible!</li>
               </ul>
             </section>
 
             <section className="space-y-3">
-              <h3 className="text-blue-400 font-bold uppercase text-sm tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4" /> Exporting
+              <h3 className="text-purple-400 font-bold uppercase text-sm tracking-wider flex items-center gap-2">
+                <Film className="w-4 h-4" /> Magic & Vibes
               </h3>
               <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
-                <li><span className="text-white font-medium">Static:</span> Saved as high-quality PNG.</li>
-                <li><span className="text-white font-medium">GIF:</span> If you use animated stickers or text, we render a smooth GIF for you.</li>
+                <li><span className="text-white font-medium">Magic AI:</span> Tap the sparkles to let AI write the caption for you.</li>
+                <li><span className="text-white font-medium">Vibe Check:</span> Spam the button for random filters, Deep Fry, or Chaos Mode.</li>
               </ul>
             </section>
 
@@ -59,7 +59,7 @@ export function InstructionModal({ isOpen, onClose }) {
                 <Move className="w-3 h-3" /> Pro Tip
               </h3>
               <p className="text-slate-400 text-xs leading-relaxed">
-                Use the <b>Fine-Tune</b> tab to make pixel-perfect adjustments or to <b>Center</b> your text instantly.
+                If your delete button disappears, check the side of the text! It moves dynamically to never fall off-screen.
               </p>
             </div>
           </div>

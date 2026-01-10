@@ -1649,7 +1649,10 @@ export default function Main() {
         URL.revokeObjectURL(url);
       }, 100);
       triggerFireworks();
-      toast.success("Downloaded!", { id: toastId, duration: 6000 });
+      // Artificial delay to let the "Encoding..." toast be visible for a moment longer
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast.success("Downloaded!", { id: toastId, duration: 5000 });
     } catch (err) {
       console.error("GIF Export Error:", err);
       toast.error("Export failed", { id: toastId });

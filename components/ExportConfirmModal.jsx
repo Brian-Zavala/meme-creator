@@ -54,7 +54,7 @@ export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStati
                                     <p className="text-slate-400 text-xs">Export as GIF file</p>
                                 </div>
                             </div>
-                            <span className="absolute top-1 right-1 sm:top-2 sm:right-2 text-[length:clamp(0.45rem,1.5vw,0.625rem)] bg-brand/20 text-brand font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full uppercase tracking-wider">
+                            <span className="absolute top-1 right-1 sm:top-2 sm:right-2 text-[length:clamp(0.45rem,1.5vw,0.625rem)] bg-brand/20 text-brand font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full uppercase tracking-wider shadow-sm">
                                 Recommended
                             </span>
                         </button>

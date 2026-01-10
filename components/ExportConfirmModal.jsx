@@ -53,10 +53,10 @@ export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStati
                                     <p className="text-white font-bold text-base">Keep Animations</p>
                                     <p className="text-slate-400 text-xs">Export as GIF file</p>
                                 </div>
-                                <span className="absolute top-3 right-3 text-[10px] bg-brand/20 text-brand font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                                    Recommended
-                                </span>
                             </div>
+                            <span className="absolute top-2 right-2 text-[10px] bg-brand/20 text-brand font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                                Recommended
+                            </span>
                         </button>
 
                         {/* Static Export Option */}

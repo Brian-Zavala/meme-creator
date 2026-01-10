@@ -5,7 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
-    react({ babel: { plugins: ["babel-plugin-react-compiler"] } }), 
+    react({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -58,9 +58,10 @@ export default defineConfig({
         theme_color: '#ffffff',
         icons: [
           {
-            src: 'images/favicons/icons8-feels-guy-ios-17-filled-96.png',
+            src: '/images/favicons/icons8-feels-guy-ios-17-filled-96.png',
             sizes: '96x96',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           }
         ]
       }

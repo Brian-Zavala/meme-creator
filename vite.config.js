@@ -59,7 +59,7 @@ export default defineConfig({
         icons: [
           {
             src: 'images/favicons/icons8-feels-guy-ios-17-filled-96.png',
-            sizes: '192x192',
+            sizes: '96x96',
             type: 'image/png'
           }
         ]

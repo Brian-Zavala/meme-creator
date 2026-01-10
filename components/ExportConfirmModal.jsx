@@ -45,12 +45,12 @@ export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStati
                             onClick={handleGifExport}
                             className="group relative bg-gradient-to-br from-brand/20 to-amber-500/20 hover:from-brand/30 hover:to-amber-500/30 border-2 border-brand/50 hover:border-brand rounded-2xl p-4 transition-all active:scale-[0.98]"
                         >
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-xl bg-brand/20 flex items-center justify-center">
                                     <Film className="w-6 h-6 text-brand" />
                                 </div>
                                 <div className="text-left flex-1">
-                                    <p className="text-white font-bold text-base">Keep Animations</p>
+                                    <p className="text-white font-bold text-base whitespace-nowrap">Keep Animations</p>
                                     <p className="text-slate-400 text-xs">Export as GIF file</p>
                                 </div>
                             </div>

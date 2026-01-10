@@ -256,4 +256,4 @@ export const ANIMATED_TEXT_FRAMES = 30;
 /**
  * Default delay for animated text frames (in centiseconds for GIF)
  */
-export const ANIMATED_TEXT_DELAY = 5; // 50ms per frame = 1.5s loop at 30 frames (slower to match preview)
+export const ANIMATED_TEXT_DELAY = 3; // 30ms per frame = 0.9s loop at 30 frames (matches CSS animation ~1s average)

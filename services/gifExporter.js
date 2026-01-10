@@ -181,7 +181,7 @@ async function loadMemeAssets(meme, stickers) {
 function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
     const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
     const { exportWidth, exportHeight, contentHeight, contentOffsetY, baseWidth = 800 } = dimensions;
-    const { stickersOnly = false, totalFrames = 1 } = options;
+    const { stickersOnly = false, totalFrames = 1, textAnimationSpeed = 1 } = options;
 
     // A. Clear & Background
     // MOBILE FIX: Ensure canvas context is valid before proceeding
@@ -404,7 +404,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
     // I will INCLUDE text in stickersOnly mode for now, as it's useful to have text transparency too.)
     // E. Draw Text
     // We pass totalFrames correctly so animations calculate progress (frameIndex / totalFrames)
-    drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, totalFrames);
+    drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, totalFrames, textAnimationSpeed);
 }
 
 /**
@@ -638,11 +638,23 @@ export async function exportGif(meme, texts, stickers) {
             let masterDelay = 10;
             const activeProcessors = [...Object.values(gifProcessors), ...Object.values(stickerProcessors)];
 
+            // Track text animation speed multiplier (how many cycles per GIF loop)
+            let textAnimationSpeed = 1;
+
             if (meme.forceStatic) {
                 maxFrames = 1;
             } else if (activeProcessors.length > 0) {
                 maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
                 masterDelay = activeProcessors[0].getDelay(0) || 10;
+
+                // If there's animated text paired with GIF stickers, calculate how many
+                // text animation cycles should occur per GIF loop to match preview speed.
+                // Preview CSS animations are ~1s. GIF loop = maxFrames * masterDelay * 10ms.
+                if (hasAnimatedText(texts)) {
+                    const gifLoopMs = maxFrames * masterDelay * 10;
+                    const targetTextCycleMs = 1000; // CSS animations average ~1s
+                    textAnimationSpeed = Math.max(1, gifLoopMs / targetTextCycleMs);
+                }
             } else if (hasAnimatedText(texts) || (stickers && stickers.length > 0)) {
                 maxFrames = ANIMATED_TEXT_FRAMES;
                 masterDelay = ANIMATED_TEXT_DELAY;
@@ -655,7 +667,7 @@ export async function exportGif(meme, texts, stickers) {
                 console.warn(`Clamping GIF frames from ${maxFrames} to 60 for file size`);
                 maxFrames = 60;
             }
-            console.log(`Exporting ${maxFrames} frames...`);
+            console.log(`Exporting ${maxFrames} frames... (text animation speed: ${textAnimationSpeed.toFixed(2)}x)`);
 
             const canvas = document.createElement('canvas');
             canvas.width = exportWidth;
@@ -669,7 +681,8 @@ export async function exportGif(meme, texts, stickers) {
                 // Use Refactored Render Function
                 renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
                     stickersOnly: meme.stickersOnly,
-                    totalFrames: maxFrames
+                    totalFrames: maxFrames,
+                    textAnimationSpeed: textAnimationSpeed
                 });
 
                 gif.addFrame(canvas, {
@@ -746,7 +759,7 @@ function applyDeepFry(ctx, x, y, w, h, level) {
     ctx.putImageData(imageData, x, y);
 }
 
-function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, totalFrames = 1) {
+function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, totalFrames = 1, textAnimationSpeed = 1) {
     const scale = width / 800;
 
     for (const textItem of texts) {
@@ -771,9 +784,13 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         if (textItem.animation && textItem.animation !== 'none') {
             const anim = getAnimationById(textItem.animation);
             if (anim && anim.getTransform) {
-                // FIX: Use totalFrames (actual GIF loop length) instead of ANIMATED_TEXT_FRAMES
-                // This ensures animation completes exactly once per GIF loop
-                const transform = anim.getTransform(frameIndex, totalFrames, 0, 1);
+                // Calculate accelerated frame position for text animations
+                // When paired with slower GIF loops, text should cycle faster to match preview speed
+                // E.g., if GIF loop is 3s and text animation is 1s, text cycles 3x per GIF loop
+                const acceleratedProgress = (frameIndex / totalFrames) * textAnimationSpeed;
+                const virtualFrameIndex = (acceleratedProgress % 1) * totalFrames;
+
+                const transform = anim.getTransform(virtualFrameIndex, totalFrames, 0, 1);
                 animX += (transform.offsetX || 0) * scale;
                 animY += (transform.offsetY || 0) * scale;
                 animRotation += (transform.rotation || 0) * (Math.PI / 180);
@@ -797,17 +814,24 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Letter spacing implementation (Canvas doesn't support it natively in all contexts yet)
-        if (ctx.letterSpacing !== undefined) {
-            ctx.letterSpacing = `${(meme.letterSpacing || 0) * scale}px`;
-        } else {
-            // Fallback or ignore for now (complex manual drawing required for reliable cross-browser letter-spacing)
-            // Canvas letterSpacing is supported in recent Chrome/Firefox/Safari
-            ctx.canvas.style.letterSpacing = `${(meme.letterSpacing || 0) * scale}px`;
+        // Letter spacing - calculate scaled value once
+        const letterSpacing = (meme.letterSpacing || 0) * scale;
+
+        // Try to set native letterSpacing if supported
+        const hasNativeLetterSpacing = ctx.letterSpacing !== undefined;
+        if (hasNativeLetterSpacing) {
+            ctx.letterSpacing = `${letterSpacing}px`;
         }
 
         const lines = [];
         const rawLines = textItem.content.toUpperCase().split('\n');
+
+        // Helper to measure text width including letter spacing
+        const measureTextWithSpacing = (text) => {
+            const baseWidth = ctx.measureText(text).width;
+            // Add letter spacing for each character except the last
+            return baseWidth + Math.max(0, text.length - 1) * letterSpacing;
+        };
 
         for (const rawLine of rawLines) {
             const words = rawLine.split(' ');
@@ -815,7 +839,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
 
             for (let i = 1; i < words.length; i++) {
                 const word = words[i];
-                const w = ctx.measureText(currentLine + " " + word).width;
+                const w = measureTextWithSpacing(currentLine + " " + word);
                 if (w < maxWidth) {
                     currentLine += " " + word;
                 } else {
@@ -832,7 +856,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         if (meme.textBgColor && meme.textBgColor !== 'transparent') {
             let maxLineWidth = 0;
             lines.forEach(line => {
-                const w = ctx.measureText(line).width;
+                const w = measureTextWithSpacing(line);
                 if (w > maxLineWidth) maxLineWidth = w;
             });
 
@@ -852,38 +876,69 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
         ctx.shadowBlur = 4 * scale;
         ctx.shadowOffsetY = 2 * scale;
-        ctx.lineWidth = stroke * 2;
+        // Match CSS -webkit-text-stroke visual weight (Canvas strokes appear thicker)
+        ctx.lineWidth = stroke * 1.5;
         ctx.lineJoin = 'round';
         ctx.strokeStyle = meme.textShadow || '#000000';
         ctx.fillStyle = meme.textColor || '#ffffff';
+
+        // Helper to draw text with proper letter spacing (char-by-char if needed)
+        const drawTextWithSpacing = (text, x, y, isStroke = false) => {
+            // For animated text or when native letterSpacing isn't supported, draw char-by-char
+            if (letterSpacing !== 0 && !hasNativeLetterSpacing) {
+                const chars = text.split('');
+                const totalWidth = measureTextWithSpacing(text);
+                let currentX = x - totalWidth / 2; // Center-align
+
+                chars.forEach((char) => {
+                    const charWidth = ctx.measureText(char).width;
+                    if (isStroke) {
+                        ctx.strokeText(char, currentX + charWidth / 2, y);
+                    } else {
+                        ctx.fillText(char, currentX + charWidth / 2, y);
+                    }
+                    currentX += charWidth + letterSpacing;
+                });
+            } else {
+                // Native letterSpacing supported or no spacing needed
+                if (isStroke) {
+                    ctx.strokeText(text, x, y);
+                } else {
+                    ctx.fillText(text, x, y);
+                }
+            }
+        };
 
         lines.forEach((line, index) => {
             const lineY = startY + (index * lineHeight);
 
             if (textItem.animation === 'wave') {
-                // Per-character Wave
-                const lineWidth = ctx.measureText(line).width;
-                let currentX = -lineWidth / 2; // Start from center (centered text alignment)
+                // Per-character Wave - always draw char-by-char with proper spacing
+                const totalLineWidth = measureTextWithSpacing(line);
+                let currentX = -totalLineWidth / 2; // Start from center (centered text alignment)
 
                 const chars = line.split('');
                 chars.forEach((char, charIdx) => {
                     const charWidth = ctx.measureText(char).width;
                     const anim = getAnimationById('wave');
-                    // Calculate absolute index if needed, or just relative to line
-                    // To make it continous across lines, we might want a global index, but per-line is usually fine
-                    const transform = anim.getTransform(frameIndex, totalFrames, charIdx);
+                    // Use accelerated frame for consistent speed with other animations
+                    const acceleratedProgress = (frameIndex / totalFrames) * textAnimationSpeed;
+                    const virtualFrame = (acceleratedProgress % 1) * totalFrames;
+                    const transform = anim.getTransform(virtualFrame, totalFrames, charIdx);
 
                     const charY = lineY + (transform.offsetY || 0) * scale;
+                    const charCenterX = currentX + charWidth / 2;
 
-                    ctx.strokeText(char, currentX + charWidth / 2, charY);
-                    ctx.fillText(char, currentX + charWidth / 2, charY);
+                    ctx.strokeText(char, charCenterX, charY);
+                    ctx.fillText(char, charCenterX, charY);
 
-                    currentX += charWidth;
+                    // Add letter spacing to character advancement
+                    currentX += charWidth + letterSpacing;
                 });
             } else {
-                // Standard block animation
-                ctx.strokeText(line, 0, lineY);
-                ctx.fillText(line, 0, lineY);
+                // Standard block animation - use helper for proper letter spacing
+                drawTextWithSpacing(line, 0, lineY, true);  // stroke
+                drawTextWithSpacing(line, 0, lineY, false); // fill
             }
         });
 

@@ -53,7 +53,7 @@ export const TEXT_ANIMATIONS = [
         // Random tremor effect - chaotic and intense
         getTransform: (frameIndex) => {
             // Use frame index as seed for pseudo-random but deterministic shake
-            const seed = frameIndex * 12345;
+            const seed = Math.floor(frameIndex) * 12345;
             const randX = ((seed % 17) - 8);
             const randY = ((seed % 13) - 6);
             const randRot = ((seed % 11) - 5) * 0.5;
@@ -70,18 +70,32 @@ export const TEXT_ANIMATIONS = [
         id: 'glitch',
         name: 'Glitch',
         icon: '/images/stickers/glitch.png',
-        // Horizontal jitter with occasional large shifts
+        // Match CSS keyframes exactly for consistent export
         getTransform: (frameIndex, totalFrames) => {
             const t = frameIndex / totalFrames;
-            // Random-ish based on frame
-            const glitchIntensity = (frameIndex % 5 === 0) ? 15 : (frameIndex % 3 === 0) ? 5 : 0;
-            const direction = (frameIndex % 2 === 0) ? 1 : -1;
+            // 10 steps (0% to 90%)
+            const step = Math.floor(t * 10) % 10;
+
+            const frames = [
+                { x: 0, y: 0, o: 1 },         // 0%
+                { x: 5, y: 0, o: 0.9 },       // 10%
+                { x: -10, y: 2, o: 1 },       // 20%
+                { x: 15, y: 0, o: 0.7 },      // 30%
+                { x: -5, y: -2, o: 1 },       // 40%
+                { x: 0, y: 0, o: 1 },         // 50%
+                { x: 8, y: 0, o: 1 },         // 60%
+                { x: -12, y: 3, o: 0.8 },     // 70%
+                { x: 3, y: 0, o: 1 },         // 80%
+                { x: -8, y: 0, o: 0.9 }       // 90%
+            ];
+
+            const f = frames[step];
             return {
-                offsetX: glitchIntensity * direction,
-                offsetY: (frameIndex % 7 === 0) ? 3 : 0,
+                offsetX: f.x,
+                offsetY: f.y,
                 rotation: 0,
                 scale: 1,
-                opacity: (frameIndex % 8 === 0) ? 0.7 : 1,
+                opacity: f.o,
             };
         },
     },

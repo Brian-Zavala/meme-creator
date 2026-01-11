@@ -1832,33 +1832,57 @@ export default function Main() {
 
       // Desktop fallback: Clipboard Loophole or Download
       if (isAnimated) {
-        // GIF CLIPBOARD LOOPHOLE:
-        // Browsers don't support writing 'image/gif' to clipboard.
-        // TRICKS: Write 'text/html' with an <img src="data:..." /> tag.
+        // GIF CLIPBOARD LOOPHOLE (Smart Hybrid):
+        // Upload to Cloud -> Get URL -> Write URL (plain) + DataURI (html)
+
         try {
-          // 1. Convert Blob to Data URI (Base64)
+          // A. Convert to Data URI (For HTML Paste - Gmail/Docs)
           const reader = new FileReader();
           const base64Data = await new Promise((resolve) => {
             reader.onloadend = () => resolve(reader.result);
             reader.readAsDataURL(blob);
           });
 
-          // 2. Construct Clipboard Items (HTML only)
-          // We REMOVED text/plain because apps like Signal/Discord prioritize it and paste the text "Shared from..."
-          // instead of the image. By sending ONLY html, we hope they parse the <img> tag or ignore it
-          // (If they ignore it, the user can use the Download fallback).
+          // B. Upload to Cloud (For Chat Paste - Signal/Discord)
+          let publicUrl = null;
+          try {
+             toast.loading("Generating sharable link...", { id: toastId });
+
+             const formData = new FormData();
+             formData.append('file', blob, 'meme.gif');
+
+             const uploadRes = await fetch('/.netlify/functions/proxy-upload', {
+                 method: 'POST',
+                 body: formData
+             });
+
+             const uploadJson = await uploadRes.json();
+             if (uploadRes.ok && uploadJson.url) {
+                 publicUrl = uploadJson.url;
+             } else {
+                 console.warn("Upload failed:", uploadJson);
+             }
+          } catch (uploadErr) {
+             console.warn("Upload network error:", uploadErr);
+          }
+
+          // C. Construct Clipboard Items
           const htmlContent = `<img src="${base64Data}" alt="Meme GIF" />`;
+          const textContent = publicUrl || "";
 
           const clipboardItem = new ClipboardItem({
-            "text/html": new Blob([htmlContent], { type: "text/html" })
+            "text/html": new Blob([htmlContent], { type: "text/html" }),
+            "text/plain": new Blob([textContent], { type: "text/plain" })
           });
 
           await navigator.clipboard.write([clipboardItem]);
 
           toast.success((
             <div className="flex flex-col gap-1">
-              <span>GIF copied to clipboard!</span>
-              <span className="text-xs opacity-80 font-normal">Paste in supported apps (Gmail, etc.)</span>
+              <span>{publicUrl ? "Copied! (Link ready)" : "Copied to clipboard!"}</span>
+              <span className="text-xs opacity-80 font-normal">
+                {publicUrl ? "Works in Signal, Discord & Email" : "Paste in Gmail/Docs (Upload failed)"}
+              </span>
             </div>
           ), { id: toastId, duration: 4000 });
 

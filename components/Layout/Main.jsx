@@ -1766,34 +1766,79 @@ export default function Main() {
   async function handleShare() {
     if (!memeRef.current) return;
 
+    const toastId = toast.loading("Preparing to share...");
     try {
-      // MOBILE FIX: Enhanced options for iOS/Android consistency
-      const canvas = await html2canvas(memeRef.current, {
-        useCORS: true,
-        backgroundColor: "#000000",
-        scale: 2,
-        allowTaint: false,
-        foreignObjectRendering: false,
-        logging: false,
-        imageTimeout: 15000,
-        removeContainer: true,
-      });
-      const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
-      const file = new File([blob], `meme.png`, { type: "image/png" });
+      // Determine if content is animated
+      const hasVideoPanel = meme.panels.some(p => p.isVideo || (p.url && p.url.includes('.gif')));
+      const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
+      const hasAnimatedTextContent = hasAnimatedText(meme.texts);
+      const isAnimated = hasVideoPanel || hasGifSticker || hasAnimatedTextContent;
+
+      let blob, file;
+      if (isAnimated) {
+        toast.loading("Encoding GIF...", { id: toastId });
+        blob = await exportGif(meme, meme.texts, meme.stickers);
+        file = new File([blob], `meme.gif`, { type: "image/gif" });
+      } else {
+        blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
+        file = new File([blob], `meme.png`, { type: "image/png" });
+      }
+
+      // Try Web Share API first (works on mobile and some desktop browsers)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file] });
-        toast.success("Shared!");
+        toast.success("Shared!", { id: toastId });
+        return;
+      }
+
+      // Desktop fallback: Clipboard for PNG, Download for GIF
+      if (isAnimated) {
+        // GIFs can't be copied to clipboard - trigger download instead
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `meme-${Date.now()}.gif`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
+        toast.success("GIF downloaded! (Clipboard doesn't support GIFs)", { id: toastId });
       } else {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        toast.success("Copied!");
+        // PNG: Try clipboard with focus handling
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast.success("Copied to clipboard!", { id: toastId });
+        } catch (clipboardError) {
+          // Clipboard failed (focus lost or not supported) - fall back to download
+          console.warn("Clipboard failed, downloading instead:", clipboardError);
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `meme-${Date.now()}.png`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, 100);
+          toast.success("Downloaded! (Clipboard unavailable)", { id: toastId });
+        }
       }
     } catch (e) {
       if (e.name !== "AbortError") {
         console.error("Share Error:", e);
-        toast.error("Share failed");
+        toast.error("Share failed", { id: toastId });
+      } else {
+        toast.dismiss(toastId);
       }
     }
   }
+
+
 
   function clearSearch() {
     setSearchQuery("");

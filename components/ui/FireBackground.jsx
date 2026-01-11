@@ -56,6 +56,12 @@ const FireBackground = () => {
         </svg >
     );
 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isIOS) {
+        return <div className="absolute inset-0 w-full h-full overflow-hidden bg-slate-900 rounded-xl magma-bg" />;
+    }
+
     return (
         <div className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl">
             {/* Base layer - 3 main flames */}

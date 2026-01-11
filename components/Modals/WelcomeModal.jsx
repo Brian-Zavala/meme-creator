@@ -7,17 +7,17 @@ export function WelcomeModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pt-36 sm:pt-4 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-xl bg-black/40 animate-in fade-in duration-500">
       <div className="glass-panel bg-slate-900/95 rounded-3xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="bg-brand px-8 py-6 text-center">
-          <h2 className="text-3xl font-black text-white tracking-tighter drop-shadow-md">
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tighter drop-shadow-md">
             WELCOME TO MEME CREATOR
           </h2>
         </div>
         <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
 
           {/* New Features Grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
                 <Layout className="w-6 h-6 text-brand" />
                 <h3 className="text-white font-bold text-sm">Comic Layouts</h3>

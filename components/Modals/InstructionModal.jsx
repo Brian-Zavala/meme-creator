@@ -15,11 +15,11 @@ export function InstructionModal({ isOpen, onClose }) {
     >
       <div className="glass-panel bg-slate-900/95 rounded-3xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="bg-brand px-8 py-6 text-center">
-          <h2 id="instruction-modal-title" className="text-2xl font-black text-white tracking-tighter drop-shadow-md">
+          <h2 id="instruction-modal-title" className="text-2xl sm:text-3xl font-black text-white tracking-tighter drop-shadow-md">
             HOW TO USE
           </h2>
         </div>
-        <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <div className="p-6 sm:p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 gap-6">
 
             <section className="space-y-3">
@@ -66,7 +66,7 @@ export function InstructionModal({ isOpen, onClose }) {
 
           <button
             onClick={onClose}
-            className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-900 border-2 border-yellow-500 transition-all active:scale-95 py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg mt-4 shadow-yellow-400/20"
+            className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-900 border-2 border-yellow-500 transition-all active:scale-95 py-3 sm:py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg mt-4 shadow-yellow-400/20"
           >
             Got it!
           </button>

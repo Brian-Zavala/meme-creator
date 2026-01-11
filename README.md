@@ -23,10 +23,7 @@ Includes a comprehensive history stack with undo/redo functionality (Ctrl+Z / Ct
 
 **Image Processing**
 Real-time CSS filter adjustments for contrast, brightness, and blur, applied non-destructively to the canvas.
-
-**Smart GIF Sharing & Privacy**
-To enable seamless sharing on platforms like Signal and Discord (which require URLs), we use a hybrid system:
-- **Client-Side**: Standard images and raw Tenor GIFs are processed entirely in your browser with zero upload.
+ 
 **Smart GIF Sharing & Privacy**
 To enable seamless sharing on platforms like Signal and Discord (which require URLs), we use a hybrid system:
 - **Client-Side**: Standard images and raw Tenor GIFs are processed entirely in your browser with zero upload.

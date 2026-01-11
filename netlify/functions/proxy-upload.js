@@ -29,9 +29,20 @@ exports.handler = async (event, context) => {
             file.on('data', (data) => chunks.push(data));
             file.on('end', () => {
                 const buffer = Buffer.concat(chunks);
+                const buffer = Buffer.concat(chunks);
                 // Tmpfiles expects 'file'
-                // We MUST ensure the filename ends in .gif for the generated URL to work in Signal
-                const safeFilename = `meme-${Date.now()}.gif`;
+
+                // Use the provided filename (sanitized) to preserve the "Tenor" name if possible
+                // This helps with "logical paradigm" and might help Preview perception
+                let safeFilename = info.filename.replace(/[^a-zA-Z0-9\-\.]/g, '_');
+                if (!safeFilename.toLowerCase().endsWith('.gif')) {
+                    safeFilename += '.gif';
+                }
+                // Fallback if empty
+                if (safeFilename === '.gif' || !safeFilename) {
+                     safeFilename = `meme-${Date.now()}.gif`;
+                }
+
                 formData.append('file', buffer, { filename: safeFilename, contentType: 'image/gif' });
             });
         });

@@ -1980,18 +1980,7 @@ export default function Main() {
           // If HTML write fails (browser block or not focused), Fallback to Download
           console.warn("GIF Clipboard trick failed:", clipboardErr);
 
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `meme-${Date.now()}.gif`;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, 100);
+          await triggerDownload(blob, `meme-${Date.now()}.gif`);
 
           // Inform user why it downloaded
           toast.success((
@@ -2009,17 +1998,7 @@ export default function Main() {
         } catch (clipboardError) {
           // Clipboard failed (focus lost or not supported) - fall back to download
           console.warn("Clipboard failed, downloading instead:", clipboardError);
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `meme-${Date.now()}.png`;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, 100);
+          await triggerDownload(blob, `meme-${Date.now()}.png`);
           toast.success("Downloaded! (Clipboard unavailable)", { id: toastId });
         }
       }

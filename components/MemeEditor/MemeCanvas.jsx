@@ -31,6 +31,7 @@ const MemeCanvas = forwardRef(({
   const description = `Meme editor with ${meme.panels?.length || 1} panels`;
   const drawCanvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const dummyInputRef = useRef(null); // iOS Keyboard Trigger Helper
   const targetPanelRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(1); // Global Aspect Ratio (usually driven by first panel or default)
@@ -44,6 +45,7 @@ const MemeCanvas = forwardRef(({
   // Long-press to add text refs
   const canvasLongPressTimerRef = useRef(null);
   const longPressStartPosRef = useRef(null);
+  const focusOnNextReleaseRef = useRef(false); // New flag for hybrid approach
 
   // Robustly set caret position when editing starts
   useEffect(() => {
@@ -291,9 +293,9 @@ const MemeCanvas = forwardRef(({
 
     // Robust Startup Cleanup: Clear any existing timers first to prevent "ghost" intervals
     if (canvasLongPressTimerRef.current) {
-        if (canvasLongPressTimerRef.current.delayTimerId) clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
-        if (canvasLongPressTimerRef.current.timerId) clearTimeout(canvasLongPressTimerRef.current.timerId);
-        if (canvasLongPressTimerRef.current.progressInterval) clearInterval(canvasLongPressTimerRef.current.progressInterval);
+      if (canvasLongPressTimerRef.current.delayTimerId) clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
+      if (canvasLongPressTimerRef.current.timerId) clearTimeout(canvasLongPressTimerRef.current.timerId);
+      if (canvasLongPressTimerRef.current.progressInterval) clearInterval(canvasLongPressTimerRef.current.progressInterval);
     }
 
     // Store all timer IDs
@@ -326,18 +328,21 @@ const MemeCanvas = forwardRef(({
 
     // Start 2 second timer for text creation
     canvasLongPressTimerRef.current.timerId = setTimeout(() => {
-      // 1. Clear the animation interval FIRST so it stops updating state
+      // 1. Clear the animation interval
       if (canvasLongPressTimerRef.current?.progressInterval) {
         clearInterval(canvasLongPressTimerRef.current.progressInterval);
       }
 
-      // 2. Auto-trigger text creation if conditions are met
+      // 2. Auto-trigger text creation IMMEDIATELY (User Request)
       if (longPressStartPosRef.current && onAddTextAtPosition) {
-         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-         onAddTextAtPosition(longPressStartPosRef.current.x, longPressStartPosRef.current.y);
+        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+        onAddTextAtPosition(longPressStartPosRef.current.x, longPressStartPosRef.current.y);
+
+        // 3. Set flag to focus input on NEXT release (iOS Requirement)
+        focusOnNextReleaseRef.current = true;
       }
 
-      // 3. Reset State & Refs immediately
+      // 4. Reset internal state (but keep cursor until release? actually let's clear it to show action is done)
       setLongPressCursor(null);
       longPressStartPosRef.current = null;
       canvasLongPressTimerRef.current = null;
@@ -364,14 +369,51 @@ const MemeCanvas = forwardRef(({
         }
         canvasLongPressTimerRef.current = null;
         longPressStartPosRef.current = null;
+        focusOnNextReleaseRef.current = false;
         setLongPressCursor(null);
       }
     }
   };
 
   const handleCanvasLongPressEnd = () => {
-    // Note: Auto-trigger happens in the timer now.
-    // This handler just cleans up if the user releases EARLY (cancels).
+    // 1. Check if we need to focus the dummy input (Hybrid Approach)
+    // 1. Check if we need to focus the dummy input (Hybrid Approach)
+    if (focusOnNextReleaseRef.current) {
+      // CRITICAL FIX: Only focus dummy input if we are NOT already editing a real input (avoid stealing focus)
+      // The timer logic (onAddTextAtPosition) sets editingId, which triggers MemeInputs to focus.
+      // We only want to 'bump' the keyboard if for some reason it didn't open.
+      // Actually, on iOS, the async timer focus MIGHT fail.
+      // So we should focus the dummy input, BUT IMMEDIATELY check if we have a real input to switch to.
+
+      // Better strategy:
+      // If we are in the "just created" flow, we want to piggyback on this touch event.
+      // If we focus dummy input here, it opens keyboard.
+      // Then we must ensure focus goes back to the real input.
+
+      // Try to find the real text input first (if it's already mounted)
+      const existingInput = document.querySelector('textarea[id^="canvas-input-"]');
+
+      if (existingInput) {
+        existingInput.focus({ preventScroll: true });
+      } else if (dummyInputRef.current) {
+        // Fallback to dummy input if real one isn't ready yet
+        // Prevent Viewport Jump: Move dummy input to the touch position
+        if (longPressStartPosRef.current) {
+          dummyInputRef.current.style.top = `${longPressStartPosRef.current.clientY}px`;
+          dummyInputRef.current.style.left = `${longPressStartPosRef.current.clientX}px`;
+        }
+        dummyInputRef.current.focus({ preventScroll: true });
+
+        // Queue the handover to the real input
+        setTimeout(() => {
+          const targetInput = document.querySelector('textarea[id^="canvas-input-"]');
+          if (targetInput) {
+            targetInput.focus({ preventScroll: true });
+          }
+        }, 50);
+      }
+      focusOnNextReleaseRef.current = false;
+    }
 
     if (canvasLongPressTimerRef.current) {
       if (canvasLongPressTimerRef.current.delayTimerId) {
@@ -386,7 +428,7 @@ const MemeCanvas = forwardRef(({
       canvasLongPressTimerRef.current = null;
     }
     longPressStartPosRef.current = null;
-    setLongPressCursor(null);
+    setLongPressCursor(null); // Ensure UI clears unconditionally
   };
 
   return (
@@ -405,6 +447,16 @@ const MemeCanvas = forwardRef(({
         accept="image/*,video/*"
         className="hidden"
         onChange={handleFileInputChange}
+      />
+
+      {/* iOS Keyboard Helper Input */}
+      <input
+        ref={dummyInputRef}
+        type="text"
+        className="fixed w-1 h-1 opacity-0 pointer-events-none"
+        style={{ top: -100, left: -100 }}
+        aria-hidden="true"
+        tabIndex={-1}
       />
 
       <div
@@ -688,27 +740,27 @@ const MemeCanvas = forwardRef(({
 
           let btnContainerClasses = "absolute flex items-center z-[60] animate-in zoom-in-95 fade-in";
           let btnContainerStyle = {
-             gap: 'clamp(12px, 4vw, 24px)',
-             pointerEvents: 'auto'
+            gap: 'clamp(12px, 4vw, 24px)',
+            pointerEvents: 'auto'
           };
 
           if (isSelected || isEditing) {
             if (shouldUseSidePosition) {
-               // Side Positioning (Center Vertically)
-               btnContainerStyle.top = '50%';
-               btnContainerStyle.transform = 'translateY(-50%)';
+              // Side Positioning (Center Vertically)
+              btnContainerStyle.top = '50%';
+              btnContainerStyle.transform = 'translateY(-50%)';
 
-               // Decide Left vs Right side based on canvas position
-               // If on right half -> Buttons go Left
-               // If on left half -> Buttons go Right
-               if (textItem.x > 50) {
-                   btnContainerClasses += " right-full mr-4";
-               } else {
-                   btnContainerClasses += " left-full ml-4";
-               }
+              // Decide Left vs Right side based on canvas position
+              // If on right half -> Buttons go Left
+              // If on left half -> Buttons go Right
+              if (textItem.x > 50) {
+                btnContainerClasses += " right-full mr-4";
+              } else {
+                btnContainerClasses += " left-full ml-4";
+              }
             } else {
-               // Standard Top Positioning
-               btnContainerClasses += " left-1/2 -translate-x-1/2 -top-[52px] md:-top-[68px]";
+              // Standard Top Positioning
+              btnContainerClasses += " left-1/2 -translate-x-1/2 -top-[52px] md:-top-[68px]";
             }
           }
 
@@ -796,14 +848,43 @@ const MemeCanvas = forwardRef(({
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        if (onStartEditing) onStartEditing(textItem.id);
                         if (navigator.vibrate) navigator.vibrate(30);
+
+                        // 1. Activate dummy input to wake up keyboard (iOS requirement)
+                        if (dummyInputRef.current) {
+                          dummyInputRef.current.style.top = `${e.clientY}px`;
+                          dummyInputRef.current.style.left = `${e.clientX}px`;
+                          dummyInputRef.current.focus({ preventScroll: true });
+                        }
+
+                        // 2. Trigger React state update to render the real input
+                        if (onStartEditing) onStartEditing(textItem.id);
+
+                        // 3. Queue the handover execution to the real input
+                        setTimeout(() => {
+                          const targetInput = document.getElementById(`canvas-input-${textItem.id}`);
+                          if (targetInput) {
+                            targetInput.focus({ preventScroll: true });
+                          }
+                        }, 50);
                       }}
                       onPointerUp={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
+                        // Redundant safety for touch devices
+                        if (dummyInputRef.current) {
+                          dummyInputRef.current.style.top = `${e.clientY}px`;
+                          dummyInputRef.current.style.left = `${e.clientX}px`;
+                          dummyInputRef.current.focus({ preventScroll: true });
+                        }
                         if (onStartEditing) onStartEditing(textItem.id);
-                        if (navigator.vibrate) navigator.vibrate(30);
+
+                        setTimeout(() => {
+                          const targetInput = document.getElementById(`canvas-input-${textItem.id}`);
+                          if (targetInput) {
+                            targetInput.focus({ preventScroll: true });
+                          }
+                        }, 50);
                       }}
                       className="flex items-center justify-center p-2 sm:p-2.5 md:p-3 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 hover:bg-brand hover:scale-110 active:scale-90"
                       style={{ touchAction: 'manipulation', minWidth: '40px', minHeight: '40px' }}
@@ -812,7 +893,7 @@ const MemeCanvas = forwardRef(({
                       <Settings2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
-              </div>
+                </div>
               )}
               {/* Text Content Rendering - always visible, styled h2 displays the text */}
               {textItem.animation === 'wave' ? (
@@ -908,11 +989,11 @@ const MemeCanvas = forwardRef(({
 
         {/* Long-press cursor indicator - enhanced with smooth animations */}
         {longPressCursor && (
-           <CountdownOverlay
-              x={longPressCursor.x}
-              y={longPressCursor.y}
-              progress={longPressCursor.progress}
-           />
+          <CountdownOverlay
+            x={longPressCursor.x}
+            y={longPressCursor.y}
+            progress={longPressCursor.progress}
+          />
         )}
       </div>
 

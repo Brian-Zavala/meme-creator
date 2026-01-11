@@ -57,22 +57,24 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
         <div className="flex items-center gap-2 text-slate-400 uppercase text-xs font-bold tracking-wider" aria-hidden="true">
           <Type className="w-4 h-4" /> Content
         </div>
-        <button
-          onClick={onMagicCaption}
-          disabled={isMagicGenerating}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-all active:scale-90 border border-brand/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title="Generate Magic Caption"
-          aria-label="Generate Magic Caption with AI"
-        >
-          {isMagicGenerating ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-          ) : (
-            <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" aria-hidden="true" />
-          )}
-          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">
-            {isMagicGenerating ? "Generating..." : "Magic AI"}
-          </span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onMagicCaption}
+            disabled={isMagicGenerating}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-all active:scale-90 border border-brand/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Generate Magic Caption"
+            aria-label="Generate Magic Caption with AI"
+          >
+            {isMagicGenerating ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" aria-hidden="true" />
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">
+              {isMagicGenerating ? "Generating..." : "Magic AI"}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Scrolling Text Inputs area */}

@@ -38,8 +38,8 @@ const DOWNLOAD_CLEANUP_DELAY = 100;
  * @returns {boolean} True if running on iOS Safari
  */
 function isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
 /**
@@ -63,7 +63,7 @@ function blobToDataURL(blob) {
  */
 async function triggerDownload(blob, filename) {
   const isiOS = isIOS();
-  
+
   if (isiOS) {
     // iOS Safari: Use Data URL approach
     const dataUrl = await blobToDataURL(blob);
@@ -618,7 +618,7 @@ export default function Main() {
           delay: 300,
           priority: 'user-visible',
           signal: controller.signal
-        }).catch(() => {}); // Ignore aborts
+        }).catch(() => { }); // Ignore aborts
       } else {
         // Fallback: Legacy Timeout
         searchTimeoutRef.current = setTimeout(async () => {
@@ -917,13 +917,13 @@ export default function Main() {
     const styles = [];
     for (const font of fonts) {
       for (const palette of palettes) {
-         const color = palette.colors[Math.floor(Math.random() * palette.colors.length)];
-         const shadow = palette.shadows[Math.floor(Math.random() * palette.shadows.length)];
+        const color = palette.colors[Math.floor(Math.random() * palette.colors.length)];
+        const shadow = palette.shadows[Math.floor(Math.random() * palette.shadows.length)];
 
-         // Fix visibility
-         if (color === shadow) continue;
+        // Fix visibility
+        if (color === shadow) continue;
 
-         styles.push({ fontFamily: font, textColor: color, textShadow: shadow, paletteName: palette.name });
+        styles.push({ fontFamily: font, textColor: color, textShadow: shadow, paletteName: palette.name });
       }
     }
     // Shuffle logic below will mix them up
@@ -972,8 +972,8 @@ export default function Main() {
     console.log("Next Style Drawn:", nextStyle);
 
     if (!nextStyle) {
-        console.error("Shuffle Error: No style returned from getNextItem");
-        return;
+      console.error("Shuffle Error: No style returned from getNextItem");
+      return;
     }
 
     // Calculate safe font size based on text length
@@ -1267,19 +1267,6 @@ export default function Main() {
   function handleTextChange(id, value) {
     updateState((prev) => {
       const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
-      const lastText = newTexts[newTexts.length - 1];
-
-      if (lastText.content.trim().length > 0) {
-        newTexts.push({
-          id: crypto.randomUUID(),
-          content: "",
-          x: 50,
-          y: 50,
-          rotation: 0,
-          animation: null,
-        });
-      }
-
       return {
         ...prev,
         texts: newTexts,
@@ -1864,8 +1851,8 @@ export default function Main() {
           return;
         } catch (shareErr) {
           if (shareErr.name === 'AbortError') {
-             toast.dismiss(toastId);
-             return;
+            toast.dismiss(toastId);
+            return;
           }
           console.warn("Native share failed, falling back...", shareErr);
         }
@@ -1887,48 +1874,48 @@ export default function Main() {
           // B. Upload to Cloud (For Chat Paste - Signal/Discord)
           let publicUrl = null;
           try {
-             toast.loading("Generating sharable link...", { id: toastId });
+            toast.loading("Generating sharable link...", { id: toastId });
 
-             // Try to get original filename for better "Paradigm" / recognition
-             let filename = `meme-${Date.now()}.gif`; // Default Safe Fallback
+            // Try to get original filename for better "Paradigm" / recognition
+            let filename = `meme-${Date.now()}.gif`; // Default Safe Fallback
 
-             const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
-             if (activePanel?.sourceUrl) {
-                 try {
-                     // Extract filename from URL (e.g. .../AAA/Cat-Spin.gif)
-                     const urlName = activePanel.sourceUrl.split('/').pop().split('?')[0];
-                     // Only use it if it looks like a normal filename
-                     if (urlName && /^[a-zA-Z0-9\-_]+(\.gif)?$/i.test(urlName)) {
-                         filename = urlName.replace('.gif', '') + '-remix.gif';
-                     }
-                 } catch (e) {
-                     console.warn("Could not extract filename", e);
-                 }
-             }
+            const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
+            if (activePanel?.sourceUrl) {
+              try {
+                // Extract filename from URL (e.g. .../AAA/Cat-Spin.gif)
+                const urlName = activePanel.sourceUrl.split('/').pop().split('?')[0];
+                // Only use it if it looks like a normal filename
+                if (urlName && /^[a-zA-Z0-9\-_]+(\.gif)?$/i.test(urlName)) {
+                  filename = urlName.replace('.gif', '') + '-remix.gif';
+                }
+              } catch (e) {
+                console.warn("Could not extract filename", e);
+              }
+            }
 
-             const formData = new FormData();
-             formData.append('file', blob, filename);
+            const formData = new FormData();
+            formData.append('file', blob, filename);
 
-             // DIRECT CLIENT-SIDE UPLOAD (Bypasses Netlify Bandwidth)
-             const uploadRes = await fetch('https://tmpfiles.org/api/v1/upload', {
-                 method: 'POST',
-                 body: formData
-             });
+            // DIRECT CLIENT-SIDE UPLOAD (Bypasses Netlify Bandwidth)
+            const uploadRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+              method: 'POST',
+              body: formData
+            });
 
-             if (uploadRes.ok) {
-                 const uploadJson = await uploadRes.json();
-                 // Tmpfiles returns: { data: { url: "https://tmpfiles.org/..." } }
-                 // Need to convert to DL link: .../org/dl/...
-                 if (uploadJson && uploadJson.data && uploadJson.data.url) {
-                     publicUrl = uploadJson.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-                 } else {
-                     console.warn("Upload response missing url:", uploadJson);
-                 }
-             } else {
-                 console.warn("Upload failed:", uploadRes.status, uploadRes.statusText);
-             }
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json();
+              // Tmpfiles returns: { data: { url: "https://tmpfiles.org/..." } }
+              // Need to convert to DL link: .../org/dl/...
+              if (uploadJson && uploadJson.data && uploadJson.data.url) {
+                publicUrl = uploadJson.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+              } else {
+                console.warn("Upload response missing url:", uploadJson);
+              }
+            } else {
+              console.warn("Upload failed:", uploadRes.status, uploadRes.statusText);
+            }
           } catch (uploadErr) {
-             console.warn("Upload network error:", uploadErr);
+            console.warn("Upload network error:", uploadErr);
           }
 
           // C. Construct Clipboard Items
@@ -1937,40 +1924,40 @@ export default function Main() {
 
           // Attempt Auto-Copy (Might fail if focus lost during upload)
           try {
-              const clipboardItem = new ClipboardItem({
-                "text/html": new Blob([htmlContent], { type: "text/html" }),
-                "text/plain": new Blob([textContent], { type: "text/plain" })
-              });
-              await navigator.clipboard.write([clipboardItem]);
-              toast.success((
-                <div className="flex flex-col gap-1">
-                  <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
-                  <span className="text-xs opacity-80 font-normal">
-                    {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
-                  </span>
-                </div>
-              ), { id: toastId, duration: 4000 });
+            const clipboardItem = new ClipboardItem({
+              "text/html": new Blob([htmlContent], { type: "text/html" }),
+              "text/plain": new Blob([textContent], { type: "text/plain" })
+            });
+            await navigator.clipboard.write([clipboardItem]);
+            toast.success((
+              <div className="flex flex-col gap-1">
+                <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
+                <span className="text-xs opacity-80 font-normal">
+                  {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
+                </span>
+              </div>
+            ), { id: toastId, duration: 4000 });
           } catch (autoCopyErr) {
-              // Fallback: Show Button for User Gesture
-              console.warn("Auto-copy failed, requesting user gesture", autoCopyErr);
-              toast((t) => (
-                  <div className="flex flex-col items-start gap-2">
-                     <span className="font-semibold">Link Ready!</span>
-                     <button
-                       className="bg-black text-white px-3 py-1.5 rounded text-sm font-bold active:scale-95 transition-transform cursor-pointer shadow-sm border border-white/20"
-                       onClick={() => {
-                           const item = new ClipboardItem({
-                              "text/html": new Blob([htmlContent], { type: "text/html" }),
-                              "text/plain": new Blob([textContent], { type: "text/plain" })
-                           });
-                           navigator.clipboard.write([item]);
-                           toast.success("Link Copied!", { id: t.id });
-                       }}
-                     >
-                       Tap to Copy
-                     </button>
-                  </div>
-              ), { id: toastId, duration: 8000 });
+            // Fallback: Show Button for User Gesture
+            console.warn("Auto-copy failed, requesting user gesture", autoCopyErr);
+            toast((t) => (
+              <div className="flex flex-col items-start gap-2">
+                <span className="font-semibold">Link Ready!</span>
+                <button
+                  className="bg-black text-white px-3 py-1.5 rounded text-sm font-bold active:scale-95 transition-transform cursor-pointer shadow-sm border border-white/20"
+                  onClick={() => {
+                    const item = new ClipboardItem({
+                      "text/html": new Blob([htmlContent], { type: "text/html" }),
+                      "text/plain": new Blob([textContent], { type: "text/plain" })
+                    });
+                    navigator.clipboard.write([item]);
+                    toast.success("Link Copied!", { id: t.id });
+                  }}
+                >
+                  Tap to Copy
+                </button>
+              </div>
+            ), { id: toastId, duration: 8000 });
           }
 
           toast.success((
@@ -1990,7 +1977,7 @@ export default function Main() {
 
           // Inform user why it downloaded
           toast.success((
-             <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span>GIF downloaded!</span>
               <span className="text-xs opacity-80 font-normal">Apps prevented clipboard copy.</span>
             </div>

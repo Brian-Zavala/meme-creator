@@ -1894,12 +1894,43 @@ export default function Main() {
           const htmlContent = `<img src="${base64Data}" alt="Meme GIF" />`;
           const textContent = publicUrl || "";
 
-          const clipboardItem = new ClipboardItem({
-            "text/html": new Blob([htmlContent], { type: "text/html" }),
-            "text/plain": new Blob([textContent], { type: "text/plain" })
-          });
-
-          await navigator.clipboard.write([clipboardItem]);
+          // Attempt Auto-Copy (Might fail if focus lost during upload)
+          try {
+              const clipboardItem = new ClipboardItem({
+                "text/html": new Blob([htmlContent], { type: "text/html" }),
+                "text/plain": new Blob([textContent], { type: "text/plain" })
+              });
+              await navigator.clipboard.write([clipboardItem]);
+              toast.success((
+                <div className="flex flex-col gap-1">
+                  <span>{publicUrl ? "Copied! (Link ready)" : "Copied to clipboard!"}</span>
+                  <span className="text-xs opacity-80 font-normal">
+                    {publicUrl ? "Works in Signal, Discord & Email" : "Paste in Gmail/Docs (Upload failed)"}
+                  </span>
+                </div>
+              ), { id: toastId, duration: 4000 });
+          } catch (autoCopyErr) {
+              // Fallback: Show Button for User Gesture
+              console.warn("Auto-copy failed, requesting user gesture", autoCopyErr);
+              toast((t) => (
+                  <div className="flex flex-col items-start gap-2">
+                     <span className="font-semibold">Link Ready!</span>
+                     <button
+                       className="bg-black text-white px-3 py-1.5 rounded text-sm font-bold active:scale-95 transition-transform cursor-pointer shadow-sm border border-white/20"
+                       onClick={() => {
+                           const item = new ClipboardItem({
+                              "text/html": new Blob([htmlContent], { type: "text/html" }),
+                              "text/plain": new Blob([textContent], { type: "text/plain" })
+                           });
+                           navigator.clipboard.write([item]);
+                           toast.success("Copied!", { id: t.id });
+                       }}
+                     >
+                       Tap to Copy Link
+                     </button>
+                  </div>
+              ), { id: toastId, duration: 8000 });
+          }
 
           toast.success((
             <div className="flex flex-col gap-1">

@@ -303,9 +303,9 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                   <span className="h-px flex-1 bg-slate-800"></span>
                 </div>
                 <div className="grid grid-cols-5 gap-1">
-                  {stickers.map(sticker => (
+                  {stickers.map((sticker, index) => (
                     <button
-                      key={sticker}
+                      key={`${sticker}-${index}`}
                       onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
                       className="h-10 flex items-center justify-center text-2xl hover:bg-slate-800 rounded-lg transition-all active:scale-75 hover:scale-110"
                       style={{ touchAction: 'manipulation' }}

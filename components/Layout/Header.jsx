@@ -5,7 +5,7 @@ export default function Header({ onOpenInstructions }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="header flex items-center justify-between px-6 py-4 bg-brand shadow-lg select-none relative z-50">
+    <header className="header flex items-center justify-between px-6 py-4 bg-brand shadow-lg select-none relative z-[100]">
       <div className="flex items-center gap-3 cursor-default">
         <div>
           <h1 className="header--title text-2xl font-black tracking-tighter text-white drop-shadow-md">MEME CREATOR</h1>
@@ -49,7 +49,7 @@ export default function Header({ onOpenInstructions }) {
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="absolute top-full left-0 right-0 glass-panel bg-slate-900/95 border-t border-white/10 p-4 flex flex-col gap-4 shadow-2xl origin-top animate-roll-down md:hidden z-50">
+        <div className="absolute top-full left-0 right-0 glass-panel bg-slate-900/95 border-t border-white/10 p-4 flex flex-col gap-4 shadow-2xl origin-top animate-roll-down md:hidden z-[100]">
           <button
             onClick={() => {
               onOpenInstructions();

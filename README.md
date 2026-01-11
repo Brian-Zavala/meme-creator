@@ -24,6 +24,14 @@ Includes a comprehensive history stack with undo/redo functionality (Ctrl+Z / Ct
 **Image Processing**
 Real-time CSS filter adjustments for contrast, brightness, and blur, applied non-destructively to the canvas.
 
+**Smart GIF Sharing & Privacy**
+To enable seamless sharing on platforms like Signal and Discord (which require URLs), we use a hybrid system:
+- **Client-Side**: Standard images and raw Tenor GIFs are processed entirely in your browser with zero upload.
+- **Server-Side Proxy**: Custom GIFs are briefly processed via a privacy-focused proxy to `Tmpfiles.org`.
+  - **Privacy First**: Files are automatically deleted after **60 minutes**.
+  - **No Logs**: We do not store or inspect your content.
+  - **Ephemeral**: The public link expires, ensuring your meme doesn't live on the web forever unless you want it to.
+
 ## Technical Architecture
 
 ### Frontend Framework

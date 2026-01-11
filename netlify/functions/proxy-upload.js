@@ -29,7 +29,6 @@ exports.handler = async (event, context) => {
             file.on('data', (data) => chunks.push(data));
             file.on('end', () => {
                 const buffer = Buffer.concat(chunks);
-                const buffer = Buffer.concat(chunks);
                 // Tmpfiles expects 'file'
 
                 // Use the provided filename (sanitized) to preserve the "Tenor" name if possible

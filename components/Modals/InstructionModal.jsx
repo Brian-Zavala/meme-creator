@@ -22,41 +22,41 @@ export function InstructionModal({ isOpen, onClose }) {
         <div className="p-6 sm:p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 gap-6">
 
-            <section className="space-y-3">
-              <h3 className="text-brand font-bold uppercase text-sm tracking-wider flex items-center gap-2">
-                <Layout className="w-4 h-4" /> Layouts & Images
+            <section className="space-y-3 flex flex-col items-center text-center">
+              <h3 className="text-brand font-bold uppercase text-sm tracking-wider">
+                Layouts & Images
               </h3>
-              <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
+              <ul className="text-slate-300 text-sm space-y-3 list-disc list-inside marker:text-slate-600 px-4">
                 <li><span className="text-white font-medium">Multi-Panel:</span> Choose a grid layout from the toolbar.</li>
                 <li><span className="text-white font-medium">Ghost Slots:</span> Tap any empty "Ghost" slot to upload or search for an image.</li>
                 <li><span className="text-white font-medium">Drag to Pan:</span> Touch and drag an image within its frame to adjust position/crop.</li>
               </ul>
             </section>
 
-            <section className="space-y-3">
-              <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider flex items-center gap-2">
-                <Type className="w-4 h-4" /> Text & Stickers
+            <section className="space-y-3 flex flex-col items-center text-center">
+              <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider">
+                Text & Stickers
               </h3>
-              <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
+              <ul className="text-slate-300 text-sm space-y-3 list-disc list-inside marker:text-slate-600 px-4">
                 <li><span className="text-white font-medium">Long Press:</span> Hold anywhere on the canvas to add text instantly.</li>
                 <li><span className="text-white font-medium">Double Tap:</span> Quickly tap any sticker twice to remove it.</li>
                 <li><span className="text-white font-medium">Smart Delete:</span> Remove buttons now automatically jump to the side to stay visible!</li>
               </ul>
             </section>
 
-            <section className="space-y-3">
-              <h3 className="text-purple-400 font-bold uppercase text-sm tracking-wider flex items-center gap-2">
-                <Film className="w-4 h-4" /> Magic & Vibes
+            <section className="space-y-3 flex flex-col items-center text-center">
+              <h3 className="text-purple-400 font-bold uppercase text-sm tracking-wider">
+                 Magic & Vibes
               </h3>
-              <ul className="text-slate-300 text-sm space-y-3 list-disc list-outside pl-5 marker:text-slate-600">
+              <ul className="text-slate-300 text-sm space-y-3 list-disc list-inside marker:text-slate-600 px-4">
                 <li><span className="text-white font-medium">Magic AI:</span> Tap the sparkles to let AI write the caption for you.</li>
                 <li><span className="text-white font-medium">Vibe Check:</span> Spam the button for random filters, Deep Fry, or Chaos Mode.</li>
               </ul>
             </section>
 
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
-              <h3 className="text-blue-400 font-bold uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
-                <Move className="w-3 h-3" /> Pro Tip
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex flex-col items-center text-center">
+              <h3 className="text-blue-400 font-bold uppercase text-xs tracking-widest mb-2">
+                 Pro Tip
               </h3>
               <p className="text-slate-400 text-xs leading-relaxed">
                 If your delete button disappears, check the side of the text! It moves dynamically to never fall off-screen.

@@ -22,7 +22,9 @@ exports.handler = async (event, context) => {
     // 1. Parse the incoming multipart/form-data (the GIF)
     const formData = new FormData();
     const parsePromise = new Promise((resolve, reject) => {
-        const busboy = Busboy({ headers: event.headers });
+        // Fix: Case-insensitive header lookup for Busboy
+        const cType = event.headers['content-type'] || event.headers['Content-Type'] || event.headers['CONTENT-TYPE'];
+        const busboy = Busboy({ headers: { 'content-type': cType } });
 
         busboy.on('file', (fieldname, file, info) => {
             try {

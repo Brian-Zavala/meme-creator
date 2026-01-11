@@ -44,33 +44,45 @@ exports.handler = async (event, context) => {
 
     await parsePromise;
 
-    // 2. Upload to Catbox.moe
-    // API Endpoint: https://catbox.moe/user/api.php
+    // 2. Upload to Tmpfiles.org (More reliable than Catbox for proxies)
+    // API Endpoint: https://tmpfiles.org/api/v1/upload
     return new Promise((resolve, reject) => {
-        const request = https.request('https://catbox.moe/user/api.php', {
+        const request = https.request('https://tmpfiles.org/api/v1/upload', {
             method: 'POST',
             headers: formData.getHeaders()
         }, (res) => {
             let data = '';
             res.on('data', (chunk) => data += chunk);
             res.on('end', () => {
+                console.log("Tmpfiles Response:", res.statusCode, data);
                 if (res.statusCode === 200) {
-                   resolve({
-                       statusCode: 200,
-                       headers,
-                       body: JSON.stringify({ url: data.trim() })
-                   });
+                   try {
+                       const json = JSON.parse(data);
+                       // Tmpfiles returns: { data: { url: "https://tmpfiles.org/..." } }
+                       // The DL link is: https://tmpfiles.org/dl/[id]/filename.gif
+                       const originalUrl = json.data.url;
+                       const dlUrl = originalUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+
+                       resolve({
+                           statusCode: 200,
+                           headers,
+                           body: JSON.stringify({ url: dlUrl })
+                       });
+                   } catch (e) {
+                       resolve({ statusCode: 502, headers, body: JSON.stringify({ error: "Invalid JSON from host" }) });
+                   }
                 } else {
                     resolve({
                         statusCode: 502,
                         headers,
-                        body: JSON.stringify({ error: 'Catbox API Error', details: data })
+                        body: JSON.stringify({ error: 'Tmpfiles API Error', details: data })
                     });
                 }
             });
         });
 
         request.on('error', (e) => {
+            console.error("Upstream Request Error:", e);
             resolve({
                 statusCode: 502,
                 headers,

@@ -25,25 +25,30 @@ exports.handler = async (event, context) => {
         const busboy = Busboy({ headers: event.headers });
 
         busboy.on('file', (fieldname, file, info) => {
-            const chunks = [];
-            file.on('data', (data) => chunks.push(data));
-            file.on('end', () => {
-                const buffer = Buffer.concat(chunks);
-                // Tmpfiles expects 'file'
+            try {
+                const chunks = [];
+                file.on('data', (data) => chunks.push(data));
+                file.on('end', () => {
+                    const buffer = Buffer.concat(chunks);
+                    // Tmpfiles expects 'file'
 
-                // Use the provided filename (sanitized) to preserve the "Tenor" name if possible
-                // This helps with "logical paradigm" and might help Preview perception
-                let safeFilename = info.filename.replace(/[^a-zA-Z0-9\-\.]/g, '_');
-                if (!safeFilename.toLowerCase().endsWith('.gif')) {
-                    safeFilename += '.gif';
-                }
-                // Fallback if empty
-                if (safeFilename === '.gif' || !safeFilename) {
-                     safeFilename = `meme-${Date.now()}.gif`;
-                }
+                    // Use the provided filename (sanitized) to preserve the "Tenor" name if possible
+                    let originalName = (info && info.filename) ? info.filename : `meme-${Date.now()}.gif`;
+                    let safeFilename = originalName.replace(/[^a-zA-Z0-9\-\.]/g, '_');
 
-                formData.append('file', buffer, { filename: safeFilename, contentType: 'image/gif' });
-            });
+                    if (!safeFilename.toLowerCase().endsWith('.gif')) {
+                        safeFilename += '.gif';
+                    }
+                    if (safeFilename === '.gif' || !safeFilename) {
+                         safeFilename = `meme-${Date.now()}.gif`;
+                    }
+
+                    formData.append('file', buffer, { filename: safeFilename, contentType: 'image/gif' });
+                });
+            } catch (err) {
+                console.error("Busboy File Handler Error:", err);
+                reject(err);
+            }
         });
 
         busboy.on('finish', resolve);

@@ -1,6 +1,6 @@
 # Meme Creator
 
-Meme Creator Ultra is a high-performance web application designed for precision meme generation. Built on React 19 and Tailwind CSS v4, it bridges the gap between simple text-over-image tools and complex photo editors. The focus here is on speed, privacy, and granular control.
+Meme Creator is a high-performance web application designed for precision meme generation. Built on React 19 and Tailwind CSS v4, it bridges the gap between simple text-over-image tools and complex photo editors. The focus here is on speed, privacy, and granular control.
 
 Unlike standard generators that rely heavily on server-side processing, this application leverages client-side technologies—including WebAssembly and multi-threaded AI—to handle heavy tasks like background removal directly in the browser.
 

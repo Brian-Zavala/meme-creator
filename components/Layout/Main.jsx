@@ -1903,9 +1903,9 @@ export default function Main() {
               await navigator.clipboard.write([clipboardItem]);
               toast.success((
                 <div className="flex flex-col gap-1">
-                  <span>{publicUrl ? "Copied! (Link ready)" : "Copied to clipboard!"}</span>
+                  <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
                   <span className="text-xs opacity-80 font-normal">
-                    {publicUrl ? "Works in Signal, Discord & Email" : "Paste in Gmail/Docs (Upload failed)"}
+                    {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
                   </span>
                 </div>
               ), { id: toastId, duration: 4000 });
@@ -1923,10 +1923,10 @@ export default function Main() {
                               "text/plain": new Blob([textContent], { type: "text/plain" })
                            });
                            navigator.clipboard.write([item]);
-                           toast.success("Copied!", { id: t.id });
+                           toast.success("Link Copied!", { id: t.id });
                        }}
                      >
-                       Tap to Copy Link
+                       Tap to Copy
                      </button>
                   </div>
               ), { id: toastId, duration: 8000 });
@@ -1934,9 +1934,9 @@ export default function Main() {
 
           toast.success((
             <div className="flex flex-col gap-1">
-              <span>{publicUrl ? "Copied! (Link ready)" : "Copied to clipboard!"}</span>
+              <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
               <span className="text-xs opacity-80 font-normal">
-                {publicUrl ? "Works in Signal, Discord & Email" : "Paste in Gmail/Docs (Upload failed)"}
+                {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
               </span>
             </div>
           ), { id: toastId, duration: 4000 });

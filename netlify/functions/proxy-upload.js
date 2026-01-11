@@ -29,9 +29,8 @@ exports.handler = async (event, context) => {
             file.on('data', (data) => chunks.push(data));
             file.on('end', () => {
                 const buffer = Buffer.concat(chunks);
-                // Append exactly as Catbox expects: 'reqtype', 'userhash' (optional), 'fileToUpload'
-                formData.append('reqtype', 'fileupload');
-                formData.append('fileToUpload', buffer, { filename: info.filename, contentType: info.mimeType });
+                // Tmpfiles expects 'file'
+                formData.append('file', buffer, { filename: info.filename, contentType: info.mimeType });
             });
         });
 

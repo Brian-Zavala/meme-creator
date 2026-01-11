@@ -32,16 +32,17 @@ export const TEXT_ANIMATIONS = [
         id: 'bounce',
         name: 'Bounce',
         icon: '/images/stickers/bounce.svg',
-        // Bouncing with physics-like easing
+        // Bouncing with physics-like easing (Match CSS: 0%->0, 50%->-12px/1.05s, 100%->0)
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames) % 1;
-            // Simple bounce: parabola that repeats
-            const bounce = Math.abs(Math.sin(t * Math.PI * 2)) * 12;
+            const t = (frameIndex / totalFrames);
+            // Sine wave 0->PI (0 to 1 to 0)
+            const sinVal = Math.sin(t * Math.PI); 
+            const bounce = sinVal * 12;
             return {
                 offsetX: 0,
                 offsetY: -bounce,
                 rotation: 0,
-                scale: 1 + (bounce / 60), // Slight squash stretch
+                scale: 1 + (sinVal * 0.05),
                 opacity: 1,
             };
         },
@@ -103,10 +104,12 @@ export const TEXT_ANIMATIONS = [
         id: 'pulse',
         name: 'Pulse',
         icon: '/images/stickers/pulse.svg',
-        // Scale pulsing effect
+        // Scale pulsing effect (Match CSS: 0%->1, 50%->1.1, 100%->1)
         getTransform: (frameIndex, totalFrames) => {
-            const progress = (frameIndex / totalFrames) * Math.PI * 2;
-            const pulseScale = 1 + Math.sin(progress) * 0.15;
+            const t = (frameIndex / totalFrames);
+            // Sine wave 0->PI (0 to 1 to 0)
+            const sinVal = Math.sin(t * Math.PI); 
+            const pulseScale = 1 + (sinVal * 0.1);
             return {
                 offsetX: 0,
                 offsetY: 0,
@@ -120,13 +123,13 @@ export const TEXT_ANIMATIONS = [
         id: 'float',
         name: 'Float',
         icon: '/images/stickers/float.png',
-        // Gentle floating up and down
+        // Gentle floating up and down (Match CSS: Only Y axis and rotation)
         getTransform: (frameIndex, totalFrames) => {
-            const progress = (frameIndex / totalFrames) * Math.PI * 2;
+            const t = (frameIndex / totalFrames) * Math.PI * 2;
             return {
-                offsetX: Math.sin(progress * 0.5) * 3,
-                offsetY: Math.sin(progress) * 6,
-                rotation: Math.sin(progress) * 2,
+                offsetX: 0,
+                offsetY: Math.sin(t) * -6, // CSS goes -6px at 50% (up)
+                rotation: Math.sin(t) * 1, // CSS goes 1deg at 50%
                 scale: 1,
                 opacity: 1,
             };
@@ -190,14 +193,27 @@ export const TEXT_ANIMATIONS = [
         id: 'heartbeat',
         name: 'Heartbeat',
         icon: '/images/stickers/heartbeat.png',
-        // Iconic double-pulse
+        // Iconic double-pulse (Match CSS: 0%, 14%, 28%, 42%, 70%)
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames); // 0 to 1
             // Heartbeat mathematical approximation
             // Two rapid pulses per cycle
             let scale = 1;
-            if (t < 0.15) scale = 1 + Math.sin(t * (Math.PI / 0.15)) * 0.15;
-            else if (t > 0.2 && t < 0.45) scale = 1 + Math.sin((t - 0.2) * (Math.PI / 0.25)) * 0.2;
+            // First pulse: 0% to 28% (Peak at 14%)
+            if (t < 0.28) {
+                scale = 1 + Math.sin((t / 0.28) * Math.PI) * 0.15;
+            } 
+            // Second pulse: 28% to 70% (Peak at 42% -> 28 + 14) - CSS peak is at 42%, ends at 70%
+            // 28% to 70% is a range of 0.42. 
+            // Peak at 42% is (42-28)/42 = 14/42 = 1/3 of the way through the pulse? 
+            // Actually CSS is 28->42->70. The peak is at 42. (42-28)=14. (70-42)=28. 
+            // So it rises fast (14%) and falls slow (28%).
+            else if (t >= 0.28 && t < 0.70) {
+                 const localT = (t - 0.28) / (0.70 - 0.28); // 0 to 1
+                 // Use a sine wave but shifted? Or just a simple up/down.
+                 // Let's use standard sine for simplicity, close enough to CSS ease-in-out
+                 scale = 1 + Math.sin(localT * Math.PI) * 0.15;
+            }
 
             return {
                 offsetX: 0,

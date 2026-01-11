@@ -819,8 +819,14 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
 
         // Try to set native letterSpacing if supported
         const hasNativeLetterSpacing = ctx.letterSpacing !== undefined;
-        if (hasNativeLetterSpacing) {
+        // We only use native spacing if supported AND we are NOT using the 'wave' animation (which requires manual char positioning)
+        const useNativeSpacing = hasNativeLetterSpacing && textItem.animation !== 'wave';
+
+        if (useNativeSpacing) {
             ctx.letterSpacing = `${letterSpacing}px`;
+        } else if (hasNativeLetterSpacing) {
+            // Explicitly reset to 0 if we have the capability but chose not to use it (for wave)
+            ctx.letterSpacing = '0px';
         }
 
         const lines = [];
@@ -828,6 +834,9 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
 
         // Helper to measure text width including letter spacing
         const measureTextWithSpacing = (text) => {
+            if (useNativeSpacing) {
+                return ctx.measureText(text).width;
+            }
             const baseWidth = ctx.measureText(text).width;
             // Add letter spacing for each character except the last
             return baseWidth + Math.max(0, text.length - 1) * letterSpacing;
@@ -885,7 +894,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         // Helper to draw text with proper letter spacing (char-by-char if needed)
         const drawTextWithSpacing = (text, x, y, isStroke = false) => {
             // For animated text or when native letterSpacing isn't supported, draw char-by-char
-            if (letterSpacing !== 0 && !hasNativeLetterSpacing) {
+            if (letterSpacing !== 0 && !useNativeSpacing) {
                 const chars = text.split('');
                 const totalWidth = measureTextWithSpacing(text);
                 let currentX = x - totalWidth / 2; // Center-align

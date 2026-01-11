@@ -1817,26 +1817,76 @@ export default function Main() {
 
       // Try Web Share API first (works on mobile and some desktop browsers)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file] });
-        toast.success("Shared!", { id: toastId });
-        return;
+        try {
+          await navigator.share({ files: [file] });
+          toast.success("Shared!", { id: toastId });
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') {
+             toast.dismiss(toastId);
+             return;
+          }
+          console.warn("Native share failed, falling back...", shareErr);
+        }
       }
 
-      // Desktop fallback: Clipboard for PNG, Download for GIF
+      // Desktop fallback: Clipboard Loophole or Download
       if (isAnimated) {
-        // GIFs can't be copied to clipboard - trigger download instead
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `meme-${Date.now()}.gif`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }, 100);
-        toast.success("GIF downloaded! (Clipboard doesn't support GIFs)", { id: toastId });
+        // GIF CLIPBOARD LOOPHOLE:
+        // Browsers don't support writing 'image/gif' to clipboard.
+        // TRICKS: Write 'text/html' with an <img src="data:..." /> tag.
+        try {
+          // 1. Convert Blob to Data URI (Base64)
+          const reader = new FileReader();
+          const base64Data = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+
+          // 2. Construct Clipboard Items (HTML only)
+          // We REMOVED text/plain because apps like Signal/Discord prioritize it and paste the text "Shared from..."
+          // instead of the image. By sending ONLY html, we hope they parse the <img> tag or ignore it
+          // (If they ignore it, the user can use the Download fallback).
+          const htmlContent = `<img src="${base64Data}" alt="Meme GIF" />`;
+
+          const clipboardItem = new ClipboardItem({
+            "text/html": new Blob([htmlContent], { type: "text/html" })
+          });
+
+          await navigator.clipboard.write([clipboardItem]);
+
+          toast.success((
+            <div className="flex flex-col gap-1">
+              <span>GIF copied to clipboard!</span>
+              <span className="text-xs opacity-80 font-normal">Paste in supported apps (Gmail, etc.)</span>
+            </div>
+          ), { id: toastId, duration: 4000 });
+
+        } catch (clipboardErr) {
+          // If HTML write fails (browser block or not focused), Fallback to Download
+          console.warn("GIF Clipboard trick failed:", clipboardErr);
+
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `meme-${Date.now()}.gif`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, 100);
+
+          // Inform user why it downloaded
+          toast.success((
+             <div className="flex flex-col gap-1">
+              <span>GIF downloaded!</span>
+              <span className="text-xs opacity-80 font-normal">Apps prevented clipboard copy.</span>
+            </div>
+          ), { id: toastId });
+        }
       } else {
         // PNG: Try clipboard with focus handling
         try {

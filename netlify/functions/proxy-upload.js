@@ -30,7 +30,9 @@ exports.handler = async (event, context) => {
             file.on('end', () => {
                 const buffer = Buffer.concat(chunks);
                 // Tmpfiles expects 'file'
-                formData.append('file', buffer, { filename: info.filename, contentType: info.mimeType });
+                // We MUST ensure the filename ends in .gif for the generated URL to work in Signal
+                const safeFilename = `meme-${Date.now()}.gif`;
+                formData.append('file', buffer, { filename: safeFilename, contentType: 'image/gif' });
             });
         });
 

@@ -27,8 +27,14 @@ import { ToastIcon } from "../ui/ToastIcon";
 
 // --- iOS Detection and Data URL Helper Functions ---
 
+// Cleanup delay after triggering a download (milliseconds)
+const DOWNLOAD_CLEANUP_DELAY = 100;
+
 /**
  * Detects if the current browser is running on iOS (iPhone, iPad, iPod)
+ * Uses multiple detection methods for reliability:
+ * - User agent string check (primary)
+ * - Platform + touch points check (for iPad Pro which identifies as Mac)
  * @returns {boolean} True if running on iOS Safari
  */
 function isIOS() {
@@ -70,7 +76,7 @@ async function triggerDownload(blob, filename) {
     // Clean up after a short delay
     setTimeout(() => {
       document.body.removeChild(link);
-    }, 100);
+    }, DOWNLOAD_CLEANUP_DELAY);
   } else {
     // Other browsers: Use Blob URL approach
     const url = URL.createObjectURL(blob);
@@ -83,7 +89,7 @@ async function triggerDownload(blob, filename) {
     setTimeout(() => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    }, 100);
+    }, DOWNLOAD_CLEANUP_DELAY);
   }
 }
 

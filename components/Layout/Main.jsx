@@ -1868,16 +1868,23 @@ export default function Main() {
              const formData = new FormData();
              formData.append('file', blob, filename);
 
-             const uploadRes = await fetch('/.netlify/functions/proxy-upload', {
+             // DIRECT CLIENT-SIDE UPLOAD (Bypasses Netlify Bandwidth)
+             const uploadRes = await fetch('https://tmpfiles.org/api/v1/upload', {
                  method: 'POST',
                  body: formData
              });
 
-             const uploadJson = await uploadRes.json();
-             if (uploadRes.ok && uploadJson.url) {
-                 publicUrl = uploadJson.url;
+             if (uploadRes.ok) {
+                 const uploadJson = await uploadRes.json();
+                 // Tmpfiles returns: { data: { url: "https://tmpfiles.org/..." } }
+                 // Need to convert to DL link: .../org/dl/...
+                 if (uploadJson && uploadJson.data && uploadJson.data.url) {
+                     publicUrl = uploadJson.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                 } else {
+                     console.warn("Upload response missing url:", uploadJson);
+                 }
              } else {
-                 console.warn("Upload failed:", uploadJson);
+                 console.warn("Upload failed:", uploadRes.status, uploadRes.statusText);
              }
           } catch (uploadErr) {
              console.warn("Upload network error:", uploadErr);

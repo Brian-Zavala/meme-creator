@@ -1849,14 +1849,15 @@ export default function Main() {
              toast.loading("Generating sharable link...", { id: toastId });
 
              // Try to get original filename for better "Paradigm" / recognition
-             let filename = 'meme.gif';
+             let filename = `meme-${Date.now()}.gif`; // Default Safe Fallback
+
              const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
              if (activePanel?.sourceUrl) {
                  try {
                      // Extract filename from URL (e.g. .../AAA/Cat-Spin.gif)
                      const urlName = activePanel.sourceUrl.split('/').pop().split('?')[0];
-                     if (urlName && urlName.length > 2) {
-                         // Clean it and add "-remix" so they know it's edited
+                     // Only use it if it looks like a normal filename
+                     if (urlName && /^[a-zA-Z0-9\-_]+(\.gif)?$/i.test(urlName)) {
                          filename = urlName.replace('.gif', '') + '-remix.gif';
                      }
                  } catch (e) {

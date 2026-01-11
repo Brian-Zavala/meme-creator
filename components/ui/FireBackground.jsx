@@ -5,7 +5,7 @@ import LottieAnimation from '../Animations/LottieAnimation';
  * Fire background using SVG turbulence effect.
  * ULTRA-ROBUST: Uses CSS Keyframe Animations which are natively handled by the browser
  * and automatically resume when tabs are switched or restored.
- * 
+ *
  * IOS/SAFARI FIX: Uses Lottie animation (fire.json) as fallback because SVG filters
  * (specifically feTurbulence) are unstable/broken on iOS.
  */
@@ -23,9 +23,10 @@ const FireBackground = () => {
     if (isIOS) {
         return (
             <div className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl flex items-center justify-center">
-                 <LottieAnimation 
-                    src="/animations/fire.json" 
-                    className="w-full h-full object-cover scale-150 opacity-90"
+                 <LottieAnimation
+                    src="/animations/fire.json"
+                    className="w-full h-full opacity-90"
+                    style={{ width: '100%', height: '100%', transform: 'scale(3)', translate: '0 -17px' }}
                  />
             </div>
         );

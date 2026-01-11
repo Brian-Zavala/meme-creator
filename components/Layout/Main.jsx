@@ -1848,8 +1848,24 @@ export default function Main() {
           try {
              toast.loading("Generating sharable link...", { id: toastId });
 
+             // Try to get original filename for better "Paradigm" / recognition
+             let filename = 'meme.gif';
+             const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
+             if (activePanel?.sourceUrl) {
+                 try {
+                     // Extract filename from URL (e.g. .../AAA/Cat-Spin.gif)
+                     const urlName = activePanel.sourceUrl.split('/').pop().split('?')[0];
+                     if (urlName && urlName.length > 2) {
+                         // Clean it and add "-remix" so they know it's edited
+                         filename = urlName.replace('.gif', '') + '-remix.gif';
+                     }
+                 } catch (e) {
+                     console.warn("Could not extract filename", e);
+                 }
+             }
+
              const formData = new FormData();
-             formData.append('file', blob, 'meme.gif');
+             formData.append('file', blob, filename);
 
              const uploadRes = await fetch('/.netlify/functions/proxy-upload', {
                  method: 'POST',

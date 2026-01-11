@@ -27,8 +27,12 @@ Real-time CSS filter adjustments for contrast, brightness, and blur, applied non
 **Smart GIF Sharing & Privacy**
 To enable seamless sharing on platforms like Signal and Discord (which require URLs), we use a hybrid system:
 - **Client-Side**: Standard images and raw Tenor GIFs are processed entirely in your browser with zero upload.
-- **Server-Side Proxy**: Custom GIFs are briefly processed via a privacy-focused proxy to `Tmpfiles.org`.
-  - **Privacy First**: Files are automatically deleted after **60 minutes**.
+**Smart GIF Sharing & Privacy**
+To enable seamless sharing on platforms like Signal and Discord (which require URLs), we use a hybrid system:
+- **Client-Side**: Standard images and raw Tenor GIFs are processed entirely in your browser with zero upload.
+- **Direct Cloud Upload**: Custom GIFs are uploaded **directly from your browser** to `Tmpfiles.org`.
+  - **Zero Server Footprint**: The file skips our servers entirely, saving bandwidth and ensuring total privacy.
+  - **Auto-Deletion**: Files are automatically deleted by the host after **60 minutes**.
   - **No Logs**: We do not store or inspect your content.
   - **Ephemeral**: The public link expires, ensuring your meme doesn't live on the web forever unless you want it to.
 

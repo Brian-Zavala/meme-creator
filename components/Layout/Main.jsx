@@ -1768,6 +1768,37 @@ export default function Main() {
 
     const toastId = toast.loading("Preparing to share...");
     try {
+      // Check if this is an unmodified Tenor GIF (can use URL copy instead of export)
+      const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
+      const hasTextContent = meme.texts.some(t => t.content.trim());
+      const hasStickers = meme.stickers.length > 0;
+      const hasDrawings = meme.drawings && meme.drawings.length > 0;
+      const hasFilterChanges = activePanel?.filters && (
+        activePanel.filters.contrast !== 100 ||
+        activePanel.filters.brightness !== 100 ||
+        activePanel.filters.blur !== 0 ||
+        activePanel.filters.grayscale !== 0 ||
+        activePanel.filters.sepia !== 0 ||
+        activePanel.filters.hueRotate !== 0 ||
+        activePanel.filters.saturate !== 100 ||
+        activePanel.filters.invert !== 0 ||
+        activePanel.filters.deepFry !== 0
+      );
+      const isTenorGif = activePanel?.sourceUrl && activePanel.isVideo;
+      const isUnmodified = !hasTextContent && !hasStickers && !hasDrawings && !hasFilterChanges;
+
+      // For unmodified Tenor GIFs, copy the URL directly (instant, works everywhere)
+      if (isTenorGif && isUnmodified && meme.layout === 'single') {
+        try {
+          await navigator.clipboard.writeText(activePanel.sourceUrl);
+          toast.success("GIF link copied! Paste in Meta/Instagram to embed.", { id: toastId });
+          return;
+        } catch (clipErr) {
+          console.warn("Tenor URL copy failed, falling back to export:", clipErr);
+          // Continue to export flow below
+        }
+      }
+
       // Determine if content is animated
       const hasVideoPanel = meme.panels.some(p => p.isVideo || (p.url && p.url.includes('.gif')));
       const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));

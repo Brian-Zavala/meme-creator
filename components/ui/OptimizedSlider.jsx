@@ -215,6 +215,7 @@ export default function OptimizedSlider({
         }}
         // Input is transparent, just providing the thumb and interaction area
         className="w-full h-full opacity-100 cursor-pointer touch-none bg-transparent appearance-none focus:outline-none range-slider relative z-10"
+        style={{ touchAction: 'none' }}
         title={title}
         disabled={disabled}
         {...props}

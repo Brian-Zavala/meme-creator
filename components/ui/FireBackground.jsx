@@ -1,11 +1,36 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import LottieAnimation from '../Animations/LottieAnimation';
 
 /**
  * Fire background using SVG turbulence effect.
  * ULTRA-ROBUST: Uses CSS Keyframe Animations which are natively handled by the browser
  * and automatically resume when tabs are switched or restored.
+ * 
+ * IOS/SAFARI FIX: Uses Lottie animation (fire.json) as fallback because SVG filters
+ * (specifically feTurbulence) are unstable/broken on iOS.
  */
 const FireBackground = () => {
+    // Detect iOS/Safari
+    const isIOS = useMemo(() => {
+        if (typeof navigator === 'undefined') return false;
+        return (
+            /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+            /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+        );
+    }, []);
+
+    if (isIOS) {
+        return (
+            <div className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl flex items-center justify-center">
+                 <LottieAnimation 
+                    src="/animations/fire.json" 
+                    className="w-full h-full object-cover scale-150 opacity-90"
+                 />
+            </div>
+        );
+    }
+
     const FireSVG = ({ seed, id }) => (
         <svg
             viewBox="0 0 200 200"
@@ -55,12 +80,6 @@ const FireBackground = () => {
             </g>
         </svg >
     );
-
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    if (isIOS) {
-        return <div className="absolute inset-0 w-full h-full overflow-hidden bg-slate-900 rounded-xl magma-bg" />;
-    }
 
     return (
         <div className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl">

@@ -25,6 +25,68 @@ const ColorControls = lazy(() => import("../MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
 import { ToastIcon } from "../ui/ToastIcon";
 
+// --- iOS Detection and Data URL Helper Functions ---
+
+/**
+ * Detects if the current browser is running on iOS (iPhone, iPad, iPod)
+ * @returns {boolean} True if running on iOS Safari
+ */
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * Converts a Blob to a Data URL using FileReader
+ * @param {Blob} blob - The blob to convert
+ * @returns {Promise<string>} Promise that resolves to the Data URL
+ */
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Triggers a download using appropriate method based on platform
+ * @param {Blob} blob - The file blob to download
+ * @param {string} filename - The desired filename
+ */
+async function triggerDownload(blob, filename) {
+  const isiOS = isIOS();
+  
+  if (isiOS) {
+    // iOS Safari: Use Data URL approach
+    const dataUrl = await blobToDataURL(blob);
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    // Clean up after a short delay
+    setTimeout(() => {
+      document.body.removeChild(link);
+    }, 100);
+  } else {
+    // Other browsers: Use Blob URL approach
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+}
+
 const DEFAULT_FILTERS = {
   contrast: 100,
   brightness: 100,
@@ -1637,17 +1699,8 @@ export default function Main() {
         .substring(0, 50)
         || 'meme';
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${safeName}-${stickersOnly ? 'stickers' : ''}-${Date.now()}.gif`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
+      const filename = `${safeName}-${stickersOnly ? 'stickers' : ''}-${Date.now()}.gif`;
+      await triggerDownload(blob, filename);
       triggerFireworks();
       // Artificial delay to let the "Encoding..." toast be visible for a moment longer
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1671,18 +1724,8 @@ export default function Main() {
       try {
         // Use our new direct PNG exporter!
         const blob = await exportStickersAsPng(meme, meme.stickers);
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `stickers-${Date.now()}.png`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }, 100);
+        const filename = `stickers-${Date.now()}.png`;
+        await triggerDownload(blob, filename);
         triggerFireworks();
         toast.success("Downloaded!", { id: toastId });
       } catch (e) {
@@ -1695,7 +1738,6 @@ export default function Main() {
     try {
       // REPLACED: html2canvas with native renderer for filter consistency
       const blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
-      const finalDataUrl = URL.createObjectURL(blob);
 
       const safeName = (meme.name || 'meme')
         .replace(/[^\w\s-]/g, '')
@@ -1705,15 +1747,8 @@ export default function Main() {
         .substring(0, 50)
         || 'meme';
 
-      const link = document.createElement("a");
-      link.href = finalDataUrl;
-      link.download = `${safeName}-${Date.now()}.png`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-      }, 100);
+      const filename = `${safeName}-${Date.now()}.png`;
+      await triggerDownload(blob, filename);
       triggerFireworks();
       toast.success("Downloaded!", { id: toastId });
     } catch (err) {

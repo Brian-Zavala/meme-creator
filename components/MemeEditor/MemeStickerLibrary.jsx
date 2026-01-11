@@ -234,7 +234,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
         {/* Custom Upload Button (Always visible) */}
         <div className="mb-4">
           <label className="flex items-center justify-center gap-2 w-full py-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 hover:text-white text-slate-400 rounded-xl cursor-pointer transition-all active:scale-95 group border-dashed">
@@ -272,6 +272,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                     key={sticker.id}
                     onClick={() => { onAddSticker(sticker.url, 'image', true); if (onClose) onClose(); }}
                     className="aspect-square relative bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-brand transition-all active:scale-95 group"
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <img
                       src={`https://wsrv.nl/?url=${encodeURIComponent(sticker.url)}&w=150&h=150&fit=contain&n=-1`}
@@ -307,6 +308,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                       key={sticker}
                       onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
                       className="h-10 flex items-center justify-center text-2xl hover:bg-slate-800 rounded-lg transition-all active:scale-75 hover:scale-110"
+                      style={{ touchAction: 'manipulation' }}
                     >
                       {sticker}
                     </button>

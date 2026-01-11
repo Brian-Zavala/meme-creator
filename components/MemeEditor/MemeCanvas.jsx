@@ -318,15 +318,19 @@ const MemeCanvas = forwardRef(({
 
     // Start 2 second timer for text creation
     canvasLongPressTimerRef.current.timerId = setTimeout(() => {
-      if (longPressStartPosRef.current && onAddTextAtPosition) {
-        if (navigator.vibrate) navigator.vibrate(50);
-        onAddTextAtPosition(longPressStartPosRef.current.x, longPressStartPosRef.current.y);
+      // Instead of adding immediately, we mark it as ready and wait for release (pointerup)
+      // This ensures the focus() call happens within a user interaction event (touchend/mouseup)
+      // which is required for iOS Safari to show the keyboard.
+      if (longPressStartPosRef.current) {
+         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+         canvasLongPressTimerRef.current.isReady = true;
+         // Visual feedback that we are ready
+         setLongPressCursor(prev => prev ? { ...prev, isReady: true, progress: 1 } : null);
       }
+      
       if (canvasLongPressTimerRef.current?.progressInterval) {
         clearInterval(canvasLongPressTimerRef.current.progressInterval);
       }
-      setLongPressCursor(null);
-      longPressStartPosRef.current = null;
     }, 2000);
   };
 
@@ -355,6 +359,12 @@ const MemeCanvas = forwardRef(({
   };
 
   const handleCanvasLongPressEnd = () => {
+    // Check if the long press was completed and is ready to trigger
+    if (canvasLongPressTimerRef.current?.isReady && longPressStartPosRef.current && onAddTextAtPosition) {
+        // Trigger the action now, inside the pointerup event handler
+        onAddTextAtPosition(longPressStartPosRef.current.x, longPressStartPosRef.current.y);
+    }
+
     if (canvasLongPressTimerRef.current) {
       if (canvasLongPressTimerRef.current.delayTimerId) {
         clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
@@ -698,6 +708,7 @@ const MemeCanvas = forwardRef(({
             <h2
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
               className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 will-change-transform ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
                 } ${isSelected || isEditing ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
               style={{
@@ -714,13 +725,16 @@ const MemeCanvas = forwardRef(({
                 letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                 maxWidth: `${meme.maxWidth}%`,
                 wordBreak: 'break-word',
-                overflowWrap: 'break-word',
+                overflowWrap: 'anywhere',
+                whiteSpace: 'pre-wrap',
                 fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
                 WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
                 paintOrder: "stroke fill",
                 filter: hasContent ? "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))" : "none",
                 border: draggedId === textItem.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
                 borderRadius: "0.2em",
+                // iOS Safari Fixes
+                WebkitTouchCallout: 'none',
                 // Min size for empty editing text placeholder
                 minWidth: !hasContent && isEditing ? '80px' : 'auto',
                 minHeight: !hasContent && isEditing ? '40px' : 'auto',
@@ -861,6 +875,10 @@ const MemeCanvas = forwardRef(({
                   data-html2canvas-ignore="true"
                   value={textItem.content}
                   onChange={(e) => onTextChange(textItem.id, e.target.value)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  spellCheck="false"
+                  autoCorrect="off"
+                  autoCapitalize="sentences"
                   className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none"
                   style={{
                     color: 'transparent',

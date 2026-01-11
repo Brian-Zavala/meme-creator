@@ -125,6 +125,9 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                   ref={(el) => (inputRefs.current[textItem.id] = el)}
                   type="text"
                   autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="sentences"
+                  enterKeyHint="done"
                   placeholder={isActive && !textItem.content ? "✨ Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
                   aria-label={index === 0 ? "Top Text Input" : index === 1 ? "Bottom Text Input" : `Text Input ${index + 1}`}
                   className={`w-full bg-slate-800/50 border-2 border-slate-700/50 rounded-xl px-4 py-3 text-lg text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/50 placeholder:text-slate-400 placeholder:font-medium transition-all ${isActive ? 'bg-brand/10 border-brand/50 placeholder:text-brand/70' : ''}`}

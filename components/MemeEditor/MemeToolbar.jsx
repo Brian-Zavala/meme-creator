@@ -60,12 +60,15 @@ function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
       onMouseLeave={() => setIsHovered(false)}
       onFocus={() => setIsHovered(true)}
       onBlur={() => setIsHovered(false)}
+      role="radio"
+      aria-checked={isActive}
       className={`snap-center shrink-0 px-3 py-2 rounded-lg border text-sm transition-all active:scale-95 flex items-center gap-2 group ${isActive
         ? activeClasses
         : anim.id === 'none'
           ? "bg-slate-900 text-slate-500 border-slate-700 hover:border-slate-500 hover:text-white"
           : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
         }`}
+      style={{ touchAction: 'manipulation' }}
     >
       {anim.icon.includes('/') || anim.icon.includes('.') ? (
         <img
@@ -156,6 +159,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           onClick={() => handleTabChange("text")}
           role="tab"
           aria-selected={activeTab === "text"}
+          style={{ touchAction: 'manipulation' }}
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 touch-target ${activeTab === "text"
             ? "text-white bg-white/10"
             : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
@@ -171,6 +175,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           onClick={() => handleTabChange("image")}
           role="tab"
           aria-selected={activeTab === "image"}
+          style={{ touchAction: 'manipulation' }}
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 touch-target ${activeTab === "image"
             ? "text-white bg-white/10"
             : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
@@ -186,6 +191,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           onClick={() => handleTabChange("draw")}
           role="tab"
           aria-selected={activeTab === "draw"}
+          style={{ touchAction: 'manipulation' }}
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden active:scale-95 touch-target ${activeTab === "draw"
             ? "text-white bg-white/10"
             : "text-slate-500 hover:text-slate-300 hover:bg-white/5"

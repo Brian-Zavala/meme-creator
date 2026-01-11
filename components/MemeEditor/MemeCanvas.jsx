@@ -1,6 +1,7 @@
 import { forwardRef, useRef, useEffect, useState } from "react";
 import { Loader2, Plus, Image as ImageIcon, Video, Upload, X, Trash2, Settings2 } from "lucide-react";
 import { getAnimationById } from "../../constants/textAnimations";
+import CountdownOverlay from "./CountdownOverlay";
 
 const MemeCanvas = forwardRef(({
   meme,
@@ -288,6 +289,13 @@ const MemeCanvas = forwardRef(({
 
     longPressStartPosRef.current = { x, y, clientX: e.clientX, clientY: e.clientY };
 
+    // Robust Startup Cleanup: Clear any existing timers first to prevent "ghost" intervals
+    if (canvasLongPressTimerRef.current) {
+        if (canvasLongPressTimerRef.current.delayTimerId) clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
+        if (canvasLongPressTimerRef.current.timerId) clearTimeout(canvasLongPressTimerRef.current.timerId);
+        if (canvasLongPressTimerRef.current.progressInterval) clearInterval(canvasLongPressTimerRef.current.progressInterval);
+    }
+
     // Store all timer IDs
     canvasLongPressTimerRef.current = {
       delayTimerId: null,
@@ -318,20 +326,23 @@ const MemeCanvas = forwardRef(({
 
     // Start 2 second timer for text creation
     canvasLongPressTimerRef.current.timerId = setTimeout(() => {
-      // Instead of adding immediately, we mark it as ready and wait for release (pointerup)
-      // This ensures the focus() call happens within a user interaction event (touchend/mouseup)
-      // which is required for iOS Safari to show the keyboard.
-      if (longPressStartPosRef.current) {
-         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-         canvasLongPressTimerRef.current.isReady = true;
-         // Visual feedback that we are ready
-         setLongPressCursor(prev => prev ? { ...prev, isReady: true, progress: 1 } : null);
-      }
-      
+      // 1. Clear the animation interval FIRST so it stops updating state
       if (canvasLongPressTimerRef.current?.progressInterval) {
         clearInterval(canvasLongPressTimerRef.current.progressInterval);
       }
+
+      // 2. Auto-trigger text creation if conditions are met
+      if (longPressStartPosRef.current && onAddTextAtPosition) {
+         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+         onAddTextAtPosition(longPressStartPosRef.current.x, longPressStartPosRef.current.y);
+      }
+
+      // 3. Reset State & Refs immediately
+      setLongPressCursor(null);
+      longPressStartPosRef.current = null;
+      canvasLongPressTimerRef.current = null;
     }, 2000);
+
   };
 
   const handleCanvasLongPressMove = (e) => {
@@ -359,11 +370,8 @@ const MemeCanvas = forwardRef(({
   };
 
   const handleCanvasLongPressEnd = () => {
-    // Check if the long press was completed and is ready to trigger
-    if (canvasLongPressTimerRef.current?.isReady && longPressStartPosRef.current && onAddTextAtPosition) {
-        // Trigger the action now, inside the pointerup event handler
-        onAddTextAtPosition(longPressStartPosRef.current.x, longPressStartPosRef.current.y);
-    }
+    // Note: Auto-trigger happens in the timer now.
+    // This handler just cleans up if the user releases EARLY (cancels).
 
     if (canvasLongPressTimerRef.current) {
       if (canvasLongPressTimerRef.current.delayTimerId) {
@@ -900,92 +908,11 @@ const MemeCanvas = forwardRef(({
 
         {/* Long-press cursor indicator - enhanced with smooth animations */}
         {longPressCursor && (
-          <div
-            data-html2canvas-ignore="true"
-            className="absolute z-50 pointer-events-none"
-            style={{
-              left: `${longPressCursor.x}%`,
-              top: `${longPressCursor.y}%`,
-              transform: `translate(-50%, -50%) scale(${0.85 + longPressCursor.progress * 0.25})`,
-              transition: 'transform 0.12s ease-out'
-            }}
-          >
-            {/* Subtle background glow */}
-            <div
-              className="absolute rounded-full"
-              style={{
-                width: `${56 + longPressCursor.progress * 24}px`,
-                height: `${56 + longPressCursor.progress * 24}px`,
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: `radial-gradient(circle, oklch(53% 0.187 39 / ${0.08 + longPressCursor.progress * 0.15}) 0%, transparent 70%)`,
-                transition: 'all 0.1s ease-out'
-              }}
-            />
-
-            {/* Pulsing outer ring - matches brand color */}
-            <div
-              className="absolute w-14 h-14 -ml-7 -mt-7 rounded-full border-2 animate-ping"
-              style={{ borderColor: 'oklch(53% 0.187 39 / 0.3)' }}
-            />
-
-            {/* Progress ring container */}
-            <svg className="absolute w-16 h-16 -ml-8 -mt-8" viewBox="0 0 64 64">
-              {/* Background track - subtle brand tint */}
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                fill="none"
-                stroke="oklch(53% 0.187 39 / 0.12)"
-                strokeWidth="3"
-              />
-              {/* Progress arc - brand color with proper fill direction */}
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                fill="none"
-                stroke="oklch(53% 0.187 39)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray="176"
-                strokeDashoffset={176 - (longPressCursor.progress * 176)}
-                transform="rotate(-90 32 32)"
-                style={{ transition: 'stroke-dashoffset 0.06s linear' }}
-              />
-            </svg>
-
-            {/* Center cursor - matches actual text input caret styling */}
-            <div
-              className="relative flex items-center justify-center"
-              style={{
-                width: '4px',
-                height: '28px',
-                borderRadius: '2px',
-                background: 'oklch(53% 0.187 39)',
-                boxShadow: '0 0 8px oklch(53% 0.187 39 / 0.5)',
-                animation: 'blink 1s steps(1) infinite'
-              }}
-            />
-
-            {/* Floating hint label - brand colors */}
-            <div
-              className="absolute left-1/2 whitespace-nowrap text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-lg"
-              style={{
-                top: `${36 + longPressCursor.progress * 6}px`,
-                opacity: Math.min(1, longPressCursor.progress * 2.5),
-                transform: `translateX(-50%) translateY(${(1 - longPressCursor.progress) * -6}px)`,
-                transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
-                background: 'oklch(15% 0.02 39 / 0.95)',
-                color: 'oklch(53% 0.187 39)',
-                border: '1px solid oklch(53% 0.187 39 / 0.3)'
-              }}
-            >
-              <span className="mr-1 font-mono">T</span> Adding text...
-            </div>
-          </div>
+           <CountdownOverlay
+              x={longPressCursor.x}
+              y={longPressCursor.y}
+              progress={longPressCursor.progress}
+           />
         )}
       </div>
 

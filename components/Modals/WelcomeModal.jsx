@@ -57,7 +57,7 @@ export function WelcomeModal({ isOpen, onClose }) {
 
           <button
             onClick={onClose}
-            className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-900 border-2 border-yellow-500 transition-all active:scale-95 py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-yellow-400/20"
+            className="w-full bg-brand hover:bg-brand/85 text-white border-2 border-brand-dark transition-all active:scale-95 py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-brand/20"
           >
             Start Creating
           </button>

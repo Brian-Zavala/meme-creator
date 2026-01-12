@@ -1460,6 +1460,19 @@ export default function Main() {
     }
   }, []);
 
+    // Auto-scroll to fine tuner when element is selected
+    useEffect(() => {
+      if (meme.selectedId) {
+        // Small delay to ensure the FineTune component has mounted and layout is updated
+        const timer = setTimeout(() => {
+          if (fineTuneRef.current) {
+            fineTuneRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }, [meme.selectedId]);
+
   function handleReset() {
     triggerFlash("red");
     setActiveTool("move");
@@ -1496,7 +1509,7 @@ export default function Main() {
     const newTextId = crypto.randomUUID();
     updateState((prev) => ({
       ...prev,
-      texts: [...prev.texts, { id: newTextId, content: "", x, y, rotation: 0, animation: null }],
+      texts: [...prev.texts, { id: newTextId, content: "", x, y, rotation: 0, scale: 1, animation: null }],
       selectedId: null, // Don't select - we're in editing mode
     }));
 
@@ -1523,7 +1536,8 @@ export default function Main() {
   function addSticker(urlOrEmoji, type = "emoji", isAnimated = false) {
     updateState((prev) => ({
       ...prev,
-      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: urlOrEmoji, type, x: 50, y: 50, isAnimated, animation: null }],
+      ...prev,
+      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: urlOrEmoji, type, x: 50, y: 50, scale: 1, isAnimated, animation: null }],
     }));
   }
 
@@ -1566,10 +1580,19 @@ export default function Main() {
     if (!meme.selectedId) return;
 
     startTransition(() => {
-      updateTransient((prev) => ({
-        ...prev,
-        texts: prev.texts.map((t) => (t.id === meme.selectedId ? { ...t, [axis]: parseFloat(value) } : t)),
-      }));
+      updateTransient((prev) => {
+        const isText = prev.texts.some((t) => t.id === meme.selectedId);
+        if (isText) {
+          return {
+            ...prev,
+            texts: prev.texts.map((t) => (t.id === meme.selectedId ? { ...t, [axis]: parseFloat(value) } : t)),
+          };
+        }
+        return {
+          ...prev,
+          stickers: prev.stickers.map((s) => (s.id === meme.selectedId ? { ...s, [axis]: parseFloat(value) } : s)),
+        };
+      });
     });
   }
 
@@ -1579,12 +1602,19 @@ export default function Main() {
 
   function handleCenterText() {
     if (!meme.selectedId) return;
-    updateState((prev) => ({
-      ...prev,
-      texts: prev.texts.map((t) =>
-        t.id === meme.selectedId ? { ...t, x: 50, y: 50 } : t
-      ),
-    }));
+    updateState((prev) => {
+      const isText = prev.texts.some(t => t.id === meme.selectedId);
+      if (isText) {
+        return {
+          ...prev,
+          texts: prev.texts.map((t) => t.id === meme.selectedId ? { ...t, x: 50, y: 50 } : t),
+        };
+      }
+      return {
+        ...prev,
+        stickers: prev.stickers.map((s) => s.id === meme.selectedId ? { ...s, x: 50, y: 50 } : s),
+      };
+    });
   }
 
   function generateMagicCaption() {
@@ -1637,13 +1667,32 @@ export default function Main() {
       if (isSticker) {
         const now = Date.now();
         if (lastTapRef.current.id === id && now - lastTapRef.current.time < 450) {
+          // Double tap to remove - CANCEL long press first
+          if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
           removeSticker(id);
           lastTapRef.current = { id: null, time: 0 };
           return;
         }
         lastTapRef.current = { id, time: now };
 
-        lastTapRef.current = { id, time: now };
+        // Sticker Long-Press Logic
+        longPressTimerRef.current = setTimeout(() => {
+          startTransition(() => {
+            updateState((prev) => ({ ...prev, selectedId: id }));
+          });
+          setDraggedId(null);
+          if (navigator.vibrate) navigator.vibrate(50);
+
+          // Show toast for sticker selection too
+           setTimeout(() => {
+            toast("Sticker Selected!", {
+              icon: (
+                 <ToastIcon src="/animations/filter-frenzy.json" />
+              ),
+              duration: 1000
+            });
+           }, 350);
+        }, 600); // 600ms for long press on sticker (slightly longer to distinguish from drag/tap)
 
       } else if (isText) {
         longPressTimerRef.current = setTimeout(() => {
@@ -2021,7 +2070,9 @@ export default function Main() {
     }
   }
 
-  const selectedText = meme.selectedId ? meme.texts.find((t) => t.id === meme.selectedId) : null;
+  const selectedText = meme.selectedId
+    ? (meme.texts.find((t) => t.id === meme.selectedId) || meme.stickers.find((s) => s.id === meme.selectedId))
+    : null;
 
   return (
     <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-in fade-in duration-500 relative">
@@ -2292,7 +2343,7 @@ export default function Main() {
             <Suspense fallback={null}>
               <div ref={fineTuneRef} data-fine-tuner>
                 <MemeFineTune
-                  selectedText={selectedText}
+                  selectedElement={selectedText}
                   onFineTune={handleFineTune}
                   onFineTuneCommit={handleFineTuneCommit}
                   onCenterText={handleCenterText}

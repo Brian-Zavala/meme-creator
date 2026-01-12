@@ -330,7 +330,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
     for (const sticker of (stickers || [])) {
         const x = (sticker.x / 100) * exportWidth;
         const y = (sticker.y / 100) * exportHeight;
-        const size = (meme.stickerSize || 60) * scaleFactor;
+        const size = (meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor;
 
         // Animation Transform
         let animX = x;
@@ -767,7 +767,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
 
         const baseX = (textItem.x / 100) * width;
         const baseY = (textItem.y / 100) * height + offsetY;
-        const fontSize = (meme.fontSize || 40) * scale;
+        const fontSize = (meme.fontSize || 40) * (textItem.scale ?? 1) * scale;
         const stroke = Math.max(1, fontSize / 25);
         const baseRotation = (textItem.rotation || 0) * (Math.PI / 180);
         const maxWidth = ((meme.maxWidth || 80) / 100) * width;

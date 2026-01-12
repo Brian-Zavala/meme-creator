@@ -681,9 +681,9 @@ const MemeCanvas = forwardRef(({
               style={{
                 left: `${sticker.x}%`,
                 top: `${sticker.y}%`,
-                fontSize: `${(meme.stickerSize || 60) * scaleFactor}px`,
-                width: sticker.type === 'image' ? `${(meme.stickerSize || 60) * scaleFactor}px` : 'auto',
-                transform: "translate(-50%, -50%)",
+                fontSize: `${(meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor}px`,
+                width: sticker.type === 'image' ? `${(meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor}px` : 'auto',
+                transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`,
               }}
               role="img"
               aria-label={`Sticker: ${sticker.url}`}
@@ -725,11 +725,13 @@ const MemeCanvas = forwardRef(({
           // Show empty placeholder cursor for texts being edited
           if (!hasContent && !isSelected && !isEditing) return null;
 
-          const stroke = Math.max(1, (meme.fontSize * scaleFactor) / 25);
-          const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
-
           // Map animation IDs to CSS class names
           const animationClass = textItem.animation ? `animate-meme-${textItem.animation}` : '';
+
+          const stroke = Math.max(1, (meme.fontSize * (textItem.scale ?? 1) * scaleFactor) / 25);
+          const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
+
+
 
           // Dynamic Positioning Logic for Action Buttons
           // Trigger side placement if near Top, Left or Right edges
@@ -781,7 +783,7 @@ const MemeCanvas = forwardRef(({
                 textAlign: "center",
                 padding: hasBg ? '0.25em 0.5em' : '0',
                 lineHeight: 1.2,
-                fontSize: `${meme.fontSize * scaleFactor}px`,
+                fontSize: `${meme.fontSize * (textItem.scale ?? 1) * scaleFactor}px`,
                 letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                 maxWidth: `${meme.maxWidth}%`,
                 wordBreak: 'break-word',

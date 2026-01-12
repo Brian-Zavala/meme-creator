@@ -942,24 +942,7 @@ const MemeCanvas = forwardRef(({
                 textItem.content
               )}
 
-              {/* Inline blinking cursor - shows when editing */}
-              {isEditing && (
-                <span
-                  data-html2canvas-ignore="true"
-                  className="inline-block align-middle animate-caret-blink"
-                  style={{
-                    width: '4px',
-                    height: `${meme.fontSize * scaleFactor * 1.1}px`,
-                    backgroundColor: 'var(--color-brand)',
-                    boxShadow: '0 0 12px var(--color-brand), 0 0 24px var(--color-brand), 0 0 4px rgba(255,255,255,0.8)',
-                    borderRadius: '2px',
-                    marginLeft: '4px',
-                    verticalAlign: 'middle',
-                  }}
-                />
-              )}
-
-              {/* Invisible Overlay Input for Direct Editing - captures keystrokes */}
+              {/* Native Textarea Overlay for Direct Editing - captures keystrokes & handles cursor */}
               {isEditing && (
                 <textarea
                   id={`canvas-input-${textItem.id}`}
@@ -970,17 +953,22 @@ const MemeCanvas = forwardRef(({
                   spellCheck="false"
                   autoCorrect="off"
                   autoCapitalize="sentences"
-                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none"
+                  className="absolute inset-0 w-full h-full bg-transparent resize-none overflow-hidden focus:outline-none uppercase tracking-tighter"
                   style={{
                     color: 'transparent',
-                    caretColor: 'transparent',
-                    opacity: 0,
+                    textShadow: 'none',
+                    WebkitTextStroke: '0',
+                    caretColor: 'var(--color-brand)', // Visible native cursor
+                    opacity: 1, // Visible element (text is transparent)
                     fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
                     fontSize: `${meme.fontSize * scaleFactor}px`,
                     letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                     lineHeight: 1.2,
                     padding: hasBg ? '0.25em 0.5em' : '0',
                     textAlign: "center",
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                 />

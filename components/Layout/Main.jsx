@@ -1075,11 +1075,177 @@ export default function Main() {
         brightness: 120,
         deepFry: 10, // Artifacts
         saturate: 0
+      }),
+      // 8. "Alien Invasion" (Green tint, high contrast)
+      () => ({
+        name: "Alien Invasion",
+        sepia: 0,
+        hueRotate: 90,
+        contrast: 150,
+        brightness: 110,
+        saturate: 200,
+        invert: 0,
+        deepFry: 5
+      }),
+      // 9. "Radioactive Melt" (Neon colors, high contrast)
+      () => ({
+        name: "Radioactive Melt",
+        hueRotate: 180,
+        contrast: 180,
+        saturate: 300,
+        brightness: 120,
+        blur: 1,
+        deepFry: 20
+      }),
+      // 10. "Solar Flare" (Extreme brightness, yellow tint)
+      () => ({
+        name: "Solar Flare",
+        brightness: 200,
+        contrast: 150,
+        sepia: 100,
+        saturate: 200,
+        hueRotate: -30,
+        blur: 2
+      }),
+      // 11. "Neon Demon" (Blue/Pink shift, dark)
+      () => ({
+        name: "Neon Demon",
+        brightness: 80,
+        contrast: 150,
+        hueRotate: 240,
+        saturate: 250,
+        invert: 0
+      }),
+      // 12. "Matrix" (Green code rain feel)
+      () => ({
+        name: "Matrix",
+        sepia: 0,
+        grayscale: 100,
+        hueRotate: 0, // Grayscale first, then tint? CSS filters order matters, this might just be B&W. Let's try high contrast green.
+        contrast: 200,
+        brightness: 80,
+        saturate: 0,
+        // Hack: emulate with sepia + hue rotate
+        sepia: 100,
+        hueRotate: 90, // green
+        saturate: 500
+      }),
+      // 13. "Acid Trip" (Wild hue rotation)
+      () => ({
+        name: "Acid Trip",
+        hueRotate: Math.floor(Math.random() * 360),
+        saturate: 400,
+        contrast: 150,
+        brightness: 120,
+        invert: 100
+      }),
+      // 14. "Rusty" (Sepia, high contrast, texturized)
+      () => ({
+        name: "Rusty",
+        sepia: 100,
+        saturate: 200,
+        contrast: 150,
+        hueRotate: -10,
+        deepFry: 30
+      }),
+      // 15. "Frozen" (Blue tint, high brightness)
+      () => ({
+        name: "Frozen",
+        sepia: 0,
+        hueRotate: 180,
+        contrast: 120,
+        brightness: 130,
+        saturate: 150,
+        blur: 1
+      }),
+      // 16. "Lava Lamp" (Red/Orange, glossy)
+      () => ({
+        name: "Lava Lamp",
+        hueRotate: -20,
+        saturate: 300,
+        contrast: 140,
+        brightness: 110,
+        blur: 2,
+        invert: 0
+      }),
+      // 17. "X-Ray" (Inverted grayscale)
+      () => ({
+        name: "X-Ray",
+        grayscale: 100,
+        invert: 100,
+        contrast: 150,
+        brightness: 100
+      }),
+      // 18. "TV Static" (Noise, desaturated)
+      () => ({
+        name: "TV Static",
+        grayscale: 100,
+        contrast: 200,
+        brightness: 150,
+        deepFry: 60,
+        blur: 0
+      }),
+      // 19. "Underwater" (Teal shift, blurry)
+      () => ({
+        name: "Underwater",
+        hueRotate: 180,
+        sepia: 50,
+        saturate: 150,
+        brightness: 90,
+        blur: 3,
+        contrast: 80
+      }),
+      // 20. "Demon Mode" (Red shift, dark, high contrast)
+      () => ({
+        name: "Demon Mode",
+        grayscale: 100,
+        sepia: 100,
+        hueRotate: -50, // Red
+        saturate: 500,
+        contrast: 200,
+        brightness: 70
+      }),
+      // 21. "Holy Light" (Extreme bloom effect)
+      () => ({
+        name: "Holy Light",
+        brightness: 180,
+        contrast: 80,
+        blur: 5,
+        saturate: 50
+      }),
+      // 22. "Void Stare" (Inverted, high contrast B&W)
+      () => ({
+        name: "Void Stare",
+        grayscale: 100,
+        invert: 100,
+        contrast: 300,
+        brightness: 80
+      }),
+      // 24. "Void Stare" (Inverted, high contrast B&W)
+      () => ({
+        name: "Void Stare",
+        grayscale: 100,
+        invert: 100,
+        contrast: 300,
+        brightness: 80
+      }),
+      // 25. "Moldy" (Green/Yellow tint, grainy)
+      () => ({
+        name: "Moldy",
+        sepia: 50,
+        hueRotate: 60,
+        saturate: 100,
+        contrast: 120,
+        deepFry: 25,
+        brightness: 90
       })
     ];
 
-    const pickStrategy = strategies[Math.floor(Math.random() * strategies.length)];
-    const strategy = pickStrategy();
+    // Cycle strictly through the list.
+    const currentIndex = filterFrenzyIndexRef.current % strategies.length;
+    const strategy = strategies[currentIndex]();
+    filterFrenzyIndexRef.current += 1; // Increment for next click
+
     const { name, ...filters } = strategy;
     const chaoticFilters = { ...DEFAULT_FILTERS, ...filters };
 
@@ -1129,12 +1295,39 @@ export default function Main() {
       goldenHour: { sepia: 40, saturate: 160, brightness: 110, contrast: 110, hueRotate: -10, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
       radioactive: { hueRotate: 90, saturate: 200, contrast: 150, brightness: 100, sepia: 0, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
       goth: { saturate: 0, contrast: 150, brightness: 80, hueRotate: 270, sepia: 0, blur: 0, grayscale: 80, invert: 0, deepFry: 0 }, // Purple tint dark
-      deepFriedLite: { deepFry: 15, saturate: 200, contrast: 150, brightness: 100, sepia: 0, blur: 0, grayscale: 0, invert: 0, hueRotate: 0 }
+      deepFriedLite: { deepFry: 15, saturate: 200, contrast: 150, brightness: 100, sepia: 0, blur: 0, grayscale: 0, invert: 0, hueRotate: 0 },
+
+      // New 2026 Authentic/Aesthetic Filters
+      filmStock: { contrast: 110, saturate: 110, brightness: 100, sepia: 10, blur: 0.2, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      cleanGirl: { contrast: 105, saturate: 100, brightness: 115, sepia: 0, blur: 0, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      cottagecore: { sepia: 30, saturate: 120, brightness: 105, contrast: 90, hueRotate: -10, blur: 0.5, grayscale: 0, invert: 0, deepFry: 0 },
+      darkAcademia: { contrast: 130, saturate: 80, brightness: 90, sepia: 20, blur: 0, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      goldenAge: { sepia: 50, saturate: 140, brightness: 110, contrast: 100, hueRotate: 0, blur: 0.5, grayscale: 0, invert: 0, deepFry: 0 },
+      polaroid: { contrast: 120, saturate: 120, brightness: 110, sepia: 15, blur: 0.5, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      fade: { contrast: 80, saturate: 90, brightness: 110, sepia: 10, blur: 0, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      cinematic: { contrast: 140, saturate: 130, brightness: 100, sepia: 0, blur: 0, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      disposable: { contrast: 130, saturate: 140, brightness: 110, sepia: 20, blur: 1, hueRotate: 10, grayscale: 0, invert: 0, deepFry: 5 },
+      matte: { contrast: 90, saturate: 100, brightness: 120, sepia: 0, blur: 0, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      vivid: { contrast: 150, saturate: 200, brightness: 110, sepia: 0, blur: 0, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      bwMoody: { grayscale: 100, contrast: 150, brightness: 90, sepia: 0, blur: 0, hueRotate: 0, saturate: 0, invert: 0, deepFry: 0 },
+      bwSoft: { grayscale: 100, contrast: 90, brightness: 110, sepia: 10, blur: 0.5, hueRotate: 0, saturate: 0, invert: 0, deepFry: 0 },
+      sepiaSoft: { sepia: 60, contrast: 100, brightness: 110, saturate: 100, blur: 0, hueRotate: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      blueHour: { hueRotate: 200, saturate: 120, contrast: 110, brightness: 100, sepia: 0, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      roseGold: { sepia: 30, saturate: 130, hueRotate: -20, contrast: 110, brightness: 115, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      mint: { hueRotate: 90, saturate: 110, contrast: 100, brightness: 110, sepia: 0, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      peachy: { sepia: 40, saturate: 150, hueRotate: -30, contrast: 110, brightness: 110, blur: 0, grayscale: 0, invert: 0, deepFry: 0 },
+      driftwood: { sepia: 20, saturate: 60, contrast: 100, brightness: 110, grayscale: 0, invert: 0, deepFry: 0, hueRotate: 0 }
     };
 
+
     const vibeNames = Object.keys(vibes);
-    const randomVibe = vibeNames[Math.floor(Math.random() * vibeNames.length)];
-    const filters = { ...DEFAULT_FILTERS, ...vibes[randomVibe] };
+
+    // Cycle strictly through the list.
+    const currentIndex = vibeIndexRef.current % vibeNames.length;
+    const currentVibe = vibeNames[currentIndex];
+    vibeIndexRef.current += 1; // Increment for next click
+
+    const filters = { ...DEFAULT_FILTERS, ...vibes[currentVibe] };
 
     startTransition(() => {
       updateState((prev) => ({
@@ -1149,7 +1342,7 @@ export default function Main() {
     remixClickCountRef.current.vibe++;
 
     // Nice formatted name
-    const formatName = randomVibe.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    const formatName = currentVibe.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
 
     toast(`${formatName} vibe applied!`, {
       icon: (

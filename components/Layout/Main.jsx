@@ -255,6 +255,7 @@ export default function Main() {
   const globalLastTapRef = useRef(0);
   const longPressTimerRef = useRef(null);
   const startPosRef = useRef({ x: 0, y: 0 });
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
   const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
@@ -549,8 +550,8 @@ export default function Main() {
 
         if (memeRef.current) {
           const rect = memeRef.current.getBoundingClientRect();
-          let x = ((e.clientX - rect.left) / rect.width) * 100;
-          let y = ((e.clientY - rect.top) / rect.height) * 100;
+          let x = ((e.clientX - rect.left) / rect.width) * 100 - dragOffsetRef.current.x;
+          let y = ((e.clientY - rect.top) / rect.height) * 100 - dragOffsetRef.current.y;
           x = Math.max(0, Math.min(100, x));
           y = Math.max(0, Math.min(100, y));
 
@@ -1909,6 +1910,27 @@ export default function Main() {
       e.stopPropagation();
 
       startPosRef.current = { x: e.clientX, y: e.clientY };
+
+      // Calculate relative pointer position to meme container for drag offset
+      if (memeRef.current) {
+        const rect = memeRef.current.getBoundingClientRect();
+        const pointerPctX = ((e.clientX - rect.left) / rect.width) * 100;
+        const pointerPctY = ((e.clientY - rect.top) / rect.height) * 100;
+
+        const sticker = meme.stickers.find((s) => s.id === id);
+        const text = meme.texts.find((t) => t.id === id);
+        const item = sticker || text;
+
+        if (item) {
+          dragOffsetRef.current = {
+            x: pointerPctX - item.x,
+            y: pointerPctY - item.y,
+          };
+        } else {
+          dragOffsetRef.current = { x: 0, y: 0 };
+        }
+      }
+
       const isSticker = meme.stickers.some((s) => s.id === id);
       const isText = meme.texts.some((t) => t.id === id);
 

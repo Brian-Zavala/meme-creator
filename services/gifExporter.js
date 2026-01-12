@@ -770,7 +770,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         const fontSize = (meme.fontSize || 40) * (textItem.scale ?? 1) * scale;
         const stroke = Math.max(1, fontSize / 25);
         const baseRotation = (textItem.rotation || 0) * (Math.PI / 180);
-        const maxWidth = ((meme.maxWidth || 80) / 100) * width;
+        const maxWidth = ((meme.maxWidth || 100) / 100) * width;
         const lineHeight = fontSize * 1.2;
 
         // Get animation transform for this frame
@@ -873,7 +873,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
             const bgHeight = totalHeight + (fontSize * 0.5);
 
             ctx.fillStyle = meme.textBgColor;
-            const radius = fontSize * 0.15;
+            const radius = fontSize * 0.2;
             const bx = -bgWidth / 2;
             const by = -(totalHeight / 2) - (fontSize * 0.25);
 
@@ -883,7 +883,7 @@ function drawText(ctx, texts, meme, width, height, offsetY, frameIndex = 0, tota
         }
 
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 4 * scale;
+        ctx.shadowBlur = 2 * scale;
         ctx.shadowOffsetY = 2 * scale;
         // Match CSS -webkit-text-stroke visual weight (Canvas strokes appear thicker)
         ctx.lineWidth = stroke * 1.5;

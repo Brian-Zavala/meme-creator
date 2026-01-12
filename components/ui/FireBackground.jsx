@@ -6,21 +6,22 @@ import LottieAnimation from '../Animations/LottieAnimation';
  * ULTRA-ROBUST: Uses CSS Keyframe Animations which are natively handled by the browser
  * and automatically resume when tabs are switched or restored.
  *
- * IOS/SAFARI FIX: Uses Lottie animation (fire.json) as fallback because SVG filters
- * (specifically feTurbulence) are unstable/broken on iOS.
+ * IOS/SAFARI/ANDROID FIX: Uses Lottie animation (fire.json) as fallback because SVG filters
+ * (specifically feTurbulence) are unstable/broken on iOS and heavy on Android.
  */
 const FireBackground = () => {
-    // Detect iOS/Safari
-    const isIOS = useMemo(() => {
+    // Detect iOS/Safari OR Android
+    const useLottie = useMemo(() => {
         if (typeof navigator === 'undefined') return false;
+        const ua = navigator.userAgent;
         return (
-            /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            /iPad|iPhone|iPod|Android/.test(ua) ||
             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-            /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+            /^((?!chrome|android).)*safari/i.test(ua)
         );
     }, []);
 
-    if (isIOS) {
+    if (useLottie) {
         return (
             <div className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl flex items-center justify-center">
                  <LottieAnimation

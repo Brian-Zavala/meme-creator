@@ -486,7 +486,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                   <div className="flex items-center gap-4 w-full">
                                     <MoveHorizontal className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
                                     <OptimizedSlider
-                                      min="20" max="100" name="maxWidth"
+                                      min="20" max="200" name="maxWidth"
                                       value={meme.maxWidth}
                                       onChange={handleStyleChange}
                                       onCommit={handleStyleCommit}

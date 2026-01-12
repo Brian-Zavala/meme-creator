@@ -6,28 +6,30 @@ import LottieAnimation from '../Animations/LottieAnimation';
  * ULTRA-ROBUST: Uses CSS Keyframe Animations which are natively handled by the browser
  * and automatically resume when tabs are switched or restored.
  *
- * IOS/SAFARI/ANDROID FIX: Uses Lottie animation (fire.json) as fallback because SVG filters
- * (specifically feTurbulence) are unstable/broken on iOS and heavy on Android.
+/**
+ * Fire background.
+ * - MOBILE: Uses Lottie animation (fire.json) for performance and reliability.
+ * - DESKTOP: Uses SVG turbulence + CSS keyframes for a high-fidelity "magma" effect.
  */
 const FireBackground = () => {
-    // Detect iOS/Safari OR Android
-    const useLottie = useMemo(() => {
+    // Robust Mobile Detection
+    const isMobile = useMemo(() => {
         if (typeof navigator === 'undefined') return false;
         const ua = navigator.userAgent;
-        return (
-            /iPad|iPhone|iPod|Android/.test(ua) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-            /^((?!chrome|android).)*safari/i.test(ua)
-        );
+        const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+        const touchSupport = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const smallScreen = typeof window !== 'undefined' && window.innerWidth < 1024;
+        
+        return mobileUA || (smallScreen && touchSupport);
     }, []);
 
-    if (useLottie) {
+    if (isMobile) {
         return (
             <div className="absolute inset-0 w-full h-full overflow-hidden bg-black rounded-xl flex items-center justify-center">
                  <LottieAnimation
                     src="/animations/fire.json"
                     className="w-full h-full opacity-90"
-                    style={{ width: '100%', height: '100%', transform: 'scale(3) translateY(-17px)' }}
+                    style={{ width: '100%', height: '100%', transform: 'scale(3)', translate: '0 -17px' }}
                  />
             </div>
         );

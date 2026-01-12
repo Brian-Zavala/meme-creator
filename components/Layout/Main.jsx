@@ -1498,7 +1498,34 @@ export default function Main() {
 
   function handleTextChange(id, value) {
     updateState((prev) => {
-      const newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
+      let newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
+
+      // Find the last filled index after this change
+      let lastFilledIndex = -1;
+      for (let i = newTexts.length - 1; i >= 0; i--) {
+        if ((newTexts[i].content || "").trim().length > 0) {
+          lastFilledIndex = i;
+          break;
+        }
+      }
+
+      // Calculate how many inputs should be visible (matches MemeInputs logic)
+      const visibleCount = Math.max(lastFilledIndex + 2, 2);
+
+      // If we need more inputs than exist, add new empty text items
+      while (newTexts.length < visibleCount) {
+        const newY = 50; // Default to center
+        newTexts = [...newTexts, {
+          id: crypto.randomUUID(),
+          content: "",
+          x: 50,
+          y: newY,
+          rotation: 0,
+          scale: 1,
+          animation: null
+        }];
+      }
+
       return {
         ...prev,
         texts: newTexts,
@@ -2098,8 +2125,19 @@ export default function Main() {
     if (!memeRef.current) return;
     setIsStickerExport(true);
 
+    // ROBUST ANIMATION DETECTION:
+    // 1. CSS Animation (e.g. Bounce, Spin) - s.animation !== 'none'
+    // 2. Native Animation (GIF/WebP) - s.isAnimated OR URL check
+    // Note: Background removed stickers (blobs) might lose filename extensions,
+    // so we rely on 'isAnimated' passed from upload/tenor, but we also check common extensions just in case.
     const hasAnimatedSticker = meme.stickers.some(s => s.animation && s.animation !== 'none');
-    const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
+
+    const hasGifSticker = meme.stickers.some(s =>
+      s.type === 'image' && (
+        s.isAnimated ||
+        (s.url && (s.url.toLowerCase().includes('.gif') || s.url.toLowerCase().includes('.webp')))
+      )
+    );
 
     // If we have animated content, ask the user what to do
     if (hasAnimatedSticker || hasGifSticker) {

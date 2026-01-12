@@ -19,7 +19,7 @@ const FireBackground = () => {
         const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
         const touchSupport = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         const smallScreen = typeof window !== 'undefined' && window.innerWidth < 1024;
-        
+
         return mobileUA || (smallScreen && touchSupport);
     }, []);
 
@@ -29,7 +29,7 @@ const FireBackground = () => {
                  <LottieAnimation
                     src="/animations/fire.json"
                     className="w-full h-full opacity-90"
-                    style={{ width: '100%', height: '100%', transform: 'scale(4.5)', translate: '0 -17px' }}
+                style={{ width: '100%', height: '100%', transform: 'scale(4.5)', translate: '0 -26px' }}
                  />
             </div>
         );

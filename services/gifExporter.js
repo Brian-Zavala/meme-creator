@@ -181,7 +181,7 @@ async function loadMemeAssets(meme, stickers) {
 function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
     const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
     const { exportWidth, exportHeight, contentHeight, contentOffsetY, baseWidth = 800 } = dimensions;
-    const { stickersOnly = false, totalFrames = 1, textAnimationSpeed = 1 } = options;
+    const { stickersOnly = false, totalFrames = 1, textAnimationSpeed = 1, exportDelayMs = 100 } = options;
 
     // A. Clear & Background
     // MOBILE FIX: Ensure canvas context is valid before proceeding
@@ -343,9 +343,11 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         if (sticker.animation && sticker.animation !== 'none') {
             const anim = getAnimationById(sticker.animation);
             if (anim && anim.getTransform) {
-                // FIX: Use totalFrames (actual GIF loop length) instead of ANIMATED_TEXT_FRAMES
-                // This ensures animation completes exactly once per GIF loop
-                const t = anim.getTransform(frameIndex, totalFrames);
+                // FIX: Apply animation speed multiplier to match CSS preview duration (~1s)
+                const acceleratedProgress = (frameIndex / totalFrames) * textAnimationSpeed;
+                const virtualFrameIndex = (acceleratedProgress % 1) * totalFrames;
+
+                const t = anim.getTransform(virtualFrameIndex, totalFrames);
 
                 animX += (t.offsetX || 0) * scaleFactor;
                 animY += (t.offsetY || 0) * scaleFactor;
@@ -370,7 +372,13 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
 
             if (stickerProcessors[sticker.id]) {
                 const proc = stickerProcessors[sticker.id];
-                const frameIdx = frameIndex % proc.numFrames;
+                // TIME-BASED FRAME SYNC: Calculate which source frame to show based on export timing
+                // This ensures native GIF stickers play at their original speed regardless of export frame rate
+                const exportTimeMs = frameIndex * exportDelayMs;  // Current time in the export loop
+                const sourceGifDelayMs = (proc.getDelay(0) || 10) * 10;  // Source GIF's frame delay in ms
+                const sourceGifLoopMs = proc.numFrames * sourceGifDelayMs;  // Total source GIF loop duration
+                const timeInSourceLoop = exportTimeMs % sourceGifLoopMs;  // Time position within source GIF loop
+                const frameIdx = Math.floor(timeInSourceLoop / sourceGifDelayMs) % proc.numFrames;
                 const result = proc.renderFrame(frameIdx);
                 drawCanvas = result.canvas;
                 sw = proc.width;
@@ -401,10 +409,11 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
 
     // E. Draw Text (Skip if stickersOnly? User said "Export Stickers Only", but conventionally overlay text is kept or separated.
     // If the goal is "transparent stickers", text is usually considered a sticker-like overlay.
-    // I will INCLUDE text in stickersOnly mode for now, as it's useful to have text transparency too.)
-    // E. Draw Text
-    // We pass totalFrames correctly so animations calculate progress (frameIndex / totalFrames)
-    drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, totalFrames, textAnimationSpeed);
+    // UPDATE: User explicitly requested "Export Stickers Only" to exclude text.
+    if (!stickersOnly) {
+        // We pass totalFrames correctly so animations calculate progress (frameIndex / totalFrames)
+        drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, totalFrames, textAnimationSpeed);
+    }
 }
 
 /**
@@ -647,18 +656,32 @@ export async function exportGif(meme, texts, stickers) {
                 maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
                 masterDelay = activeProcessors[0].getDelay(0) || 10;
 
-                // If there's animated text paired with GIF stickers, calculate how many
-                // text animation cycles should occur per GIF loop to match preview speed.
+                // If there's animated text or stickers paired with GIF backgrounds, calculate how many
+                // animation cycles should occur per GIF loop to match preview speed.
                 // Preview CSS animations are ~1s. GIF loop = maxFrames * masterDelay * 10ms.
-                if (hasAnimatedText(texts)) {
+                const hasStickerAnimation = stickers && stickers.some(s => s.animation && s.animation !== 'none');
+
+                if (hasAnimatedText(texts) || hasStickerAnimation) {
                     const gifLoopMs = maxFrames * masterDelay * 10;
                     const targetTextCycleMs = 1000; // CSS animations average ~1s
                     textAnimationSpeed = Math.max(1, gifLoopMs / targetTextCycleMs);
                 }
-            } else if (hasAnimatedText(texts) || (stickers && stickers.length > 0)) {
-                maxFrames = ANIMATED_TEXT_FRAMES;
-                masterDelay = ANIMATED_TEXT_DELAY;
-                console.log('Animation needed on static image (text animation or stickers), creating GIF with', maxFrames, 'frames');
+            } else if (hasAnimatedText(texts) || (stickers && stickers.some(s => s.animation && s.animation !== 'none'))) {
+                // Static background with animated text OR animated stickers (CSS animations)
+                // Use 50 frames at 20ms for exactly 1000ms loop = matches CSS 1s animation perfectly
+                maxFrames = 50;
+                masterDelay = 2; // 20ms per frame (2 centiseconds, browser-safe minimum)
+
+                // textAnimationSpeed = 1 means animation completes exactly once per GIF loop (1s)
+                textAnimationSpeed = 1;
+
+                console.log('CSS animation needed on static image (text/sticker animation), creating GIF with', maxFrames, 'frames at', masterDelay * 10, 'ms delay (1000ms loop)');
+            } else if (stickers && stickers.length > 0) {
+                // Static stickers on static background (no animation) - just needs 1 frame
+                // But we still render as GIF for transparency support
+                maxFrames = 1;
+                masterDelay = 10;
+                console.log('Static stickers on static image, creating single-frame GIF');
             } else {
                 maxFrames = 1;
             }
@@ -682,7 +705,8 @@ export async function exportGif(meme, texts, stickers) {
                 renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
                     stickersOnly: meme.stickersOnly,
                     totalFrames: maxFrames,
-                    textAnimationSpeed: textAnimationSpeed
+                    textAnimationSpeed: textAnimationSpeed,
+                    exportDelayMs: masterDelay * 10  // Pass export delay for native GIF sync
                 });
 
                 gif.addFrame(canvas, {

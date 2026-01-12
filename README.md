@@ -114,4 +114,4 @@ PRs welcome. The codebase is straightforward React. No weird patterns or over-en
 
 ## License
 
-MIT
+AGPLv3

@@ -6,6 +6,11 @@ export async function deepFryImage(imageSrc, level, signal = null) {
   if (!level || level <= 0) return null;
 
   return new Promise(async (resolve, reject) => {
+    // 0. Instant Abort Check: Don't spawn worker if already cancelled
+    if (signal?.aborted) {
+      return reject(new Error("Aborted"));
+    }
+
     // 1. Prepare Worker
     const worker = new Worker(new URL('./deepFry.worker.js', import.meta.url), { type: 'module' });
 

@@ -7,8 +7,9 @@ export function ToastIcon({ src, size = 32 }) {
         src={src}
         loop
         autoplay
-        width={size}
-        height={size}
+        width="100%"
+        height="100%"
+        style={{ width: '100%', height: '100%' }}
       />
     </div>
   );

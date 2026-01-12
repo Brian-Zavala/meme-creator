@@ -24,7 +24,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
   }, [editingId]);
 
   return (
-    <div className="flex flex-col bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm relative transition-all duration-300 z-10">
+    <div className="flex flex-col bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm relative transition-all duration-300 z-40">
       {/* Header with Magic AI */}
       <div className="flex items-center justify-between p-6 pb-2">
         <div className="flex items-center gap-2 text-slate-400 uppercase text-xs font-bold tracking-wider" aria-hidden="true">

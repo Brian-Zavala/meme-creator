@@ -71,7 +71,6 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
         </button>
       )}
 
-      {/* Floating Menu - USING THE NEW LIBRARY COMPONENT */}
       {isOpen && (
         <div
           className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in zoom-in-95 fade-in duration-200 origin-top h-[400px]"

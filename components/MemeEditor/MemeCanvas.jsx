@@ -501,7 +501,7 @@ const MemeCanvas = forwardRef(({
             }}
           />
         )}
-        {/* === PANELS LAYER === */}
+
         <div
           className="absolute inset-x-0"
           style={{
@@ -654,7 +654,7 @@ const MemeCanvas = forwardRef(({
           })}
         </div>
 
-        {/* === DRAWING LAYER (Global) === */}
+
         <canvas
           ref={drawCanvasRef}
           role="img"
@@ -666,7 +666,7 @@ const MemeCanvas = forwardRef(({
           onPointerLeave={handleDrawEnd}
         />
 
-        {/* === STICKERS LAYER (Global) === */}
+
         {meme.stickers?.map((sticker) => {
           // Map animation IDs to CSS class names
           const animationClass = sticker.animation ? `animate-meme-${sticker.animation}` : '';
@@ -706,7 +706,7 @@ const MemeCanvas = forwardRef(({
           )
         })}
 
-        {/* === TEXT FILTER DEF === */}
+
         <svg className="absolute w-0 h-0 invisible" aria-hidden="true">
           <defs>
             <filter id="text-bg-filter" x="-5%" y="-5%" width="110%" height="110%">
@@ -716,7 +716,7 @@ const MemeCanvas = forwardRef(({
           </defs>
         </svg>
 
-        {/* === TEXT LAYER (Global) === */}
+
         {meme.texts.map((textItem) => {
           const isSelected = selectedId === textItem.id;
           const isEditing = editingId === textItem.id;

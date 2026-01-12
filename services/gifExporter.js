@@ -2,10 +2,6 @@ import GIF from 'gif.js';
 import { GifReader } from 'omggif';
 import { getAnimationById, hasAnimatedText, ANIMATED_TEXT_FRAMES, ANIMATED_TEXT_DELAY } from '../constants/textAnimations';
 
-/**
- * Helper to create a processor for a single GIF source
- * Handles decoding, frame state, and disposal logic
- */
 async function createGifProcessor(url) {
     try {
         const controller = new AbortController();
@@ -111,20 +107,17 @@ async function createGifProcessor(url) {
  * Exports a meme as an animated GIF
  * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
  */
-// --- REFACTORED HELPERS ---
 
-/**
- * Loads all image and GIF assets for the meme
- */
+
 async function loadMemeAssets(meme, stickers) {
     const gifProcessors = {};
     const staticImages = {};
     const stickerProcessors = {};
     const stickerImages = {};
 
-    console.log("Loading assets for export...");
 
-    // Load Panels
+
+
     await Promise.all(meme.panels.map(async (panel) => {
         if (!panel.url) return;
 
@@ -151,7 +144,6 @@ async function loadMemeAssets(meme, stickers) {
         }
     }));
 
-    // Load Stickers
     await Promise.all((stickers || []).filter(s => s.type === 'image').map(async (s) => {
         let processor = null;
         if (s.isAnimated || s.url.includes('.gif')) {
@@ -176,14 +168,14 @@ async function loadMemeAssets(meme, stickers) {
 }
 
 /**
- * Renders a single frame of the meme to the provided context
+ * Renders a single frame of the meme to the canvas context
  */
 function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
     const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
     const { exportWidth, exportHeight, contentHeight, contentOffsetY, baseWidth = 800 } = dimensions;
     const { stickersOnly = false, totalFrames = 1, textAnimationSpeed = 1, exportDelayMs = 100 } = options;
 
-    // A. Clear & Background
+
     // MOBILE FIX: Ensure canvas context is valid before proceeding
     if (!ctx || typeof ctx.fillRect !== 'function') {
         console.error('Canvas context unavailable - possible memory issue on mobile');
@@ -220,7 +212,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         ctx.clearRect(0, 0, exportWidth, exportHeight);
     }
 
-    // B. Draw Panels (Skip if stickersOnly)
+
     if (!stickersOnly) {
         for (const panel of meme.panels) {
             if (!panel.url) continue;
@@ -299,7 +291,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         }
     }
 
-    // C. Draw Drawings
+
     // TODO: Verify if drawings should be included in stickersOnly.
     // Assuming YES as they are "on top" layers often used with stickers.
     if (meme.drawings && meme.drawings.length > 0) {
@@ -323,7 +315,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         ctx.restore();
     }
 
-    // D. Draw Stickers
+
     // Use scaleFactor based on exportWidth / baseWidth (same as MemeCanvas uses containerWidth / 800)
     const scaleFactor = exportWidth / baseWidth;
 
@@ -407,9 +399,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         ctx.restore();
     }
 
-    // E. Draw Text (Skip if stickersOnly? User said "Export Stickers Only", but conventionally overlay text is kept or separated.
-    // If the goal is "transparent stickers", text is usually considered a sticker-like overlay.
-    // UPDATE: User explicitly requested "Export Stickers Only" to exclude text.
+
     if (!stickersOnly) {
         // We pass totalFrames correctly so animations calculate progress (frameIndex / totalFrames)
         drawText(ctx, texts, meme, exportWidth, exportHeight, 0, frameIndex, totalFrames, textAnimationSpeed);
@@ -417,7 +407,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
 }
 
 /**
- * Calculates export dimensions
+ * Calculates export canvas dimensions based on meme layout and content
  */
 function calculateDimensions(meme, assets) {
     let containerAspect = 1;

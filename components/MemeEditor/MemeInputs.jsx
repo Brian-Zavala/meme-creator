@@ -9,8 +9,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
   const inputRefs = useRef({});
 
   // When editingId changes, focus the corresponding input without scrolling
-  // NOTE: Only trigger on editingId changes, NOT selectedId. When user long-presses to select,
-  // we want to show marching ants + buttons first, not jump straight into editing mode.
+  // Focus the input when editingId changes (not on selection - that shows the toolbar first)
   useEffect(() => {
     if (editingId && inputRefs.current[editingId]) {
       // Don't steal focus if user is already typing in the on-canvas direct input

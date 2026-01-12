@@ -26,7 +26,7 @@ const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
 import { ToastIcon } from "../ui/ToastIcon";
 import { MemeStickerSection } from "../MemeEditor/MemeStickerSection";
 
-// --- iOS Detection and Data URL Helper Functions ---
+
 
 // Cleanup delay after triggering a download (milliseconds)
 const DOWNLOAD_CLEANUP_DELAY = 100;
@@ -280,7 +280,7 @@ export default function Main() {
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
 
-  // --- IMGFLIP SEARCH LOGIC ---
+
   const [memeSearchQuery, setMemeSearchQuery] = useState("");
   const [showMemeSuggestions, setShowMemeSuggestions] = useState(false);
   const [hoveredMeme, setHoveredMeme] = useState(null);
@@ -372,8 +372,7 @@ export default function Main() {
   }, []);
 
 
-  // --- PERFORMANCE: O(1) Lookups ---
-  // Convert arrays to Maps for faster access during render/effects
+
   const panelMap = useMemo(() => new Map(meme.panels.map(p => [p.id, p])), [meme.panels]);
   const textMap = useMemo(() => new Map(meme.texts.map(t => [t.id, t])), [meme.texts]);
   const stickerMap = useMemo(() => new Map(meme.stickers.map(s => [s.id, s])), [meme.stickers]);
@@ -381,9 +380,7 @@ export default function Main() {
   const activePanel = panelMap.get(meme.activePanelId) || meme.panels[0];
   const deferredDeepFry = useDeferredValue(activePanel?.filters?.deepFry);
 
-  // ------------------------------------------------------
-  // ✅ FIXED: Deep Fry Effect with Debounce & Safety Checks
-  // ------------------------------------------------------
+
   useEffect(() => {
     const level = parseInt(deferredDeepFry || 0, 10);
     const controller = new AbortController();
@@ -391,7 +388,6 @@ export default function Main() {
 
     if (!activePanel) return;
 
-    // 1. If level is 0, show original image and stop
     if (level === 0) {
       if (activePanel.processedImage) {
         startTransition(() => {
@@ -408,7 +404,6 @@ export default function Main() {
       return;
     }
 
-    // 2. Skip if we already processed this level for this image
     if (activePanel.processedImage && activePanel.processedDeepFryLevel === level) {
       return;
     }
@@ -432,14 +427,12 @@ export default function Main() {
         // Call your service
         const fried = await deepFryImage(activePanel.url, level, signal);
 
-        // 3. CRITICAL CHECK: If user moved slider again, STOP here.
         if (signal.aborted) {
           URL.revokeObjectURL(fried);
           return;
         }
 
-        // 4. Success! Update the image
-        // MEMORY LEAK FIX: Revoke previous URL to prevent crash
+        // Revoke previous URL to prevent memory leak
         if (lastFriedImageRef.current) URL.revokeObjectURL(lastFriedImageRef.current);
         lastFriedImageRef.current = fried;
 
@@ -455,7 +448,6 @@ export default function Main() {
         });
 
       } catch (error) {
-        // 5. SILENTLY FAIL if it was just an abort (this fixes your error log)
         if (error.name === 'AbortError' || error.message === 'Aborted' || error.message?.includes('aborted')) {
           return;
         }
@@ -467,7 +459,6 @@ export default function Main() {
       }
     };
 
-    // 6. DEBOUNCE: Use Scheduler API for prioritized background execution
     let taskAbortController;
 
     if ('scheduler' in window) {
@@ -493,7 +484,7 @@ export default function Main() {
     };
   }, [deferredDeepFry, activePanel?.url, activePanel?.id]);
 
-  // NOTE: Auto-scroll to fine-tuner removed - users can use the settings icon button to scroll manually
+
 
   // Handle auto-scroll when a text element is selected (fine-tuner opens)
   useEffect(() => {
@@ -931,7 +922,7 @@ export default function Main() {
     }
   }
 
-  // --- REMIX HANDLERS ---
+
 
   const allCaptions = useMemo(() => Object.values(MEME_QUOTES).flat(), []);
   const [captionDeck, setCaptionDeck] = useState([]);
@@ -2013,7 +2004,7 @@ export default function Main() {
     [meme.stickers, meme.texts, updateState],
   );
 
-  // --- EXPORT HELPER FUNCTIONS ---
+
 
   // Helper: Execute GIF export
   const doGifExport = useCallback(async (options = {}) => {

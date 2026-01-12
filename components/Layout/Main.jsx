@@ -24,6 +24,7 @@ const ModeSelector = lazy(() =>
 const ColorControls = lazy(() => import("../MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
 import { ToastIcon } from "../ui/ToastIcon";
+import { MemeStickerSection } from "../MemeEditor/MemeStickerSection";
 
 // --- iOS Detection and Data URL Helper Functions ---
 
@@ -2612,6 +2613,15 @@ export default function Main() {
             deepFryLevel={currentDeepFryLevel}
           />
         </Suspense>
+
+        {/* Mobile-Only Sticker Section */}
+        <div className="block lg:hidden bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-30">
+           <MemeStickerSection
+            onAddSticker={addSticker}
+            hasStickers={meme.stickers.length > 0}
+            onExportStickers={handleExportStickers}
+           />
+        </div>
 
         {/* Undo / Redo Controls */}
         <div className="grid grid-cols-[1fr_1fr_auto] gap-3">

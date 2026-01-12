@@ -499,10 +499,15 @@ body {
   }
 }
 
-/* Desktop: 5-column row */
+/* Desktop: 3-column grid (2 rows) to let buttons breathe */
 @media (min-width: 1024px) {
   .remix-carousel {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .remix-btn {
+     min-height: 80px;
   }
 }
 

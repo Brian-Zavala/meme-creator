@@ -2329,331 +2329,354 @@ export default function Main() {
         style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }}
       />
 
-      {/* Export Confirmation Modal */}
-      <ExportConfirmModal
-        isOpen={showExportModal}
-        onClose={() => { setShowExportModal(false); setIsStickerExport(false); }}
-        onExportGif={() => doGifExport({ stickersOnly: isStickerExport })}
-        onExportStatic={() => doStaticExport({ stickersOnly: isStickerExport, forceStatic: isStickerExport })}
-        isStickerOnly={isStickerExport}
-      />
+      {/* Reusable Remix Controls Group */}
+      {(() => {
+        const remixControls = (
+          <div className="space-y-4">
+             {/* Remix Carousel */}
+            <Suspense fallback={<div className="h-14 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+              <RemixCarousel
+                onChaos={handleChaos}
+                onCaptionRemix={handleCaptionRemix}
+                onStyleShuffle={handleStyleShuffle}
+                onFilterFrenzy={handleFilterFrenzy}
+                onVibeCheck={handleVibeCheck}
+                onExtremeDeepFry={handleExtremeDeepFry}
+                deepFryLevel={deferredDeepFry}
+              />
+            </Suspense>
 
-      <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
-        <MemeInputs
-          texts={meme.texts}
-          handleTextChange={handleTextChange}
-          onAddSticker={addSticker}
-          onMagicCaption={generateMagicCaption}
-          isMagicGenerating={isMagicGenerating}
-          onChaos={handleChaos}
-          hasStickers={meme.stickers.length > 0}
-          onExportStickers={handleExportStickers}
-          selectedId={meme.selectedId}
-          // Only pass editingId if the text has content (not a new empty text from canvas)
-          // This prevents the input panel from expanding while user types on canvas
-          editingId={editingId && meme.texts.find(t => t.id === editingId)?.content?.trim() ? editingId : null}
-          onEditingChange={setEditingId}
-        />
-        <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-          <MemeActions
-            onFileUpload={handleFileUpload}
-            onDownload={handleDownload}
-            onShare={handleShare}
-          />
-        </Suspense>
-      </div>
+            {/* Undo / Redo Controls */}
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
+              <button
+                onClick={undo}
+                disabled={!canUndo}
+                className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95 touch-target"
+              >
+                <Undo2 className="w-4 h-4" /> Undo
+              </button>
+              <button
+                onClick={redo}
+                disabled={!canRedo}
+                className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95 touch-target"
+              >
+                <Redo2 className="w-4 h-4" /> Redo
+              </button>
+              <button
+                onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })}
+                className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95 touch-target"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
+            </div>
 
-      <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-            <ModeSelector
-              mode={meme.mode}
-              onModeChange={(e) => {
-                const m = e.target.value;
-                startTransition(() => {
-                  updateState((prev) => ({ ...prev, mode: m }));
-                  if (m === "image") clearSearch();
-                  getMemeImage(m);
-                });
-              }}
+            <button
+              onClick={handleReset}
+              className="w-full bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-red-900/50 touch-target"
+            >
+              <Eraser className="w-4 h-4" /> <span>Remove Everything</span>
+            </button>
+          </div>
+        );
+
+        return (
+          <>
+             {/* Export Confirmation Modal */}
+            <ExportConfirmModal
+              isOpen={showExportModal}
+              onClose={() => { setShowExportModal(false); setIsStickerExport(false); }}
+              onExportGif={() => doGifExport({ stickersOnly: isStickerExport })}
+              onExportStatic={() => doStaticExport({ stickersOnly: isStickerExport, forceStatic: isStickerExport })}
+              isStickerOnly={isStickerExport}
             />
-          </Suspense>
-          <LayoutSelector
-            layout={meme.layout}
-            onLayoutChange={handleLayoutChange}
-          />
-        </div>
-        <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
-          <MemeToolbar
-            meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
-            activeTool={activeTool}
-            setActiveTool={setActiveTool}
-            handleStyleChange={handleStyleChange}
-            handleFilterChange={handleFilterChange}
-            handleStyleCommit={handleStyleCommit}
-            onResetFilters={resetFilters}
-            onClearDrawings={handleClearDrawings}
-            onDrawerExpand={handleToolbarExpand}
-            onAnimationChange={handleAnimationChange}
-            onStickerAnimationChange={handleStickerAnimationChange}
-            editingId={editingId}
-          />
 
-          {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}
+            <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
+              <MemeInputs
+                texts={meme.texts}
+                handleTextChange={handleTextChange}
+                onAddSticker={addSticker}
+                onMagicCaption={generateMagicCaption}
+                isMagicGenerating={isMagicGenerating}
+                onChaos={handleChaos}
+                hasStickers={meme.stickers.length > 0}
+                onExportStickers={handleExportStickers}
+                selectedId={meme.selectedId}
+                // Only pass editingId if the text has content (not a new empty text from canvas)
+                // This prevents the input panel from expanding while user types on canvas
+                editingId={editingId && meme.texts.find(t => t.id === editingId)?.content?.trim() ? editingId : null}
+                onEditingChange={setEditingId}
+              />
 
-          {/* CASE 1: VIDEO MODE (Existing Tenor Search) */}
-          {meme.mode === "video" && (
-            <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-              <div className="p-3 border-b border-slate-800">
-                <GifSearch
-                  searchQuery={searchQuery}
-                  onSearchInput={handleSearchInput}
-                  onFocus={() => setShowSuggestions(true)}
-                  onClear={clearSearch}
-                  suggestions={suggestions}
-                  showSuggestions={showSuggestions}
-                  categories={categories}
-                  onSelectSuggestion={selectSuggestion}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      setShowSuggestions(false);
-                      performSearch(searchQuery);
-                    }
-                  }}
-                  containerRef={searchContainerRef}
-                  placeholder={isMobileScreen ? "Search GIFs..." : "Search GIFs (e.g. funny cat, dancing)..."}
+              {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
+              <div className="hidden lg:block">
+                 {remixControls}
+              </div>
+
+              <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                <MemeActions
+                  onFileUpload={handleFileUpload}
+                  onDownload={handleDownload}
+                  onShare={handleShare}
+                />
+              </Suspense>
+            </div>
+
+            <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                  <ModeSelector
+                    mode={meme.mode}
+                    onModeChange={(e) => {
+                      const m = e.target.value;
+                      startTransition(() => {
+                        updateState((prev) => ({ ...prev, mode: m }));
+                        if (m === "image") clearSearch();
+                        getMemeImage(m);
+                      });
+                    }}
+                  />
+                </Suspense>
+                <LayoutSelector
+                  layout={meme.layout}
+                  onLayoutChange={handleLayoutChange}
                 />
               </div>
-            </Suspense>
-          )}
-
-          {/* CASE 2: IMAGE MODE (New Imgflip Search) */}
-          {meme.mode === "image" && (
-            <div className="relative z-50 p-3 border-b border-slate-800" ref={memeSearchRef}>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand transition-colors">
-                  <Search className="w-5 h-5" />
-                </div>
-                <input
-                  type="text"
-                  placeholder={isMobileScreen ? "Search images..." : "Search images (e.g. Drake, Distracted Boyfriend)..."}
-                  value={memeSearchQuery}
-                  onChange={(e) => {
-                    setMemeSearchQuery(e.target.value);
-                    setShowMemeSuggestions(true);
-                  }}
-                  onFocus={() => setShowMemeSuggestions(true)}
-                  className="w-full bg-slate-900/80 border-2 border-slate-700 text-white pl-10 pr-10 py-3 rounded-xl focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm"
+              <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
+                <MemeToolbar
+                  meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
+                  activeTool={activeTool}
+                  setActiveTool={setActiveTool}
+                  handleStyleChange={handleStyleChange}
+                  handleFilterChange={handleFilterChange}
+                  handleStyleCommit={handleStyleCommit}
+                  onResetFilters={resetFilters}
+                  onClearDrawings={handleClearDrawings}
+                  onDrawerExpand={handleToolbarExpand}
+                  onAnimationChange={handleAnimationChange}
+                  onStickerAnimationChange={handleStickerAnimationChange}
+                  editingId={editingId}
                 />
-                {memeSearchQuery && (
-                  <button
-                    onClick={() => setMemeSearchQuery("")}
-                    className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+
+                {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}
+
+                {/* CASE 1: VIDEO MODE (Existing Tenor Search) */}
+                {meme.mode === "video" && (
+                  <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                    <div className="p-3 border-b border-slate-800">
+                      <GifSearch
+                        searchQuery={searchQuery}
+                        onSearchInput={handleSearchInput}
+                        onFocus={() => setShowSuggestions(true)}
+                        onClear={clearSearch}
+                        suggestions={suggestions}
+                        showSuggestions={showSuggestions}
+                        categories={categories}
+                        onSelectSuggestion={selectSuggestion}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            setShowSuggestions(false);
+                            performSearch(searchQuery);
+                          }
+                        }}
+                        containerRef={searchContainerRef}
+                        placeholder={isMobileScreen ? "Search GIFs..." : "Search GIFs (e.g. funny cat, dancing)..."}
+                      />
+                    </div>
+                  </Suspense>
+                )}
+
+                {/* CASE 2: IMAGE MODE (New Imgflip Search) */}
+                {meme.mode === "image" && (
+                  <div className="relative z-50 p-3 border-b border-slate-800" ref={memeSearchRef}>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand transition-colors">
+                        <Search className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder={isMobileScreen ? "Search images..." : "Search images (e.g. Drake, Distracted Boyfriend)..."}
+                        value={memeSearchQuery}
+                        onChange={(e) => {
+                          setMemeSearchQuery(e.target.value);
+                          setShowMemeSuggestions(true);
+                        }}
+                        onFocus={() => setShowMemeSuggestions(true)}
+                        className="w-full bg-slate-900/80 border-2 border-slate-700 text-white pl-10 pr-10 py-3 rounded-xl focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm"
+                      />
+                      {memeSearchQuery && (
+                        <button
+                          onClick={() => setMemeSearchQuery("")}
+                          className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Dropdown Results */}
+                    {showMemeSuggestions && (
+                      <div className="absolute top-full left-0 right-0 mt-2 mx-3 bg-slate-900 border-2 border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-[60]">
+                        {!memeSearchQuery && (
+                          <div className="px-4 py-3 border-b border-slate-800 bg-slate-800/30 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="w-4 h-4 text-brand" />
+                              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Popular Images</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-medium italic">Scroll to browse</span>
+                          </div>
+                        )}
+                        {memeSearchQuery && filteredMemes.length > 0 && (
+                          <div className="px-4 py-2 border-b border-slate-800 bg-brand/5">
+                            <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Search Results</span>
+                          </div>
+                        )}
+                        {filteredMemes.length === 0 ? (
+                          <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
+                            <Search className="w-10 h-10 opacity-20" />
+                            <p>No images found for "{memeSearchQuery}"</p>
+                          </div>
+                        ) : (
+                          <div className="max-h-96 overflow-y-auto p-3 custom-scrollbar relative">
+                            <div className="grid grid-cols-3 gap-3">
+                              {filteredMemes.map((m) => (
+                                <button
+                                  key={m.id}
+                                  onClick={() => {
+                                    loadSelectedMeme(m);
+                                    setHoveredMeme(null);
+                                  }}
+                                  onMouseEnter={() => setHoveredMeme(m)}
+                                  onMouseLeave={() => setHoveredMeme(null)}
+                                  className="group relative aspect-square rounded-xl overflow-hidden bg-slate-800 border-2 border-transparent hover:border-brand transition-all active:scale-95 focus:outline-none focus:border-brand"
+                                  title={m.name}
+                                >
+                                  <img
+                                    src={`https://wsrv.nl/?url=${encodeURIComponent(m.url)}&w=300&h=300&fit=cover`}
+                                    alt={m.name}
+                                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                    loading="lazy"
+                                    crossOrigin="anonymous"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                                    <p className="text-[10px] text-white font-medium truncate w-full">
+                                      {m.name}
+                                    </p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Floating Preview Pane (Visible on Large Screens) */}
+                            {hoveredMeme && (
+                              <div className="fixed left-[calc(100%+1rem)] top-0 w-64 p-3 bg-slate-900 border-2 border-brand rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 hidden xl:block z-[70] pointer-events-none">
+                                <div className="relative aspect-auto rounded-lg overflow-hidden border border-slate-800">
+                                  <img
+                                    src={`https://wsrv.nl/?url=${encodeURIComponent(hoveredMeme.url)}&w=600`}
+                                    className="w-full h-auto max-h-[400px] object-contain"
+                                    alt="Preview"
+                                    crossOrigin="anonymous"
+                                  />
+                                </div>
+                                <div className="mt-3 space-y-1">
+                                  <p className="text-sm font-bold text-white truncate">{hoveredMeme.name}</p>
+                                  <p className="text-[10px] text-brand font-black uppercase tracking-widest opacity-80">Click to load Image</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (navigator.vibrate) navigator.vibrate(30);
+                    setPingKey(Date.now());
+                    getMemeImage();
+                  }}
+                  disabled={loading || generating}
+                  className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-brand hover:bg-brand-dark transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
+                >
+                  {pingKey && <span key={pingKey} className="absolute inset-0 animate-radar pointer-events-none" />}
+                  <div className="relative z-10 flex items-center justify-center gap-2">
+                    {generating ? (
+                      <Loader2 className="animate-spin w-5 h-5" />
+                    ) : meme.mode === "video" ? (
+                      <Video className="w-5 h-5" />
+                    ) : (
+                      <RefreshCcw className="w-5 h-5" />
+                    )}
+                    <span className="text-lg">
+                      {generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}
+                    </span>
+                  </div>
+                </button>
+                <div ref={canvasContainerRef} className="scroll-mt-4">
+                  <MemeCanvas
+                    ref={memeRef}
+                    meme={meme}
+                    loading={loading}
+                    isProcessing={isProcessing}
+                    draggedId={draggedId}
+                    selectedId={meme.selectedId}
+                    editingId={editingId}
+                    activeTool={activeTool}
+                    onDrawCommit={handleDrawCommit}
+                    onFineTune={handleFineTune}
+                    onFineTuneCommit={handleFineTuneCommit}
+                    onCenterText={handleCenterText}
+                    onPointerDown={handlePointerDown}
+                    onRemoveSticker={removeSticker}
+                    onRemoveText={removeText}
+                    onTextChange={handleTextChange}
+                    onAddTextAtPosition={addTextAtPosition}
+                    onStartEditing={setEditingId}
+                    onCanvasPointerDown={handleCanvasPointerDown}
+
+                    // New Props
+                    activePanelId={meme.activePanelId}
+                    onPanelSelect={handlePanelSelect}
+                    layouts={DEFAULT_LAYOUTS}
+                    onDrop={handleCanvasDrop}
+                    onClearPanel={handleClearPanel}
+                    onToggleFit={togglePanelFit}
+                    onPanelPosChange={handlePanelPosChange}
+                  />
+                </div>
+                {selectedText && (
+                  <Suspense fallback={null}>
+                    <div ref={fineTuneRef} data-fine-tuner>
+                      <MemeFineTune
+                        selectedElement={selectedText}
+                        onFineTune={handleFineTune}
+                        onFineTuneCommit={handleFineTuneCommit}
+                        onQuickPosition={handleQuickPosition}
+                      />
+                    </div>
+                  </Suspense>
                 )}
               </div>
 
-              {/* Dropdown Results */}
-              {showMemeSuggestions && (
-                <div className="absolute top-full left-0 right-0 mt-2 mx-3 bg-slate-900 border-2 border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-[60]">
-                  {!memeSearchQuery && (
-                    <div className="px-4 py-3 border-b border-slate-800 bg-slate-800/30 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-brand" />
-                        <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Popular Images</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-medium italic">Scroll to browse</span>
-                    </div>
-                  )}
-                  {memeSearchQuery && filteredMemes.length > 0 && (
-                    <div className="px-4 py-2 border-b border-slate-800 bg-brand/5">
-                      <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Search Results</span>
-                    </div>
-                  )}
-                  {filteredMemes.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
-                      <Search className="w-10 h-10 opacity-20" />
-                      <p>No images found for "{memeSearchQuery}"</p>
-                    </div>
-                  ) : (
-                    <div className="max-h-96 overflow-y-auto p-3 custom-scrollbar relative">
-                      <div className="grid grid-cols-3 gap-3">
-                        {filteredMemes.map((m) => (
-                          <button
-                            key={m.id}
-                            onClick={() => {
-                              loadSelectedMeme(m);
-                              setHoveredMeme(null);
-                            }}
-                            onMouseEnter={() => setHoveredMeme(m)}
-                            onMouseLeave={() => setHoveredMeme(null)}
-                            className="group relative aspect-square rounded-xl overflow-hidden bg-slate-800 border-2 border-transparent hover:border-brand transition-all active:scale-95 focus:outline-none focus:border-brand"
-                            title={m.name}
-                          >
-                            <img
-                              src={`https://wsrv.nl/?url=${encodeURIComponent(m.url)}&w=300&h=300&fit=cover`}
-                              alt={m.name}
-                              className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                              loading="lazy"
-                              crossOrigin="anonymous"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                              <p className="text-[10px] text-white font-medium truncate w-full">
-                                {m.name}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Floating Preview Pane (Visible on Large Screens) */}
-                      {hoveredMeme && (
-                        <div className="fixed left-[calc(100%+1rem)] top-0 w-64 p-3 bg-slate-900 border-2 border-brand rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 hidden xl:block z-[70] pointer-events-none">
-                          <div className="relative aspect-auto rounded-lg overflow-hidden border border-slate-800">
-                            <img
-                              src={`https://wsrv.nl/?url=${encodeURIComponent(hoveredMeme.url)}&w=600`}
-                              className="w-full h-auto max-h-[400px] object-contain"
-                              alt="Preview"
-                              crossOrigin="anonymous"
-                            />
-                          </div>
-                          <div className="mt-3 space-y-1">
-                            <p className="text-sm font-bold text-white truncate">{hoveredMeme.name}</p>
-                            <p className="text-[10px] text-brand font-black uppercase tracking-widest opacity-80">Click to load Image</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={() => {
-              if (navigator.vibrate) navigator.vibrate(30);
-              setPingKey(Date.now());
-              getMemeImage();
-            }}
-            disabled={loading || generating}
-            className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-brand hover:bg-brand-dark transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
-          >
-            {pingKey && <span key={pingKey} className="absolute inset-0 animate-radar pointer-events-none" />}
-            <div className="relative z-10 flex items-center justify-center gap-2">
-              {generating ? (
-                <Loader2 className="animate-spin w-5 h-5" />
-              ) : meme.mode === "video" ? (
-                <Video className="w-5 h-5" />
-              ) : (
-                <RefreshCcw className="w-5 h-5" />
-              )}
-              <span className="text-lg">
-                {generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}
-              </span>
-            </div>
-          </button>
-          <div ref={canvasContainerRef} className="scroll-mt-4">
-            <MemeCanvas
-              ref={memeRef}
-              meme={meme}
-              loading={loading}
-              isProcessing={isProcessing}
-              draggedId={draggedId}
-              selectedId={meme.selectedId}
-              editingId={editingId}
-              activeTool={activeTool}
-              onDrawCommit={handleDrawCommit}
-              onFineTune={handleFineTune}
-              onFineTuneCommit={handleFineTuneCommit}
-              onCenterText={handleCenterText}
-              onPointerDown={handlePointerDown}
-              onRemoveSticker={removeSticker}
-              onRemoveText={removeText}
-              onTextChange={handleTextChange}
-              onAddTextAtPosition={addTextAtPosition}
-              onStartEditing={setEditingId}
-              onCanvasPointerDown={handleCanvasPointerDown}
-
-              // New Props
-              activePanelId={meme.activePanelId}
-              onPanelSelect={handlePanelSelect}
-              layouts={DEFAULT_LAYOUTS}
-              onDrop={handleCanvasDrop}
-              onClearPanel={handleClearPanel}
-              onToggleFit={togglePanelFit}
-              onPanelPosChange={handlePanelPosChange}
-            />
-          </div>
-          {selectedText && (
-            <Suspense fallback={null}>
-              <div ref={fineTuneRef} data-fine-tuner>
-                <MemeFineTune
-                  selectedElement={selectedText}
-                  onFineTune={handleFineTune}
-                  onFineTuneCommit={handleFineTuneCommit}
-                  onQuickPosition={handleQuickPosition}
-                />
+              {/* MOBILE: Remix Controls BELOW Canvas (Default) */}
+              <div className="block lg:hidden">
+                {remixControls}
               </div>
-            </Suspense>
-          )}
-        </div>
 
-        {/* Remix Carousel */}
-        <Suspense fallback={<div className="h-14 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-          <RemixCarousel
-            onChaos={handleChaos}
-            onCaptionRemix={handleCaptionRemix}
-            onStyleShuffle={handleStyleShuffle}
-            onFilterFrenzy={handleFilterFrenzy}
-            onVibeCheck={handleVibeCheck}
-            onExtremeDeepFry={handleExtremeDeepFry}
-            deepFryLevel={currentDeepFryLevel}
-          />
-        </Suspense>
+              {/* Mobile-Only Sticker Section */}
+              <div className="block lg:hidden bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-30">
+                 <MemeStickerSection
+                  onAddSticker={addSticker}
+                  hasStickers={meme.stickers.length > 0}
+                  onExportStickers={handleExportStickers}
+                 />
+              </div>
 
-        {/* Mobile-Only Sticker Section */}
-        <div className="block lg:hidden bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-30">
-           <MemeStickerSection
-            onAddSticker={addSticker}
-            hasStickers={meme.stickers.length > 0}
-            onExportStickers={handleExportStickers}
-           />
-        </div>
-
-        {/* Undo / Redo Controls */}
-        <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
-          <button
-            onClick={undo}
-            disabled={!canUndo}
-            className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
-          >
-            <Undo2 className="w-4 h-4" /> Undo
-          </button>
-          <button
-            onClick={redo}
-            disabled={!canRedo}
-            className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
-          >
-            <Redo2 className="w-4 h-4" /> Redo
-          </button>
-          <button
-            onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })}
-            className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
-        </div>
-
-        <button
-          onClick={handleReset}
-          className="w-full bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-red-900/50"
-        >
-          <Eraser className="w-4 h-4" /> <span>Remove Everything</span>
-        </button>
-      </div>
+            </div>
+          </>
+        );
+      })()}
     </main>
   );
 }

@@ -3,9 +3,9 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 /**
  * LottieAnimation Component
- * 
+ *
  * A wrapper around DotLottieReact to easily display Lottie animations.
- * 
+ *
  * @param {Object} props
  * @param {string} props.src - Path to the animation file (e.g., '/animations/animation.json')
  * @param {boolean} [props.loop=true] - Whether the animation should loop
@@ -25,12 +25,43 @@ const LottieAnimation = ({
     height = '100%',
     ...props
 }) => {
+    // Dynamic render configuration for Desktop quality vs Mobile performance
+    const [renderConfig, setRenderConfig] = React.useState({
+        devicePixelRatio: 1,
+    });
+
+    React.useEffect(() => {
+        const updateQuality = () => {
+            // Check if Desktop (lg breakpoint)
+            if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                 // "Max" quality: Use native device pixel ratio, or at least 2.0 for sharpness
+                 setRenderConfig({
+                    devicePixelRatio: Math.max(window.devicePixelRatio || 2, 2)
+                 });
+            } else {
+                 // Mobile/Standard: Default behavior (usually auto-scales down)
+                 // Setting 1 or leaving undefined often lets the library choose
+                 setRenderConfig({
+                    devicePixelRatio: 1
+                 });
+            }
+        };
+
+        // Initial check
+        updateQuality();
+
+        // Optional: Listen for resize if users switch modes (though usually overkill)
+        window.addEventListener('resize', updateQuality);
+        return () => window.removeEventListener('resize', updateQuality);
+    }, []);
+
     return (
         <div className={className} style={{ width, height, ...style }}>
             <DotLottieReact
                 src={src}
                 loop={loop}
                 autoplay={autoplay}
+                renderConfig={renderConfig}
                 {...props}
             />
         </div>

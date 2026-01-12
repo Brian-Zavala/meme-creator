@@ -4,7 +4,7 @@ A stupid-fast meme generator that runs entirely in your browser. No uploads. No 
 
 Built with React 19 + Tailwind v4. Ships with client-side AI for background removal, animated stickers from Tenor, and a bunch of chaos buttons that randomize everything when you're out of ideas.
 
-**Live at:** [meme-creator.app]([https://meme-creator.app](https://meme-creator.app/)
+**Live at:** [meme-creator.app](https://meme-creator.app/)
 
 ## What's in the box
 

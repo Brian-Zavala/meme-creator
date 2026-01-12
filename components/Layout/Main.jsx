@@ -1600,19 +1600,36 @@ export default function Main() {
     updateState((prev) => prev);
   };
 
-  function handleCenterText() {
+  function handleQuickPosition(pos) {
     if (!meme.selectedId) return;
+
+    // Map string positions to coordinates if needed, or use direct values
+    const positions = {
+      'top-left': { x: 20, y: 20 },
+      'top-center': { x: 50, y: 20 },
+      'top-right': { x: 80, y: 20 },
+      'center-left': { x: 20, y: 50 },
+      'center': { x: 50, y: 50 },
+      'center-right': { x: 80, y: 50 },
+      'bottom-left': { x: 20, y: 80 },
+      'bottom-center': { x: 50, y: 80 },
+      'bottom-right': { x: 80, y: 80 },
+    };
+
+    const targetPos = typeof pos === 'string' ? positions[pos] : pos;
+    if (!targetPos) return;
+
     updateState((prev) => {
       const isText = prev.texts.some(t => t.id === meme.selectedId);
       if (isText) {
         return {
           ...prev,
-          texts: prev.texts.map((t) => t.id === meme.selectedId ? { ...t, x: 50, y: 50 } : t),
+          texts: prev.texts.map((t) => t.id === meme.selectedId ? { ...t, x: targetPos.x, y: targetPos.y } : t),
         };
       }
       return {
         ...prev,
-        stickers: prev.stickers.map((s) => s.id === meme.selectedId ? { ...s, x: 50, y: 50 } : s),
+        stickers: prev.stickers.map((s) => s.id === meme.selectedId ? { ...s, x: targetPos.x, y: targetPos.y } : s),
       };
     });
   }
@@ -2346,7 +2363,7 @@ export default function Main() {
                   selectedElement={selectedText}
                   onFineTune={handleFineTune}
                   onFineTuneCommit={handleFineTuneCommit}
-                  onCenterText={handleCenterText}
+                  onQuickPosition={handleQuickPosition}
                 />
               </div>
             </Suspense>

@@ -1,7 +1,33 @@
-import { RefreshCcw, RotateCw } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { RefreshCcw, RotateCw, ChevronDown, Check } from "lucide-react";
 import OptimizedSlider from "../ui/OptimizedSlider";
 
-export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCommit, onCenterText }) {
+export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCommit, onQuickPosition }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const positions = [
+    { label: "Top Left", value: "top-left" },
+    { label: "Top Center", value: "top-center" },
+    { label: "Top Right", value: "top-right" },
+    { label: "Left Center", value: "center-left" },
+    { label: "Center", value: "center" },
+    { label: "Right Center", value: "center-right" },
+    { label: "Bottom Left", value: "bottom-left" },
+    { label: "Bottom Center", value: "bottom-center" },
+    { label: "Bottom Right", value: "bottom-right" },
+  ];
+
   if (!selectedElement) return null;
 
   return (
@@ -30,12 +56,58 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
                 </span>
             </div>
 
-            <button
-                onClick={onCenterText}
-                className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg text-xs font-bold text-slate-300 transition-all active:scale-95"
-            >
-                <RefreshCcw className="w-3 h-3" /> Center
-            </button>
+            {/* Custom Position Dropdown */}
+            <div className="relative group/pos" ref={dropdownRef}>
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-1.5 min-w-[100px] justify-between transition-all active:scale-95 group/btn"
+                >
+                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest truncate">
+                         Position
+                    </span>
+                    <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand' : 'group-hover/btn:text-brand'}`} />
+                </button>
+
+                {isOpen && (
+                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 origin-bottom-right z-50 flex flex-col p-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+                        <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5 mb-1 bg-slate-900/50">
+                            Snap To
+                        </div>
+                        {positions.map((pos) => (
+                            <button
+                                key={pos.value}
+                                onClick={() => {
+                                    onQuickPosition(pos.value);
+                                    setIsOpen(false);
+                                }}
+                                className="flex items-center items-start gap-3 px-3 py-2 text-left rounded-lg transition-all hover:bg-brand/20 hover:text-brand-light group/item relative overflow-hidden"
+                            >
+                                <div className="grid grid-cols-3 gap-0.5 w-3 h-3 opacity-50 group-hover/item:opacity-100 transition-opacity">
+                                    {/* Mini Grid Icon Generation based on position */}
+                                    {[...Array(9)].map((_, i) => {
+                                        const isActive =
+                                            (pos.value === 'top-left' && i === 0) ||
+                                            (pos.value === 'top-center' && i === 1) ||
+                                            (pos.value === 'top-right' && i === 2) ||
+                                            (pos.value === 'center-left' && i === 3) ||
+                                            (pos.value === 'center' && i === 4) ||
+                                            (pos.value === 'center-right' && i === 5) ||
+                                            (pos.value === 'bottom-left' && i === 6) ||
+                                            (pos.value === 'bottom-center' && i === 7) ||
+                                            (pos.value === 'bottom-right' && i === 8);
+                                        return (
+                                            <div key={i} className={`w-0.5 h-0.5 rounded-full ${isActive ? 'bg-brand' : 'bg-slate-600'}`} />
+                                        )
+                                    })}
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider group-hover/item:text-brand group-hover/item:translate-x-1 transition-all">
+                                    {pos.label}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

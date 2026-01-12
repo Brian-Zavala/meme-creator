@@ -2665,7 +2665,7 @@ export default function Main() {
               </div>
 
               {/* Mobile-Only Sticker Section */}
-              <div className="block lg:hidden bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-30">
+              <div className="block lg:hidden bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
                  <MemeStickerSection
                   onAddSticker={addSticker}
                   hasStickers={meme.stickers.length > 0}

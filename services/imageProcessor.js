@@ -8,7 +8,7 @@ export async function deepFryImage(imageSrc, level, signal = null) {
   return new Promise(async (resolve, reject) => {
     // 1. Prepare Worker
     const worker = new Worker(new URL('./deepFry.worker.js', import.meta.url), { type: 'module' });
-    
+
     // Handle AbortSignal
     if (signal) {
       signal.addEventListener('abort', () => {
@@ -20,9 +20,9 @@ export async function deepFryImage(imageSrc, level, signal = null) {
     worker.onmessage = (e) => {
       worker.terminate();
       if (e.data.success) {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(e.data.blob);
+        // PERF: Use ObjectURL (O(1)) instead of FileReader (O(N) + Main Thread Hang)
+        const objectUrl = URL.createObjectURL(e.data.blob);
+        resolve(objectUrl);
       } else {
         reject(new Error(e.data.error));
       }
@@ -35,46 +35,24 @@ export async function deepFryImage(imageSrc, level, signal = null) {
     };
 
     try {
-      // 2. Load Image & Create Bitmap (Efficient Transfer)
-      const img = new Image();
+      // 2. Load Image directly in Worker (Zero Main Thread Block)
+      // We just pass the string. The worker fetches and decodes it.
+
+      // Handle potential CORS/Cache issues for non-local images
+      let finalSrc = imageSrc;
       const isLocal = imageSrc.startsWith('data:') || imageSrc.startsWith('blob:');
       if (!isLocal) {
-        img.crossOrigin = "Anonymous";
-        imageSrc += (imageSrc.includes('?') ? '&' : '?') + `t=${Date.now()}`;
+        finalSrc += (imageSrc.includes('?') ? '&' : '?') + `t=${Date.now()}`;
       }
-      img.src = imageSrc;
-
-      await new Promise((r, j) => {
-        img.onload = r;
-        img.onerror = () => j(new Error("Failed to load image for deep frying"));
-      });
-
-      // Resize logic (Same constraint as before to prevent crashes)
-      const MAX_SIZE = 1500;
-      let width = img.width;
-      let height = img.height;
-      if (width > MAX_SIZE || height > MAX_SIZE) {
-        const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
-        width = Math.floor(width * ratio);
-        height = Math.floor(height * ratio);
-      }
-
-      // Create bitmap for the worker
-      const imageBitmap = await createImageBitmap(img, { 
-        resizeWidth: width, 
-        resizeHeight: height 
-      });
 
       // 3. Send to Worker
-      worker.postMessage(
-        { imageBitmap, level, width, height }, 
-        [imageBitmap] // Transfer ownership! Zero-copy where possible.
-      );
+      worker.postMessage({ imageSrc: finalSrc, level });
+
 
     } catch (err) {
       worker.terminate();
       console.error("Deep Fry Setup Error:", err);
-      // Fallback: If createImageBitmap fails (rare), reject or fallback to main thread? 
+      // Fallback: If createImageBitmap fails (rare), reject or fallback to main thread?
       // For now, we reject to keep it clean.
       reject(err);
     }

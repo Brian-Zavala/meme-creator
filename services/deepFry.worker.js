@@ -2,13 +2,32 @@
 // Uses OffscreenCanvas for maximum performance
 
 self.onmessage = async (e) => {
-  const { imageBitmap, level, width, height } = e.data;
+  const { imageSrc, level } = e.data;
 
   try {
+    // 1. Fetch & Decode Image completely off-main-thread
+    const response = await fetch(imageSrc);
+    if (!response.ok) throw new Error("Failed to fetch image in worker");
+    const fetchBlob = await response.blob();
+    const originalBitmap = await createImageBitmap(fetchBlob);
+
+    // 2. Resize Logic (Ported from imageProcessor.js)
+    const MAX_SIZE = 1500;
+    let width = originalBitmap.width;
+    let height = originalBitmap.height;
+
+    if (width > MAX_SIZE || height > MAX_SIZE) {
+      const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
+      width = Math.floor(width * ratio);
+      height = Math.floor(height * ratio);
+    }
+
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    
-    ctx.drawImage(imageBitmap, 0, 0);
+
+    // Draw resized
+    ctx.drawImage(originalBitmap, 0, 0, width, height);
+    originalBitmap.close(); // Cleanup original bitmap memory explicitly
 
     // ----------------------------------------------------
     // PIXEL DESTRUCTION (Exact port of your original logic)
@@ -21,7 +40,7 @@ self.onmessage = async (e) => {
     const noiseAmount = level * 2.5;
     const satBoost = 1 + (level / 20);
     const doSharpen = level > 10;
-    
+
     // Create copy for sharpening only if needed (saves memory)
     const copy = doSharpen ? new Uint8ClampedArray(data) : null;
 
@@ -43,7 +62,7 @@ self.onmessage = async (e) => {
           const bottom = i + (width * 4);
           const left = i - 4;
           const right = i + 4;
-          
+
           let sr = copy[i] * 5;
           let sg = copy[i + 1] * 5;
           let sb = copy[i + 2] * 5;

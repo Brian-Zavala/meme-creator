@@ -243,8 +243,11 @@ export default function Main() {
   const canvasContainerRef = useRef(null);
   const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
   const vibeThrottleRef = useRef(0); // Spam protection for vibe-check button
+  const chaosThrottleRef = useRef(0); // Spam protection for chaos button
+  const filterThrottleRef = useRef(0); // Spam protection for filter button
   const vibeIndexRef = useRef(0); // Cycle through vibes
   const filterFrenzyIndexRef = useRef(0); // Cycle through chaos strategies
+  const lastFriedImageRef = useRef(null); // Cleanup memory leaks from deep fry
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
@@ -415,6 +418,10 @@ export default function Main() {
         if (signal.aborted) return;
 
         // 4. Success! Update the image
+        // MEMORY LEAK FIX: Revoke previous URL to prevent crash
+        if (lastFriedImageRef.current) URL.revokeObjectURL(lastFriedImageRef.current);
+        lastFriedImageRef.current = fried;
+
         startTransition(() => {
           updateState((prev) => ({
             ...prev,
@@ -747,6 +754,13 @@ export default function Main() {
   }
 
   async function handleChaos() {
+    // --- SPAM PROTECTION: 800ms cooldown (Heavy operations) ---
+    const now = Date.now();
+    if (now - chaosThrottleRef.current < 800) {
+      return;
+    }
+    chaosThrottleRef.current = now;
+
     // Safety check for memes
     if (!allMemes || allMemes.length === 0) {
       toast.error("Memes are still loading...");
@@ -1006,6 +1020,13 @@ export default function Main() {
   }
 
   function handleFilterFrenzy() {
+    // --- SPAM PROTECTION: 500ms cooldown ---
+    const now = Date.now();
+    if (now - filterThrottleRef.current < 500) {
+      return;
+    }
+    filterThrottleRef.current = now;
+
     // Chaos Archetypes: Distinct strategies for "Frenzy"
     const strategies = [
       // 1. The "Nuked" (High Saturation, High Contrast, Deep Fry)
@@ -1268,9 +1289,9 @@ export default function Main() {
   }
 
   function handleVibeCheck() {
-    // --- SPAM PROTECTION: 400ms cooldown (reduced for snappiness) ---
+    // --- SPAM PROTECTION: 500ms cooldown ---
     const now = Date.now();
-    if (now - vibeThrottleRef.current < 400) {
+    if (now - vibeThrottleRef.current < 500) {
       return;
     }
     vibeThrottleRef.current = now;

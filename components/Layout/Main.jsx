@@ -115,8 +115,24 @@ const DEFAULT_LAYOUTS = {
   ]
 };
 
+const TOAST_ANIMATIONS = [
+  "/animations/broom.json",
+  "/animations/filter-frenzy.json",
+  "/animations/performing-arts.json",
+  "/animations/speech-bubble.json",
+  "/animations/vibe-check-toast.json",
+  "/animations/waste-basket.json"
+];
+
 export default function Main() {
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    // Preload toast animations
+    TOAST_ANIMATIONS.forEach(src => {
+      fetch(src).catch(() => { });
+    });
+  }, []);
 
   const {
     state: meme,
@@ -415,7 +431,10 @@ export default function Main() {
         const fried = await deepFryImage(activePanel.url, level, signal);
 
         // 3. CRITICAL CHECK: If user moved slider again, STOP here.
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          URL.revokeObjectURL(fried);
+          return;
+        }
 
         // 4. Success! Update the image
         // MEMORY LEAK FIX: Revoke previous URL to prevent crash
@@ -1140,12 +1159,9 @@ export default function Main() {
       // 12. "Matrix" (Green code rain feel)
       () => ({
         name: "Matrix",
-        sepia: 0,
         grayscale: 100,
-        hueRotate: 0, // Grayscale first, then tint? CSS filters order matters, this might just be B&W. Let's try high contrast green.
         contrast: 200,
         brightness: 80,
-        saturate: 0,
         // Hack: emulate with sepia + hue rotate
         sepia: 100,
         hueRotate: 90, // green

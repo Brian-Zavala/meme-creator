@@ -27,7 +27,7 @@ const FireBackground = () => {
                  <LottieAnimation
                     src="/animations/fire.json"
                     className="w-full h-full opacity-90"
-                    style={{ width: '100%', height: '100%', transform: 'scale(3)', translate: '0 -17px' }}
+                    style={{ width: '100%', height: '100%', transform: 'scale(3) translateY(-17px)' }}
                  />
             </div>
         );

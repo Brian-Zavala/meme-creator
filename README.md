@@ -1,67 +1,117 @@
 # Meme Creator
 
-Meme Creator is a high-performance web application designed for precision meme generation. Built on React 19 and Tailwind CSS v4, it bridges the gap between simple text-over-image tools and complex photo editors. The focus here is on speed, privacy, and granular control.
+A stupid-fast meme generator that runs entirely in your browser. No uploads. No waiting. Just fire it up and start slapping text on images.
 
-Unlike standard generators that rely heavily on server-side processing, this application leverages client-side technologies—including WebAssembly and multi-threaded AI—to handle heavy tasks like background removal directly in the browser.
+Built with React 19 + Tailwind v4. Ships with client-side AI for background removal, animated stickers from Tenor, and a bunch of chaos buttons that randomize everything when you're out of ideas.
 
-## Core Capabilities
+**Live at:** [meme-creator.netlify.app](https://meme-creator.netlify.app)
 
-**Precision Editor**
-A fully interactive canvas supporting multiple text layers and stickers. It features drag-and-drop positioning, resizing, and rotation with a snappy, native-app feel.
+## What's in the box
 
-**Client-Side AI Background Removal**
-Upload any image as a custom sticker and instantly isolate the subject. This feature runs entirely in the browser using ONNX Runtime and WebAssembly. No data is sent to a server, ensuring privacy and zero latency after the initial model load.
+**The Editor**
+Drag stuff around. Resize it. Rotate it. Add as many text layers as you want. The canvas feels snappy because we're not round-tripping to a server for every action.
 
-**Tenor Sticker Integration**
-Integrated directly with the Tenor API to fetch transparent animated stickers. The search logic filters specifically for overlay-ready assets rather than standard opaque GIFs, ensuring clean compositions.
+**AI Background Removal**
+Upload a photo, click remove background, get a transparent sticker. Uses ONNX Runtime + WebAssembly so everything happens locally. Your images never leave your device.
 
-**Smart Contextual Captions**
-An automated "Magic" caption system that analyzes the selected template context to generate relevant, humorous text on the fly.
+**Tenor Stickers**
+Search pulls transparent animated stickers, not regular GIFs. Slap them on your meme, they animate in the export.
 
-**Robust State Management**
-Includes a comprehensive history stack with undo/redo functionality (Ctrl+Z / Ctrl+Y). State is automatically synced to local storage, preventing data loss during accidental refreshes.
+**Magic Captions**
+Hit the magic button and it picks random captions that (sometimes) make sense for the template you picked.
 
-**Image Processing**
-Real-time CSS filter adjustments for contrast, brightness, and blur, applied non-destructively to the canvas.
- 
-**Smart GIF Sharing & Privacy**
-To enable seamless sharing on platforms like Signal and Discord (which require URLs), we use a hybrid system:
-- **Client-Side**: Standard images and raw Tenor GIFs are processed entirely in your browser with zero upload.
-- **Direct Cloud Upload**: Custom GIFs are uploaded **directly from your browser** to `Tmpfiles.org`.
-  - **Zero Server Footprint**: The file skips our servers entirely, saving bandwidth and ensuring total privacy.
-  - **Auto-Deletion**: Files are automatically deleted by the host after **60 minutes**.
-  - **No Logs**: We do not store or inspect your content.
-  - **Ephemeral**: The public link expires, ensuring your meme doesn't live on the web forever unless you want it to.
+**Undo/Redo**
+Ctrl+Z and Ctrl+Y work like you'd expect. State persists to localStorage so refreshing won't nuke your work.
 
-## Technical Architecture
+**Filters**
+Contrast, brightness, blur, saturation, hue rotate, deep fry. All applied in real-time on the canvas.
 
-### Frontend Framework
-The application is built with **React 19**, utilizing the latest compiler optimizations for efficient rendering. It avoids unnecessary re-renders even with complex canvas manipulations.
+**Chaos Mode**
+Six remix buttons that randomize different aspects. Hit "Chaos Mode" if you want to roll the dice on everything at once.
 
-### Styling System
-**Tailwind CSS v4** drives the UI, providing a modern engine for rapid development. The design system enforces a dark-mode aesthetic with glassmorphism elements to maintain focus on the content.
+## The stack
 
-### The AI Stack
-The background removal feature is self-hosted to avoid external dependencies and bandwidth costs.
-- **Engine**: ONNX Runtime Web (WASM)
-- **Model**: ISNet (FP16 quantization)
-- **Optimization**: Multi-threading is enabled via `SharedArrayBuffer`, requiring specific security headers (`Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy`) in the Vite and Netlify configurations.
+```
+React 19          - latest compiler, concurrent features
+Tailwind CSS v4   - the new engine, not v3
+Vite              - dev server + build
+ONNX Runtime Web  - WASM-based AI inference
+gif.js            - client-side GIF encoding
+PostHog           - analytics (optional, proxied through /ph)
+```
 
-### Key Dependencies
-- **@imgly/background-removal**: For client-side neural network processing.
-- **lucide-react**: Consistent, lightweight iconography.
-- **html2canvas**: High-fidelity DOM serialization for export.
-- **react-hot-toast**: Context-aware notification system.
+### Why client-side AI?
 
-## Installation and Setup
+No server costs. No upload latency. No privacy concerns. The model (ISNet, FP16) loads once and runs in a Web Worker with SharedArrayBuffer threading. Requires COOP/COEP headers which are set in `netlify.toml` and `vite.config.js`.
 
-### Prerequisites
-- Node.js (Latest LTS recommended)
-- A Tenor API Key (for sticker search)
+### GIF sharing
 
-### Local Development
+Platforms like Signal and Discord need URLs to embed GIFs. For custom exports:
+- Files upload directly from your browser to `tmpfiles.org`
+- Bypasses our servers completely
+- Auto-deletes after 60 minutes
+- We don't log or store anything
 
-1. **Clone the repository**
-   ```bash
-   git clone [https://github.com/Brian-Zavala/meme-creator.git](https://github.com/Brian-Zavala/meme-creator.git)
-   cd meme-creator
+For unmodified Tenor GIFs, we just copy the original URL. No upload needed.
+
+## Running locally
+
+```bash
+git clone https://github.com/Brian-Zavala/meme-creator.git
+cd meme-creator
+npm install
+```
+
+Create `.env`:
+```
+VITE_PUBLIC_TENOR_API_KEY=your_tenor_key
+VITE_PUBLIC_POSTHOG_KEY=your_posthog_key  # optional
+VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+```
+
+Start dev server:
+```bash
+npm run dev
+```
+
+Build for production:
+```bash
+npm run build
+```
+
+## Project structure
+
+```
+src/
+├── components/
+│   ├── Layout/         # Header, Main (the big one)
+│   ├── MemeEditor/     # Canvas, Toolbar, Inputs, FineTune
+│   ├── Modals/         # Welcome, Instructions, Export
+│   └── ui/             # Buttons, sliders, backgrounds
+├── services/
+│   ├── gifExporter.js  # GIF encoding logic
+│   └── imageProcessor.js # Deep fry worker
+├── hooks/
+│   └── useHistory.js   # Undo/redo state management
+├── constants/
+│   └── textAnimations.js
+└── App.jsx
+```
+
+`Main.jsx` is the beast. It handles all the meme state, remix logic, export flows, and canvas interactions. Most of the action lives there.
+
+## Deploying
+
+Works out of the box on Netlify. The `netlify.toml` has the security headers needed for SharedArrayBuffer.
+
+Set these env vars in Netlify dashboard:
+- `VITE_PUBLIC_TENOR_API_KEY`
+- `VITE_PUBLIC_POSTHOG_KEY` (if using analytics)
+
+## Contributing
+
+PRs welcome. The codebase is straightforward React. No weird patterns or over-engineering. Open an issue if something's broken or you have a feature idea.
+
+## License
+
+MIT

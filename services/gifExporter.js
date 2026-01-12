@@ -335,7 +335,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
         // Animation Transform
         let animX = x;
         let animY = y;
-        let animRotation = 0;
+        let animRotation = (sticker.rotation || 0) * (Math.PI / 180);
         let animScaleX = 1;
         let animScaleY = 1;
         let animOpacity = 1;

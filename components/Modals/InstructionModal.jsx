@@ -44,9 +44,9 @@ export function InstructionModal({ isOpen, onClose }) {
                     Text & Stickers
                   </h3>
                   <ul className="text-slate-300 text-sm space-y-3 list-none px-2">
-                    <li><span className="text-white font-medium">Long Press:</span> Hold anywhere on the canvas to add text instantly.</li>
+                    <li><span className="text-white font-medium">Long Press:</span> Hold any Item to open the editor and Fine-Tune Sizing & Position.</li>
                     <li><span className="text-white font-medium">Double Tap:</span> Quickly tap any sticker twice to remove it.</li>
-                    <li><span className="text-white font-medium">Smart Delete:</span> Remove buttons now automatically jump to the side to stay visible!</li>
+                    <li><span className="text-white font-medium">Fine-Tune:</span> Use the drawer to precisely adjust scale, position, and rotation!</li>
                   </ul>
                 </section>
               </div>

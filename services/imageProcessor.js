@@ -15,7 +15,7 @@ export async function deepFryImage(imageSrc, level, signal = null) {
     if (signal) {
       signal.addEventListener('abort', () => {
         worker.terminate();
-        reject(new Error("Aborted"));
+        reject(new DOMException("Aborted", "AbortError"));
       });
     }
 

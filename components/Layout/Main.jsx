@@ -1811,7 +1811,6 @@ export default function Main() {
   function addSticker(urlOrEmoji, type = "emoji", isAnimated = false) {
     updateState((prev) => ({
       ...prev,
-      ...prev,
       stickers: [...prev.stickers, { id: crypto.randomUUID(), url: urlOrEmoji, type, x: 50, y: 50, scale: 1, isAnimated, animation: null }],
     }));
   }
@@ -1820,6 +1819,7 @@ export default function Main() {
     updateState((prev) => ({
       ...prev,
       stickers: prev.stickers.filter((s) => s.id !== id),
+      selectedId: prev.selectedId === id ? null : prev.selectedId,
     }));
     toast.error("Sticker removed", {
       icon: (

@@ -74,8 +74,8 @@ export function InstructionModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            <div className="bg-lime-500/10 border border-lime-500/20 rounded-2xl p-4 flex flex-col items-center text-center">
-              <h3 className="text-lime-400 font-bold uppercase text-xs tracking-widest mb-2">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex flex-col items-center text-center">
+              <h3 className="text-blue-400 font-bold uppercase text-xs tracking-widest mb-2">
                  Pro Tip
               </h3>
               <p className="text-slate-400 text-xs leading-relaxed">

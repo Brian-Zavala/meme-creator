@@ -1,14 +1,38 @@
 // Deep Fry Worker - Runs image processing off the main thread
 // Uses OffscreenCanvas for maximum performance
 
+// Timeout wrapper for fetch to prevent infinite hangs
+const fetchWithTimeout = (url, timeoutMs = 10000) => {
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`Fetch timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    fetch(url, { signal: controller.signal })
+      .then(response => {
+        clearTimeout(timeoutId);
+        resolve(response);
+      })
+      .catch(err => {
+        clearTimeout(timeoutId);
+        reject(err);
+      });
+  });
+};
+
 self.onmessage = async (e) => {
   const { imageSrc, level } = e.data;
 
   try {
     // 1. Fetch & Decode Image completely off-main-thread
-    const response = await fetch(imageSrc);
-    if (!response.ok) throw new Error("Failed to fetch image in worker");
+    const response = await fetchWithTimeout(imageSrc, 10000);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
     const fetchBlob = await response.blob();
+
+    if (fetchBlob.size === 0) throw new Error("Empty image blob received");
+
     const originalBitmap = await createImageBitmap(fetchBlob);
 
     // 2. Resize Logic (Ported from imageProcessor.js)

@@ -267,6 +267,22 @@ export default function Main() {
   const vibeIndexRef = useRef(0); // Cycle through vibes
   const filterFrenzyIndexRef = useRef(0); // Cycle through chaos strategies
   const lastFriedImageRef = useRef(null); // Cleanup memory leaks from deep fry
+  const longPressHintShownRef = useRef(localStorage.getItem('longPressHintShown') === 'true');
+
+  // Helper to show long-press hint once per device
+  const showLongPressHint = useCallback(() => {
+    if (longPressHintShownRef.current) return;
+    longPressHintShownRef.current = true;
+    localStorage.setItem('longPressHintShown', 'true');
+
+    setTimeout(() => {
+      toast('Tip: Long-press text to fine-tune position', {
+        duration: 4000,
+        icon: '👆',
+        id: 'long-press-hint'
+      });
+    }, 1500); // Delay slightly so it doesn't overlap with action toast
+  }, []);
 
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
@@ -990,6 +1006,8 @@ export default function Main() {
         <ToastIcon src="/animations/speech-bubble.json" />
       )
     });
+
+    showLongPressHint();
   }
 
   function handleStyleShuffle() {
@@ -1523,6 +1541,11 @@ export default function Main() {
         texts: newTexts,
       };
     });
+
+    // Show hint when user types their first text
+    if (value.length > 0) {
+      showLongPressHint();
+    }
   }
 
   function handleCenterText() {
@@ -1731,6 +1754,7 @@ export default function Main() {
     startTransition(() => {
       updateState((prev) => ({
         ...prev,
+        selectedId: null, // Clear fine-tuner state
         texts: [
           { id: "top", content: "", x: 50, y: 5, rotation: 0, animation: null },
           { id: "bottom", content: "", x: 50, y: 95, rotation: 0, animation: null },
@@ -1915,12 +1939,14 @@ export default function Main() {
         };
       });
 
-      toast("Magic logic applied! ✨", {
+      toast("Magic logic applied!", {
         duration: 2000,
         icon: <ToastIcon src="/animations/filter-frenzy.json" />
       });
       setStatusMessage("Magic captions generated.");
       setIsMagicGenerating(false);
+
+      showLongPressHint();
     }, 800);
   }
 

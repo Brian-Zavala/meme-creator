@@ -78,14 +78,15 @@ export default function App() {
       <Toaster
         position="bottom-right"
         toastOptions={{
-          duration: 2000,
+          duration: 3000,
+          className: "toast-gradient-border",
           style: {
             background: "#1e293b",
             color: "#fff",
             border: "1px solid #334155",
           },
-          success: { duration: 1500 },
-          error: { duration: 2500 },
+          success: { duration: 2500 },
+          error: { duration: 3500 },
         }}
         containerStyle={{
           bottom: 16,

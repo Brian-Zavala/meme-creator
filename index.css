@@ -839,6 +839,48 @@ body {
   }
 }
 
+/* --- TOAST SUBTLE GRADIENT BORDER --- */
+.toast-gradient-border {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  border-radius: 0.5rem;
+}
+
+.toast-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(
+    45deg,
+    #fb0094,
+    #0000ff,
+    #00ff00,
+    #ffff00,
+    #ff0000,
+    #fb0094,
+    #0000ff,
+    #00ff00,
+    #ffff00,
+    #ff0000
+  );
+  background-size: 400%;
+  z-index: -1;
+  border-radius: inherit;
+  animation: gradient-border-animate 20s linear infinite;
+  opacity: 0.35;
+  /* Mask to only show as a border ring, not filled */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px; /* Border thickness */
+}
+
 /* Flip - 3D horizontal flip simulated with scaleX */
 @keyframes meme-flip {
   0% {

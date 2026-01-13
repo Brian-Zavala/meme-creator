@@ -1,7 +1,15 @@
 import { Move, Type, Layers, Image as ImageIcon, Film, Layout, Hand } from "lucide-react";
 import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
+import toast from "react-hot-toast";
 
 export function InstructionModal({ isOpen, onClose }) {
+  const handleGotIt = () => {
+    onClose();
+    toast("Long-press image/GIF to create text", {
+      icon: "👆",
+      duration: 4000,
+    });
+  };
   useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
@@ -77,7 +85,7 @@ export function InstructionModal({ isOpen, onClose }) {
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleGotIt}
             className="w-full bg-brand hover:bg-brand/85 text-white border-2 border-brand-dark transition-all active:scale-95 py-3 sm:py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg mt-4 shadow-brand/20"
           >
             Got it!

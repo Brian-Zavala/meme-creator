@@ -2606,10 +2606,10 @@ export default function Main() {
             <div className="lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
               {/* Controls moved to Toolbar */}
 
-              {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
+                {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
               <div className="hidden lg:block space-y-4">
-                {remixCarouselControl}
                 {remixActionControls}
+                {remixCarouselControl}
               </div>
 
               <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>

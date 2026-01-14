@@ -19,8 +19,12 @@ export default function RemixCarousel({
     onFilterFrenzy,
     onVibeCheck,
     onExtremeDeepFry,
-    deepFryLevel = 0
+    deepFryLevel = 0,
+    isProcessing = false
 }) {
+    // Buttons that can trigger deep fry processing and should be locked during processing
+    const deepFryTriggerButtons = ['chaos', 'filter', 'vibe', 'deepfry'];
+
     const remixModes = [
         {
             id: "chaos",
@@ -72,37 +76,48 @@ export default function RemixCarousel({
             role="group"
             aria-label="Remix Options"
         >
-            {remixModes.map(({ id, label, handler, Background, ariaLabel }) => (
-                <button
-                    key={id}
-                    onClick={() => {
-                        if (navigator.vibrate) navigator.vibrate(30);
-                        handler();
-                    }}
-                    className="remix-btn relative overflow-hidden group border-2 border-white/10 hover:border-white/30 rounded-xl transition-all active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-slate-900"
-                    aria-label={ariaLabel}
-                >
-                    {/* Animated background */}
-                    {id === 'deepfry' ? (
-                        <Background key={deepFryLevel > 0 ? 'active' : 'inactive'} />
-                    ) : (
-                        <Background />
-                    )}
+            {remixModes.map(({ id, label, handler, Background, ariaLabel }) => {
+                // Lock buttons that can trigger deep fry while processing is active
+                const isLocked = isProcessing && deepFryTriggerButtons.includes(id);
 
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-300 z-10" />
+                return (
+                    <button
+                        key={id}
+                        onClick={() => {
+                            if (isLocked) return; // Prevent action if locked
+                            if (navigator.vibrate) navigator.vibrate(30);
+                            handler();
+                        }}
+                        disabled={isLocked}
+                        className={`remix-btn relative overflow-hidden group border-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${isLocked
+                            ? 'border-white/5 opacity-50 cursor-not-allowed'
+                            : 'border-white/10 hover:border-white/30 active:scale-[0.97]'
+                            }`}
+                        aria-label={isLocked ? `${ariaLabel} (processing...)` : ariaLabel}
+                        aria-disabled={isLocked}
+                    >
+                        {/* Animated background */}
+                        {id === 'deepfry' ? (
+                            <Background key={deepFryLevel > 0 ? 'active' : 'inactive'} />
+                        ) : (
+                            <Background />
+                        )}
 
-                    {/* Label */}
-                    <div className="relative z-20 flex items-center justify-center py-3 px-2">
-                        <span
-                            className="font-black uppercase tracking-wider text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)] text-center leading-tight"
-                            style={{ fontSize: 'clamp(0.5rem, 2vw + 0.25rem, 0.8rem)' }}
-                        >
-                            {label}
-                        </span>
-                    </div>
-                </button>
-            ))}
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-300 z-10" />
+
+                        {/* Label */}
+                        <div className="relative z-20 flex items-center justify-center py-3 px-2">
+                            <span
+                                className="font-black uppercase tracking-wider text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)] text-center leading-tight"
+                                style={{ fontSize: 'clamp(0.5rem, 2vw + 0.25rem, 0.8rem)' }}
+                            >
+                                {label}
+                            </span>
+                        </div>
+                    </button>
+                );
+            })}
         </div>
     );
 }

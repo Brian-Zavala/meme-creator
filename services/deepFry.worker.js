@@ -22,6 +22,16 @@ const fetchWithTimeout = (url, timeoutMs = 10000) => {
   });
 };
 
+// Promise wrapper with timeout for any async operation
+const withTimeout = (promise, timeoutMs, errorMessage) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    )
+  ]);
+};
+
 self.onmessage = async (e) => {
   const { imageSrc, level } = e.data;
 
@@ -33,7 +43,12 @@ self.onmessage = async (e) => {
 
     if (fetchBlob.size === 0) throw new Error("Empty image blob received");
 
-    const originalBitmap = await createImageBitmap(fetchBlob);
+    // Wrap createImageBitmap with timeout (can hang on malformed images)
+    const originalBitmap = await withTimeout(
+      createImageBitmap(fetchBlob),
+      5000,
+      "Image decode timeout - image may be corrupted"
+    );
 
     // 2. Resize Logic (Ported from imageProcessor.js)
     const MAX_SIZE = 1500;
@@ -140,9 +155,18 @@ self.onmessage = async (e) => {
 
     let blob;
     for (let i = 0; i < loops; i++) {
-      blob = await canvas.convertToBlob({ type: "image/jpeg", quality });
+      // Wrap convertToBlob with timeout (can hang on memory issues)
+      blob = await withTimeout(
+        canvas.convertToBlob({ type: "image/jpeg", quality }),
+        5000,
+        "Blob conversion timeout"
+      );
       if (i < loops - 1) {
-        const bmp = await createImageBitmap(blob);
+        const bmp = await withTimeout(
+          createImageBitmap(blob),
+          3000,
+          "Image re-decode timeout"
+        );
         ctx.drawImage(bmp, 0, 0);
       }
     }

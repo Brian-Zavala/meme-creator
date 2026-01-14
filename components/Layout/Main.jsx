@@ -425,8 +425,15 @@ export default function Main() {
       return;
     }
 
+    // Track if this specific effect instance started processing
+    let didStartProcessing = false;
+
     const processDeepFry = async () => {
+      // Early exit if already aborted before we even start
+      if (signal.aborted) return;
+
       try {
+        didStartProcessing = true;
         setIsProcessing(true); // Start loading spinner
 
         if (activePanel.isVideo) {
@@ -441,8 +448,14 @@ export default function Main() {
           });
         }
 
-        // Call your service
-        const fried = await deepFryImage(activePanel.url, level, signal);
+        // Call your service with a timeout wrapper
+        const timeoutMs = 15000; // 15 second max for entire operation
+        const fried = await Promise.race([
+          deepFryImage(activePanel.url, level, signal),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Deep fry timeout')), timeoutMs)
+          )
+        ]);
 
         if (signal.aborted) {
           URL.revokeObjectURL(fried);
@@ -470,9 +483,19 @@ export default function Main() {
         }
 
         console.error("Deep Fry Error:", error);
-        toast.error("Effect failed");
+
+        // Show user-friendly error for timeout
+        if (error.message === 'Deep fry timeout') {
+          toast.error("Processing took too long - try a smaller image");
+        } else {
+          toast.error("Effect failed");
+        }
       } finally {
-        if (!signal.aborted) setIsProcessing(false);
+        // CRITICAL FIX: Always reset isProcessing if this effect instance started it
+        // This prevents the "stuck processing" bug when effects are aborted
+        if (didStartProcessing) {
+          setIsProcessing(false);
+        }
       }
     };
 
@@ -2424,6 +2447,7 @@ export default function Main() {
                 onVibeCheck={handleVibeCheck}
                 onExtremeDeepFry={handleExtremeDeepFry}
                 deepFryLevel={deferredDeepFry}
+                isProcessing={isProcessing}
               />
             </Suspense>
 

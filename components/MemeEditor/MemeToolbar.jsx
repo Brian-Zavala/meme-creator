@@ -460,7 +460,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       className={`w-full grid transition-[grid-template-rows] duration-300 ease-out ${showTextStyling ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                         }`}
                     >
-                      <div className="w-full overflow-hidden">
+                      <div className="w-full overflow-visible">
                         <div className={`w-full flex flex-col gap-6 transition-opacity duration-200 ${showTextStyling ? 'opacity-100 pt-10' : 'opacity-0'
                           }`}>
 
@@ -564,7 +564,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                               <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
 
                               {/* Group 3: Color Controls - Centered */}
-                              <div className="w-full flex justify-center py-2 overflow-visible">
+                              <div className="w-[calc(100%+24px)] -mx-3 flex justify-center py-2 overflow-visible">
                                 <Suspense fallback={<div className="w-full md:w-auto h-20 bg-slate-800/20 rounded animate-pulse shrink-0" />}>
                                   <ColorControls
                                     meme={meme}

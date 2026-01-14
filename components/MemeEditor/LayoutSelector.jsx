@@ -37,9 +37,9 @@ export function LayoutSelector({ layout, onLayoutChange }) {
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label="Select Layout"
-        className={`w-full rounded-xl bg-slate-900/50 border border-slate-700 p-3 flex items-center justify-center relative transition-all active:scale-[0.99] ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
+        className={`w-full rounded-xl bg-slate-900/50 border border-slate-700 px-4 py-3 flex items-center justify-center relative transition-all active:scale-[0.99] ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pr-9">
             <LayoutTemplate className="w-5 h-5 text-brand" />
             <span className="font-bold text-lg">
                 {activeLayout.label}
@@ -49,8 +49,8 @@ export function LayoutSelector({ layout, onLayoutChange }) {
       </button>
 
       {isOpen && (
-        <div 
-            className="absolute top-full mt-2 left-0 w-full bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col p-1"
+        <div
+            className="absolute top-full mt-2 left-0 w-full bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col p-2"
             role="listbox"
             aria-label="Layout Options"
         >
@@ -60,13 +60,13 @@ export function LayoutSelector({ layout, onLayoutChange }) {
                     onClick={() => handleSelect(l.id)}
                     role="option"
                     aria-selected={layout === l.id}
-                    className={`flex items-center gap-3 w-full p-3 rounded-lg transition-colors group ${layout === l.id ? "bg-slate-800" : "hover:bg-brand"}`}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors group ${layout === l.id ? "bg-slate-800" : "hover:bg-brand"}`}
                 >
-                    <l.icon className={`w-5 h-5 ${layout === l.id ? "text-brand" : "text-slate-400 group-hover:text-white"}`} />
+                    <l.icon className={`w-5 h-5 shrink-0 ${layout === l.id ? "text-brand" : "text-slate-400 group-hover:text-white"}`} />
                     <span className={`font-bold ${layout === l.id ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
                         {l.label}
                     </span>
-                    {layout === l.id && <div className="ml-auto w-2 h-2 rounded-full bg-brand" />}
+                    {layout === l.id && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0" />}
                 </button>
             ))}
         </div>

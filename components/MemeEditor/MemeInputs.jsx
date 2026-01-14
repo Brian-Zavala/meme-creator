@@ -1,9 +1,34 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { Type, Sparkles, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { MemeStickerSection } from "./MemeStickerSection";
+import LottieAnimation from "../Animations/LottieAnimation";
 
-export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false }) {
+// Preload the animation JSON to prevent pop-in on re-render
+const WALKING_PENCIL_SRC = "/animations/walking-pencil.json";
+
+export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
+  const [isPending, startTransition] = useTransition();
+
+  // Preload animation on mount to ensure it's cached
+  useEffect(() => {
+    // Add preload link to document head
+    const preloadLink = document.createElement('link');
+    preloadLink.rel = 'preload';
+    preloadLink.as = 'fetch';
+    preloadLink.href = WALKING_PENCIL_SRC;
+    preloadLink.crossOrigin = 'anonymous';
+    document.head.appendChild(preloadLink);
+
+    // Also fetch to ensure it's in browser cache
+    fetch(WALKING_PENCIL_SRC).catch(() => {});
+
+    return () => {
+      if (document.head.contains(preloadLink)) {
+        document.head.removeChild(preloadLink);
+      }
+    };
+  }, []);
   // Track which text IDs have been rendered before to prevent re-animation
   const renderedIdsRef = useRef(new Set());
   const inputRefs = useRef({});
@@ -125,7 +150,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
         })()}
       </div>
 
-      {/* Custom Sticker Dropdown Section - Desktop Only */}
+
       <div className="px-6 pb-6 hidden lg:block">
         <div className="pt-4 border-t border-white/5">
           <MemeStickerSection
@@ -133,6 +158,41 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
             hasStickers={hasStickers}
             onExportStickers={onExportStickers}
           />
+        </div>
+
+        {/* Walking Pencil Animation - Only show when no text on canvas */}
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-500 ease-out ${
+            hasText ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+          }`}
+        >
+          <div className={hasText ? "overflow-hidden" : ""}>
+            <div
+              className={`group/pencil flex flex-col items-center justify-center pt-32 pb-12 cursor-pointer transition-all duration-300 ${hasText ? 'opacity-0' : 'opacity-100'}`}
+            >
+              {/* Animation container with hover effects */}
+              <div className="relative transition-transform duration-500 ease-out group-hover/pencil:scale-110 group-hover/pencil:-translate-y-2">
+                {/* Soft glow effect on hover - radial gradient fades to transparent */}
+                <div
+                  className="absolute -inset-16 opacity-0 transition-opacity duration-500 group-hover/pencil:opacity-100 pointer-events-none blur-3xl"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(255, 199, 0, 0.2) 0%, rgba(255, 199, 0, 0.05) 40%, transparent 65%)',
+                  }}
+                />
+                <LottieAnimation
+                  src={WALKING_PENCIL_SRC}
+                  className="w-56 h-56 relative z-10"
+                  loop={true}
+                  autoplay={true}
+                  style={{ filter: 'drop-shadow(0 4px 12px rgba(255, 199, 0, 0.15))' }}
+                />
+              </div>
+              {/* Text with hover color transition */}
+              <p className="text-xs text-slate-500 mt-6 text-center uppercase tracking-wider font-medium transition-all duration-300 group-hover/pencil:text-brand group-hover/pencil:tracking-widest">
+                Start typing to create your meme
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -2371,14 +2371,23 @@ export default function Main() {
             if (activePanel?.sourceUrl) {
               try {
                 // Extract filename from URL (e.g. .../AAA/Cat-Spin.gif)
-                const urlName = activePanel.sourceUrl.split('/').pop().split('?')[0];
+                const urlParts = activePanel.sourceUrl.split('/');
+                const lastPart = urlParts[urlParts.length - 1];
+                // Remove query params
+                const potentialName = lastPart.split('?')[0];
+
                 // Only use it if it looks like a normal filename
-                if (urlName && /^[a-zA-Z0-9\-_]+(\.gif)?$/i.test(urlName)) {
-                  filename = urlName.replace('.gif', '') + '-remix.gif';
+                if (potentialName && /^[a-zA-Z0-9\-_]+(\.gif)?$/i.test(potentialName)) {
+                   // Ensure it ends in .gif
+                   const baseName = potentialName.replace(/\.gif$/i, '');
+                   filename = `${baseName}-remix.gif`;
                 }
               } catch (e) {
                 console.warn("Could not extract filename", e);
               }
+            } else {
+               // User upload or no source URL - use a nice generic name
+               filename = `meme-${Date.now()}.gif`;
             }
 
             const formData = new FormData();

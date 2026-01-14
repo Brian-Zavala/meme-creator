@@ -129,9 +129,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
   // Determine if drawer should be collapsed:
   // - NEVER collapse text tab (we want to show inputs)
-  // - For other tabs: collapse if no content and not explicit draw tab
-  // - Collapse if actively editing AND drawer hasn't been opened yet (BUT NOT for text tab, since inputs are inside)
-  const isCollapsed = activeTab === 'text' ? false : ((!hasStickers && activeTab !== 'draw') || (isActivelyEditing && !drawerHasOpened));
+  // - NEVER collapse image tab (we want to show filter sliders)
+  // - For draw tab: collapse if actively editing AND drawer hasn't been opened yet
+  const isCollapsed = (activeTab === 'text' || activeTab === 'image') ? false : (isActivelyEditing && !drawerHasOpened);
   const wasCollapsedRef = useRef(isCollapsed);
 
   // Notify parent when drawer TRANSITIONS from collapsed to expanded
@@ -428,6 +428,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     selectedId={meme.selectedId}
                     editingId={editingId}
                     onEditingChange={onEditingChange}
+                    hasText={hasText}
                   />
                 </div>
 
@@ -591,111 +592,112 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   <RefreshCcw className="w-3 h-3" /> Reset All Filters
                 </button>
 
-                <div className="grid grid-cols-2 lg:flex lg:flex-row gap-x-4 gap-y-6 md:gap-8 lg:gap-10 w-full items-center">
-                  <div className="flex-1 w-full flex flex-col gap-5">
-                    <div className="flex items-center gap-3">
-                      <Contrast className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="200" name="contrast"
-                        value={meme.filters?.contrast ?? 100}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Contrast"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Sun className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="200" name="brightness"
-                        value={meme.filters?.brightness ?? 100}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Brightness"
-                      />
-                    </div>
+                {/* Desktop: Vertical stacked layout with more breathing room */}
+                {/* Mobile/Tablet: 2-column grid layout */}
+                <div className="grid grid-cols-2 lg:grid-cols-1 gap-x-4 gap-y-6 lg:gap-y-8 w-full">
+
+                  {/* Contrast */}
+                  <div className="flex items-center gap-3">
+                    <Contrast className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="200" name="contrast"
+                      value={meme.filters?.contrast ?? 100}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Contrast"
+                    />
                   </div>
 
-                  <div className="hidden lg:block w-px h-10 bg-slate-800 shrink-0" aria-hidden="true" />
-
-                  <div className="flex-1 w-full flex flex-col gap-5">
-                    <div className="flex items-center gap-3">
-                      <Blur className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="10" step="0.5" name="blur"
-                        value={meme.filters?.blur ?? 0}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Blur"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Grayscale className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="100" name="grayscale"
-                        value={meme.filters?.grayscale ?? 0}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Grayscale"
-                      />
-                    </div>
+                  {/* Brightness */}
+                  <div className="flex items-center gap-3">
+                    <Sun className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="200" name="brightness"
+                      value={meme.filters?.brightness ?? 100}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Brightness"
+                    />
                   </div>
 
-                  <div className="hidden lg:block w-px h-10 bg-slate-800 shrink-0" aria-hidden="true" />
-
-                  <div className="flex-1 w-full flex flex-col gap-5">
-                    <div className="flex items-center gap-3">
-                      <Sepia className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="100" name="sepia"
-                        value={meme.filters?.sepia ?? 0}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Sepia"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Saturate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="300" name="saturate"
-                        value={meme.filters?.saturate ?? 100}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Saturation"
-                      />
-                    </div>
+                  {/* Blur */}
+                  <div className="flex items-center gap-3">
+                    <Blur className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="10" step="0.5" name="blur"
+                      value={meme.filters?.blur ?? 0}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Blur"
+                    />
                   </div>
 
-                  <div className="hidden lg:block w-px h-10 bg-slate-800 shrink-0" aria-hidden="true" />
+                  {/* Grayscale */}
+                  <div className="flex items-center gap-3">
+                    <Grayscale className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="100" name="grayscale"
+                      value={meme.filters?.grayscale ?? 0}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Grayscale"
+                    />
+                  </div>
 
-                  <div className="flex-1 w-full flex flex-col gap-5">
-                    <div className="flex items-center gap-3">
-                      <HueRotate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="360" name="hueRotate"
-                        value={meme.filters?.hueRotate ?? 0}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Hue Rotate"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Invert className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <OptimizedSlider
-                        min="0" max="100" name="invert"
-                        value={meme.filters?.invert ?? 0}
-                        onChange={handleFilterChange}
-                        onCommit={handleStyleCommit}
-                        className="range-slider w-full cursor-pointer h-2 rounded-full"
-                        title="Invert"
-                      />
-                    </div>
+                  {/* Sepia */}
+                  <div className="flex items-center gap-3">
+                    <Sepia className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="100" name="sepia"
+                      value={meme.filters?.sepia ?? 0}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Sepia"
+                    />
+                  </div>
+
+                  {/* Saturation */}
+                  <div className="flex items-center gap-3">
+                    <Saturate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="300" name="saturate"
+                      value={meme.filters?.saturate ?? 100}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Saturation"
+                    />
+                  </div>
+
+                  {/* Hue Rotate */}
+                  <div className="flex items-center gap-3">
+                    <HueRotate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="360" name="hueRotate"
+                      value={meme.filters?.hueRotate ?? 0}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Hue Rotate"
+                    />
+                  </div>
+
+                  {/* Invert */}
+                  <div className="flex items-center gap-3">
+                    <Invert className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                    <OptimizedSlider
+                      min="0" max="100" name="invert"
+                      value={meme.filters?.invert ?? 0}
+                      onChange={handleFilterChange}
+                      onCommit={handleStyleCommit}
+                      className="range-slider w-full cursor-pointer h-2 rounded-full"
+                      title="Invert"
+                    />
                   </div>
                 </div>
 

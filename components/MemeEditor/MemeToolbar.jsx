@@ -220,95 +220,101 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
                 {/* Group -1: Layout (Caption Bars) - Only show if we have text to layout */}
                 {(hasText || hasStickers) && (
-                <div className="w-full flex flex-nowrap justify-center items-center gap-4 sm:gap-5 md:gap-6 px-2 sm:px-4 min-w-0 animate-in fade-in duration-300">
-                  {/* Top Bar Color Picker */}
-                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
-                    <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
-                      <input
-                        type="color"
-                        value={meme.paddingTopColor || "#ffffff"}
-                        onChange={(e) => handleStyleChange(e)}
-                        name="paddingTopColor"
-                        className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                        title="Top Bar Color"
-                      />
+                <div className="w-full flex flex-wrap justify-center items-center gap-4 px-2 sm:px-4 min-w-0 animate-in fade-in duration-300">
+                  {/* Pair 1: Top Bar Control (Color + Toggle) */}
+                  <div className="flex flex-1 items-center gap-3">
+                    {/* Top Caption Bar */}
+                    <button
+                      onClick={() => {
+                        if (navigator.vibrate) navigator.vibrate(10);
+                        const isOn = meme.paddingTop > 0;
+                        handleStyleChange({ currentTarget: { name: 'paddingTop', value: isOn ? 0 : 15 } }, true);
+
+                        setTimeout(() => {
+                          if (!isOn && meme.paddingBottom === 0) {
+                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                            handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                          } else if (isOn && meme.paddingBottom === 0) {
+                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                            handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                          }
+                        }, 50);
+                      }}
+                      className={`flex flex-1 items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider touch-target ${meme.paddingTop > 0
+                        ? "btn-brand"
+                        : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
+                        }`}
+                      style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
+                    >
+                      {/* Custom SVG with filled top bar */}
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <rect x="3" y="3" width="18" height="6" rx="2" fill="currentColor" />
+                      </svg>
+                      <span className="hidden sm:inline whitespace-nowrap">Top Bar {meme.paddingTop > 0 ? "On" : "Off"}</span>
+                    </button>
+
+                    {/* Top Bar Color Picker */}
+                    <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
+                      <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
+                        <input
+                          type="color"
+                          value={meme.paddingTopColor || "#ffffff"}
+                          onChange={(e) => handleStyleChange(e)}
+                          name="paddingTopColor"
+                          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                          title="Top Bar Color"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Top Caption Bar */}
-                  <button
-                    onClick={() => {
-                      if (navigator.vibrate) navigator.vibrate(10);
-                      const isOn = meme.paddingTop > 0;
-                      handleStyleChange({ currentTarget: { name: 'paddingTop', value: isOn ? 0 : 15 } }, true);
-
-                      setTimeout(() => {
-                        if (!isOn && meme.paddingBottom === 0) {
-                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
-                          handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                        } else if (isOn && meme.paddingBottom === 0) {
-                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
-                          handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
-                        }
-                      }, 50);
-                    }}
-                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 touch-target ${meme.paddingTop > 0
-                      ? "btn-brand"
-                      : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
-                      }`}
-                    style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
-                  >
-                    {/* Custom SVG with filled top bar */}
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <rect x="3" y="3" width="18" height="6" rx="2" fill="currentColor" />
-                    </svg>
-                    <span className="hidden sm:inline whitespace-nowrap">Top Bar {meme.paddingTop > 0 ? "On" : "Off"}</span>
-                  </button>
-
-                  {/* Bottom Caption Bar */}
-                  <button
-                    onClick={() => {
-                      if (navigator.vibrate) navigator.vibrate(10);
-                      const isOn = (meme.paddingBottom || 0) > 0;
-                      handleStyleChange({ currentTarget: { name: 'paddingBottom', value: isOn ? 0 : 15 } }, true);
-
-                      setTimeout(() => {
-                        if (!isOn && meme.paddingTop === 0) {
-                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
-                          handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                        } else if (isOn && meme.paddingTop === 0) {
-                          handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
-                          handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
-                        }
-                      }, 50);
-                    }}
-                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider shrink-0 touch-target ${(meme.paddingBottom || 0) > 0
-                      ? "btn-brand"
-                      : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
-                      }`}
-                    style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
-                  >
-                    {/* Custom SVG with filled bottom bar */}
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <rect x="3" y="15" width="18" height="6" rx="2" fill="currentColor" />
-                    </svg>
-                    <span className="hidden sm:inline whitespace-nowrap">Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
-                  </button>
-
-                  {/* Bottom Bar Color Picker */}
-                  <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
-                    <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
-                      <input
-                        type="color"
-                        value={meme.paddingBottomColor || "#ffffff"}
-                        onChange={(e) => handleStyleChange(e)}
-                        name="paddingBottomColor"
-                        className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                        title="Bottom Bar Color"
-                      />
+                  {/* Pair 2: Bottom Bar Control (Color + Toggle) */}
+                  <div className="flex flex-1 items-center gap-3">
+                    {/* Bottom Bar Color Picker */}
+                    <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
+                      <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
+                        <input
+                          type="color"
+                          value={meme.paddingBottomColor || "#ffffff"}
+                          onChange={(e) => handleStyleChange(e)}
+                          name="paddingBottomColor"
+                          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                          title="Bottom Bar Color"
+                        />
+                      </div>
                     </div>
+
+                    {/* Bottom Caption Bar */}
+                    <button
+                      onClick={() => {
+                        if (navigator.vibrate) navigator.vibrate(10);
+                        const isOn = (meme.paddingBottom || 0) > 0;
+                        handleStyleChange({ currentTarget: { name: 'paddingBottom', value: isOn ? 0 : 15 } }, true);
+
+                        setTimeout(() => {
+                          if (!isOn && meme.paddingTop === 0) {
+                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                            handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                          } else if (isOn && meme.paddingTop === 0) {
+                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                            handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                          }
+                        }, 50);
+                      }}
+                      className={`flex flex-1 items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider touch-target ${(meme.paddingBottom || 0) > 0
+                        ? "btn-brand"
+                        : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
+                        }`}
+                      style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
+                    >
+                      {/* Custom SVG with filled bottom bar */}
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <rect x="3" y="15" width="18" height="6" rx="2" fill="currentColor" />
+                      </svg>
+                      <span className="hidden sm:inline whitespace-nowrap">Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
+                    </button>
                   </div>
                 </div>
                 )}
@@ -558,7 +564,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                               <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
 
                               {/* Group 3: Color Controls - Centered */}
-                              <div className="w-full flex justify-center py-2">
+                              <div className="w-full flex justify-center py-2 overflow-visible">
                                 <Suspense fallback={<div className="w-full md:w-auto h-20 bg-slate-800/20 rounded animate-pulse shrink-0" />}>
                                   <ColorControls
                                     meme={meme}

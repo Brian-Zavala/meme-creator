@@ -226,7 +226,10 @@ export default function Main() {
               w: p.w ?? layoutSlot.w,
               h: p.h ?? layoutSlot.h,
               posX: p.posX ?? 50,
-              posY: p.posY ?? 50
+              posY: p.posY ?? 50,
+              // Clear processedImage on reload - blob URLs aren't valid across sessions
+              processedImage: null,
+              processedDeepFryLevel: 0
             };
           });
         }
@@ -523,6 +526,37 @@ export default function Main() {
       controller.abort();    // Cancel any running process
     };
   }, [deferredDeepFry, activePanel?.url, activePanel?.id]);
+
+  // Handle visibility chance to clear stale blob URLs
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When page becomes visible again, check if any processedImage URLs are stale
+        // Blob URLs may become invalid if browser garbage collected them
+        // We can't easily detect if a blob is valid, so we check if IT IS a blob URL
+        updateTransient((prev) => {
+          const hasStaleUrls = prev.panels.some(p =>
+            p.processedImage && p.processedImage.startsWith('blob:')
+          );
+
+          if (!hasStaleUrls) return prev;
+
+          // Clear all processedImage fields to force re-render with base URLs
+          return {
+            ...prev,
+            panels: prev.panels.map(p => ({
+              ...p,
+              processedImage: null,
+              processedDeepFryLevel: 0
+            }))
+          };
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [updateTransient]);
 
 
 

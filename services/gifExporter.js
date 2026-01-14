@@ -109,6 +109,85 @@ async function createGifProcessor(url) {
  */
 
 
+async function createVideoProcessor(url) {
+    return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.crossOrigin = "anonymous";
+        video.src = url;
+        video.muted = true;
+        video.playsInline = true;
+
+        // Cleanup helper
+        const cleanup = () => {
+            video.pause();
+            video.src = "";
+            video.load();
+        };
+
+        video.onloadedmetadata = () => {
+             // CAP DURATION to 5 seconds max for GIF export safety
+            const MAX_DURATION = 5.0; // seconds
+            const duration = Math.min(video.duration, MAX_DURATION);
+            const width = video.videoWidth;
+            const height = video.videoHeight;
+            const fps = 10; // Reduced FPS for GIF file size safety
+            const numFrames = Math.floor(duration * fps);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+            console.log(`Initialized Video Processor: ${width}x${height}, ${duration}s cap, ${numFrames} frames`);
+
+
+            resolve({
+                width,
+                height,
+                numFrames,
+                getDelay: () => 1000 / fps / 10, // delay in centiseconds (1/100s)
+                renderFrame: async (frameIndex) => {
+                    // ASYNC SEEK: Wait for video to actually seek before drawing
+                    const time = frameIndex / fps;
+                    video.currentTime = time;
+
+                    await new Promise(r => {
+                         // If already there (rare with floats), resolve. Else wait.
+                         // But for robustness, just setting onseeked is safest.
+                         const clean = () => {
+                             video.removeEventListener('seeked', handler);
+                             r();
+                         };
+                         const handler = () => clean();
+                         video.addEventListener('seeked', handler, { once: true });
+
+                         // Fallback in case seeked doesn't fire (browser quirk)
+                         setTimeout(clean, 500);
+                    });
+
+                    // Clear and Draw
+                    ctx.drawImage(video, 0, 0, width, height);
+
+                    return { canvas, delay: 10 };
+                },
+                cleanup
+            });
+
+        };
+
+        video.onerror = (e) => {
+            console.error("Failed to load video for export", e);
+            resolve(null);
+        };
+    });
+}
+
+/**
+ * Exports a meme as an animated GIF
+ * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
+ */
+
+
 async function loadMemeAssets(meme, stickers) {
     const gifProcessors = {};
     const staticImages = {};
@@ -116,22 +195,26 @@ async function loadMemeAssets(meme, stickers) {
     const stickerImages = {};
 
 
-
-
     await Promise.all(meme.panels.map(async (panel) => {
         if (!panel.url) return;
 
         let processor = null;
-        if (panel.isVideo || panel.url.includes('.gif')) {
+        // Detect Video vs GIF
+        // Note: DataURL mime type check or Extension check
+        const isVideo = panel.isVideo ||
+                        panel.url.startsWith('data:video') ||
+                        panel.url.match(/\.(mp4|webm|mov)$/i);
+
+        if (isVideo) {
+            processor = await createVideoProcessor(panel.url);
+        } else if (panel.url.includes('.gif') || panel.url.startsWith('data:image/gif')) {
             processor = await createGifProcessor(panel.url);
-            if (processor) {
-                gifProcessors[panel.id] = processor;
-            } else {
-                console.warn("Failed to create GIF processor for:", panel.url);
-            }
         }
 
-        if (!processor) {
+        if (processor) {
+            gifProcessors[panel.id] = processor;
+        } else {
+             // Fallback to Static Image (if not video/gif or processor failed)
             try {
                 const img = new Image();
                 // FIX: Do NOT set crossOrigin for Data URLs or Blob URLs (local uploads)
@@ -143,7 +226,7 @@ async function loadMemeAssets(meme, stickers) {
                 await img.decode();
                 staticImages[panel.id] = img;
             } catch (err) {
-                console.warn("Failed to load/decode image:", panel.url, err);
+                console.warn("Failed to load/decode image:", panel.url.substring(0, 50) + "...", err);
             }
         }
     }));
@@ -177,7 +260,7 @@ async function loadMemeAssets(meme, stickers) {
 /**
  * Renders a single frame of the meme to the canvas context
  */
-function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
+async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
     const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
     const { exportWidth, exportHeight, contentHeight, contentOffsetY, baseWidth = 800 } = dimensions;
     const { stickersOnly = false, totalFrames = 1, textAnimationSpeed = 1, exportDelayMs = 100 } = options;
@@ -242,7 +325,8 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
             } else if (gifProcessors[panel.id]) {
                 const proc = gifProcessors[panel.id];
                 const frameIdx = frameIndex % proc.numFrames;
-                const result = proc.renderFrame(frameIdx);
+                // ASYNC AWAIT: Needed for Video Processor (GIF processor is sync but this works for both)
+                const result = await proc.renderFrame(frameIdx);
                 sourceCanvas = result.canvas;
                 srcW = proc.width;
                 srcH = proc.height;
@@ -382,7 +466,7 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
                 const sourceGifLoopMs = proc.numFrames * sourceGifDelayMs;  // Total source GIF loop duration
                 const timeInSourceLoop = exportTimeMs % sourceGifLoopMs;  // Time position within source GIF loop
                 const frameIdx = Math.floor(timeInSourceLoop / sourceGifDelayMs) % proc.numFrames;
-                const result = proc.renderFrame(frameIdx);
+                const result = await proc.renderFrame(frameIdx);
                 drawCanvas = result.canvas;
                 sw = proc.width;
                 sh = proc.height;
@@ -496,6 +580,10 @@ export async function exportStickersAsPng(meme, stickers) {
 
     renderMemeFrame(ctx, exportMeme, stickers, meme.texts, 0, assets, dimensions, { stickersOnly: true });
 
+    // NOTE: For exportStickersAsPng, we technically didn't await above, but renderMemeFrame WAS synchronous before.
+    // Now it returns a Promise. We MUST await it.
+    await renderMemeFrame(ctx, exportMeme, stickers, meme.texts, 0, assets, dimensions, { stickersOnly: true });
+
     // 4. Export as Blob
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
@@ -549,7 +637,7 @@ export async function exportImageAsPng(meme, texts, stickers) {
     canvas.height = exportHeight;
     const ctx = canvas.getContext('2d');
 
-    renderMemeFrame(ctx, meme, stickers, texts, 0, assets, dimensions, { stickersOnly: false });
+    await renderMemeFrame(ctx, meme, stickers, texts, 0, assets, dimensions, { stickersOnly: false });
 
     // 4. Export as Blob
     return new Promise((resolve) => {
@@ -723,7 +811,7 @@ export async function exportGif(meme, texts, stickers) {
                 // Render frame immediately - canvas operations are synchronous
 
                 // Use Refactored Render Function
-                renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
+                await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
                     stickersOnly: meme.stickersOnly,
                     totalFrames: maxFrames,
                     textAnimationSpeed: textAnimationSpeed,

@@ -40,7 +40,32 @@ export async function saveState(state) {
 
 export async function loadState() {
     try {
-        return await sendRequest('LOAD_STATE');
+        const state = await sendRequest('LOAD_STATE');
+        if (!state) return null;
+
+        // OPTIMIZATION: Inflate Blobs to Object URLs
+        // This is instant and prevents Main Thread freezing compared to Base64 parsing
+        const processItem = (item) => {
+            if (item.url && item.url instanceof Blob) {
+                // HYDRATION FIX: Keep reference to original Blob as 'sourceBlob'
+                // This ensures subsequent saves (which read sourceBlob) work correctly.
+                return {
+                    ...item,
+                    url: URL.createObjectURL(item.url),
+                    sourceBlob: item.url
+                };
+            }
+            return item;
+        };
+
+        if (state.panels) {
+            state.panels = state.panels.map(processItem);
+        }
+        if (state.stickers) {
+            state.stickers = state.stickers.map(processItem);
+        }
+
+        return state;
     } catch (err) {
         console.error('Failed to load state via worker:', err);
         return null;

@@ -7,6 +7,7 @@ import { searchTenor, registerShare, getAutocomplete, getCategories } from "../.
 import { exportGif, exportStickersAsPng, exportImageAsPng } from "../../services/gifExporter";
 import { hasAnimatedText } from "../../constants/textAnimations";
 import { deepFryImage } from "../../services/imageProcessor";
+import { processFileInWorker } from "../../services/fileLoader";
 import { MEME_QUOTES } from "../../constants/memeQuotes";
 
 import MemeCanvas from "../MemeEditor/MemeCanvas";
@@ -1728,57 +1729,72 @@ export default function Main() {
     toast.success("Drawings cleared");
   }
 
-  function handleFileUpload(event) {
+  async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
+      // Instant Render with ObjectURL
+      // No Worker needed for display. We just pass the File (Blob) to storage later.
       const isGif = file.type === "image/gif";
       const isVideo = file.type.startsWith("video/");
+      const objectUrl = URL.createObjectURL(file);
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target.result;
-        updateState((prev) => {
-          const newPanels = prev.panels.map(p =>
-            p.id === prev.activePanelId
-              ? { ...p, url: dataUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
-              : p
-          );
-          return {
-            ...prev,
-            panels: newPanels,
-            name: file.name.split(".")[0],
-            mode: isGif || isVideo ? "video" : "image",
-          };
-        });
-      };
-      reader.readAsDataURL(file);
+      updateState((prev) => {
+        const newPanels = prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? {
+                ...p,
+                url: objectUrl,
+                // CRITICAL: Attach raw Blob for efficient storage
+                sourceBlob: file,
+                isVideo: isVideo || isGif,
+                objectFit: "cover",
+                filters: { ...DEFAULT_FILTERS },
+                processedImage: null,
+                processedDeepFryLevel: 0
+              }
+            : p
+        );
+        return {
+          ...prev,
+          panels: newPanels,
+          name: file.name.split(".")[0],
+          mode: isGif || isVideo ? "video" : "image",
+        };
+      });
     }
   }
 
-  const handleCanvasDrop = useCallback((file, panelId) => {
+  const handleCanvasDrop = useCallback(async (file, panelId) => {
+    // OPTIMIZATION: Instant Drop
     const isGif = file.type === "image/gif";
     const isVideo = file.type.startsWith("video/");
+    const objectUrl = URL.createObjectURL(file);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      startTransition(() => {
-        updateState((prev) => {
-          const newPanels = prev.panels.map(p =>
-            p.id === panelId
-              ? { ...p, url: dataUrl, isVideo: isVideo || isGif, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
-              : p
-          );
-          return {
-            ...prev,
-            panels: newPanels,
-            activePanelId: panelId,
-            mode: newPanels.some(p => p.isVideo) ? "video" : "image"
-          };
-        });
+    startTransition(() => {
+      updateState((prev) => {
+        const newPanels = prev.panels.map(p =>
+          p.id === panelId
+            ? {
+                ...p,
+                url: objectUrl,
+                // CRITICAL: Attach raw Blob for efficient storage
+                sourceBlob: file,
+                isVideo: isVideo || isGif,
+                objectFit: "cover",
+                filters: { ...DEFAULT_FILTERS },
+                processedImage: null,
+                processedDeepFryLevel: 0
+              }
+            : p
+        );
+        return {
+          ...prev,
+          panels: newPanels,
+          activePanelId: panelId,
+          mode: newPanels.some(p => p.isVideo) ? "video" : "image"
+        };
       });
-    };
-    reader.readAsDataURL(file);
+    });
   }, [updateState]);
 
   const handleClearPanel = useCallback((panelId) => {

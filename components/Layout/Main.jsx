@@ -560,8 +560,11 @@ export default function Main() {
           const rect = memeRef.current.getBoundingClientRect();
           let x = ((e.clientX - rect.left) / rect.width) * 100 - dragOffsetRef.current.x;
           let y = ((e.clientY - rect.top) / rect.height) * 100 - dragOffsetRef.current.y;
-          x = Math.max(0, Math.min(100, x));
-          y = Math.max(0, Math.min(100, y));
+          // Boundary clamping: creates invisible walls at edges
+          // Horizontal bounds more aggressive (10-90%) since text extends wider
+          // Vertical bounds (5-95%) are less restrictive
+          x = Math.max(10, Math.min(90, x));
+          y = Math.max(5, Math.min(95, y));
 
           updateTransient((prev) => {
             const isText = prev.texts.some((t) => t.id === draggedId);
@@ -1734,18 +1737,18 @@ export default function Main() {
     }
   }, []);
 
-    // Auto-scroll to fine tuner when element is selected
-    useEffect(() => {
-      if (meme.selectedId) {
-        // Small delay to ensure the FineTune component has mounted and layout is updated
-        const timer = setTimeout(() => {
-          if (fineTuneRef.current) {
-            fineTuneRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-        }, 150);
-        return () => clearTimeout(timer);
-      }
-    }, [meme.selectedId]);
+  // Auto-scroll to fine tuner when element is selected
+  useEffect(() => {
+    if (meme.selectedId) {
+      // Small delay to ensure the FineTune component has mounted and layout is updated
+      const timer = setTimeout(() => {
+        if (fineTuneRef.current) {
+          fineTuneRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [meme.selectedId]);
 
   function handleReset() {
     triggerFlash("red");
@@ -1999,14 +2002,14 @@ export default function Main() {
           if (navigator.vibrate) navigator.vibrate(50);
 
           // Show toast for sticker selection too
-           setTimeout(() => {
+          setTimeout(() => {
             toast("Sticker Selected!", {
               icon: (
-                 <ToastIcon src="/animations/filter-frenzy.json" />
+                <ToastIcon src="/animations/filter-frenzy.json" />
               ),
               duration: 1000
             });
-           }, 350);
+          }, 350);
         }, 600); // 600ms for long press on sticker (slightly longer to distinguish from drag/tap)
 
       } else if (isText) {
@@ -2411,7 +2414,7 @@ export default function Main() {
       {(() => {
         const remixControls = (
           <div className="space-y-4">
-             {/* Remix Carousel */}
+            {/* Remix Carousel */}
             <Suspense fallback={<div className="h-14 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
               <RemixCarousel
                 onChaos={handleChaos}
@@ -2459,7 +2462,7 @@ export default function Main() {
 
         return (
           <>
-             {/* Export Confirmation Modal */}
+            {/* Export Confirmation Modal */}
             <ExportConfirmModal
               isOpen={showExportModal}
               onClose={() => { setShowExportModal(false); setIsStickerExport(false); }}
@@ -2487,7 +2490,7 @@ export default function Main() {
 
               {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
               <div className="hidden lg:block">
-                 {remixControls}
+                {remixControls}
               </div>
 
               <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
@@ -2747,11 +2750,11 @@ export default function Main() {
 
               {/* Mobile-Only Sticker Section */}
               <div className="block lg:hidden bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
-                 <MemeStickerSection
+                <MemeStickerSection
                   onAddSticker={addSticker}
                   hasStickers={meme.stickers.length > 0}
                   onExportStickers={handleExportStickers}
-                 />
+                />
               </div>
 
             </div>

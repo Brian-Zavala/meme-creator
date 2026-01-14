@@ -771,7 +771,7 @@ const MemeCanvas = forwardRef(({
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
               onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className={`absolute uppercase tracking-tighter whitespace-pre-wrap break-words select-none touch-none z-40 will-change-transform ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
+              className={`absolute uppercase tracking-tighter select-none touch-none z-40 will-change-transform ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
                 } ${isSelected || isEditing ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
               style={{
                 left: `${textItem.x}%`,
@@ -785,10 +785,7 @@ const MemeCanvas = forwardRef(({
                 lineHeight: 1.2,
                 fontSize: `${meme.fontSize * (textItem.scale ?? 1) * scaleFactor}px`,
                 letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
-                maxWidth: `${meme.maxWidth}%`,
-                wordBreak: 'break-word',
-                overflowWrap: 'anywhere',
-                whiteSpace: 'pre-wrap',
+                whiteSpace: 'nowrap',
                 fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
                 WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
                 paintOrder: "stroke fill",
@@ -966,9 +963,7 @@ const MemeCanvas = forwardRef(({
                     lineHeight: 1.2,
                     padding: hasBg ? '0.25em 0.5em' : '0',
                     textAlign: "center",
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'anywhere',
+                    whiteSpace: 'nowrap',
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                 />

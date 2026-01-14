@@ -129,6 +129,8 @@ const TOAST_ANIMATIONS = [
 
 export default function Main() {
   const [isPending, startTransition] = useTransition();
+  // NEW: Track hydration status to prevent overwriting DB with default state
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     // Preload toast animations
@@ -201,7 +203,7 @@ export default function Main() {
 
   }, []);
 
-  /* 
+  /*
     Updated to use IndexedDB via storage.js for better persistence of large images (Data URLs).
     The initial state is now pure default, and we hydrate asynchronously.
   */
@@ -251,6 +253,8 @@ export default function Main() {
     selectedId: null,
   }), []);
 
+
+
   const {
     state: meme,
     updateState,
@@ -267,8 +271,7 @@ export default function Main() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  // NEW: Track hydration status to prevent overwriting DB with default state
-  const [isHydrated, setIsHydrated] = useState(false);
+
   const [draggedId, setDraggedId] = useState(null);
   const [activeTool, setActiveTool] = useState("move");
   const [flashColor, setFlashColor] = useState(null);
@@ -2492,6 +2495,16 @@ export default function Main() {
   const selectedText = meme.selectedId
     ? (meme.texts.find((t) => t.id === meme.selectedId) || meme.stickers.find((s) => s.id === meme.selectedId))
     : null;
+
+  // HYDRATION LOADER: Prevent flickering by showing a loading screen until state is restored
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] flex-col gap-4 animate-in fade-in zoom-in-95 duration-500">
+        <Loader2 className="w-12 h-12 text-brand animate-spin" />
+        <p className="text-slate-400 font-medium text-sm animate-pulse">Restoring Session...</p>
+      </div>
+    );
+  }
 
   return (
     <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-in fade-in duration-500 relative">

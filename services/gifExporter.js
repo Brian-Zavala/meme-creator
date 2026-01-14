@@ -520,8 +520,28 @@ export async function exportImageAsPng(meme, texts, stickers) {
     // So we just call renderMemeFrame.
 
     // 2. Dimensions
-    const dimensions = calculateDimensions(meme, assets);
-    const { exportWidth, exportHeight } = dimensions;
+    let dimensions = calculateDimensions(meme, assets);
+    let { exportWidth, exportHeight } = dimensions;
+
+    // MOBILE FIX: Clamp MAX dimension for static exports to prevent OOM on iOS/Android
+    // 12MP photos (4000x3000) can crash mobile canvas. 2400px is safe & high quality (better than 1080p).
+    const MAX_STATIC_DIMENSION = 2400;
+    if (exportWidth > MAX_STATIC_DIMENSION || exportHeight > MAX_STATIC_DIMENSION) {
+        const scale = MAX_STATIC_DIMENSION / Math.max(exportWidth, exportHeight);
+        exportWidth = Math.round(exportWidth * scale);
+        exportHeight = Math.round(exportHeight * scale);
+
+        // Update dimensions object for renderMemeFrame
+        dimensions = {
+            ...dimensions,
+            exportWidth,
+            exportHeight,
+            contentHeight: Math.round(dimensions.contentHeight * scale),
+            contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
+            contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
+        };
+        console.log(`Clamped Static Export dimensions to ${exportWidth}x${exportHeight} for mobile stability`);
+    }
 
     // 3. Render Frame 0
     const canvas = document.createElement('canvas');

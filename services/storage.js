@@ -1,58 +1,48 @@
-export const DB_NAME = 'MemeCreatorDB';
-export const DB_VERSION = 1;
-export const STORE_NAME = 'appState';
-export const KEY = 'meme-generator-state';
+// Initialize Worker
+const worker = new Worker(new URL('./storage.worker.js', import.meta.url), { type: 'module' });
 
-function openDB() {
+// Request Tracker
+let nextRequestId = 0;
+const pendingRequests = new Map();
+
+// Listen for responses
+worker.onmessage = (e) => {
+    const { id, type, payload, success, error } = e.data;
+    const request = pendingRequests.get(id);
+
+    if (request) {
+        if (success) {
+            request.resolve(payload);
+        } else {
+            console.error(`Storage Worker Error (${type}):`, error);
+            request.reject(new Error(error));
+        }
+        pendingRequests.delete(id);
+    }
+};
+
+function sendRequest(type, payload = null) {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
-
-        request.onsuccess = (event) => {
-            resolve(event.target.result);
-        };
-
-        request.onerror = (event) => {
-            reject(event.target.error);
-        };
+        const id = nextRequestId++;
+        pendingRequests.set(id, { resolve, reject });
+        worker.postMessage({ type, payload, id });
     });
 }
 
+// Exported Facade
 export async function saveState(state) {
     try {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction(STORE_NAME, 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.put(state, KEY);
-
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
+        await sendRequest('SAVE_STATE', state);
     } catch (err) {
-        console.error('Failed to save state to IndexedDB:', err);
+        console.error('Failed to save state via worker:', err);
     }
 }
 
 export async function loadState() {
     try {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction(STORE_NAME, 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.get(KEY);
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
+        return await sendRequest('LOAD_STATE');
     } catch (err) {
-        console.error('Failed to load state from IndexedDB:', err);
+        console.error('Failed to load state via worker:', err);
         return null;
     }
 }

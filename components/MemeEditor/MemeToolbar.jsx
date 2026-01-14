@@ -146,6 +146,25 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
     wasCollapsedRef.current = isCollapsed;
   }, [isCollapsed, onDrawerExpand]);
 
+  // Manage overflow state for text styling drawer to prevent blank space when closed
+  const [textStylingOverflow, setTextStylingOverflow] = useState("hidden");
+
+  useEffect(() => {
+    let timer;
+    if (showTextStyling) {
+      // Start hidden for the opening animation
+      setTextStylingOverflow("hidden");
+      // Switch to visible after animation completes to allow tooltips/sliders popup
+      timer = setTimeout(() => {
+        startTransition(() => setTextStylingOverflow("visible"));
+      }, 300);
+    } else {
+      // Immediately hide when closing to clip content and prevent blank space
+      setTextStylingOverflow("hidden");
+    }
+    return () => clearTimeout(timer);
+  }, [showTextStyling]);
+
   return (
     <div
       className={`flex flex-col z-20 relative overflow-hidden ${className}`}
@@ -460,7 +479,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       className={`w-full grid transition-[grid-template-rows] duration-300 ease-out ${showTextStyling ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                         }`}
                     >
-                      <div className="w-full overflow-visible">
+                      <div className={`w-full overflow-${textStylingOverflow}`}>
                         <div className={`w-full flex flex-col gap-6 transition-opacity duration-200 ${showTextStyling ? 'opacity-100 pt-10' : 'opacity-0'
                           }`}>
 

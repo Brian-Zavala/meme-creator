@@ -272,7 +272,11 @@ function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensi
 
                 const ratioW = pw / srcW;
                 const ratioH = ph / srcH;
-                const ratio = panel.objectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
+                // For single layout, default to contain (show full image); for multi-panel, default to cover (fill panel)
+                const effectiveObjectFit = meme.layout === 'single'
+                    ? (panel.objectFit || 'contain')
+                    : (panel.objectFit || 'cover');
+                const ratio = effectiveObjectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
 
                 const newW = srcW * ratio;
                 const newH = srcH * ratio;

@@ -177,7 +177,7 @@ export default function Main() {
           url: "http://i.imgflip.com/1bij.jpg",
           sourceUrl: null,
           isVideo: false,
-          objectFit: "cover",
+          objectFit: "contain",
           posX: 50,
           posY: 50,
           filters: { ...DEFAULT_FILTERS }

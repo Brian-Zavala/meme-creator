@@ -91,21 +91,31 @@ const MemeCanvas = forwardRef(({
 
   const scaleFactor = containerWidth / 800;
 
-  // Determine container aspect ratio based on layout
-  let containerAspect = 1; // Default square
+  // Determine the IMAGE/CONTENT aspect ratio based on layout
+  let imageAspect = 1; // Default square
   if (meme.layout === 'single') {
-    containerAspect = aspectRatio;
+    imageAspect = aspectRatio;
   } else if (meme.layout === 'top-bottom') {
-    containerAspect = 3 / 4; // Portrait-ish
+    imageAspect = 3 / 4; // Portrait-ish
   } else if (meme.layout === 'side-by-side') {
-    containerAspect = 4 / 3; // Landscape-ish
+    imageAspect = 4 / 3; // Landscape-ish
   }
 
-  // Adjust for padding (top and bottom)
-  const totalPadding = (meme.paddingTop || 0) + (meme.paddingBottom || 0);
-  if (totalPadding > 0 && containerAspect > 0) {
-    containerAspect = 1 / ((1 / containerAspect) + (totalPadding / 100));
-  }
+  // Calculate the TOTAL container aspect ratio that includes image + padding bars
+  // The padding values are percentages of WIDTH
+  // paddingHeight (in width units) = paddingPct / 100
+  // totalHeight (in width units) = imageHeight + paddingTop + paddingBottom
+  //                               = (1 / imageAspect) + (paddingTop/100) + (paddingBottom/100)
+  // containerAspect = 1 / totalHeight
+  const paddingTop = meme.paddingTop || 0;
+  const paddingBottom = meme.paddingBottom || 0;
+  const totalHeightInWidthUnits = (1 / imageAspect) + (paddingTop / 100) + (paddingBottom / 100);
+  const containerAspect = 1 / totalHeightInWidthUnits;
+
+  // Calculate what percentage of the TOTAL container height each section takes
+  // This ensures the image area is NOT cut off - it maintains its full size
+  const paddingTopPct = (paddingTop / 100) / totalHeightInWidthUnits * 100;
+  const paddingBottomPct = (paddingBottom / 100) / totalHeightInWidthUnits * 100;
 
   // Panel Drag Logic
   useEffect(() => {
@@ -476,7 +486,6 @@ const MemeCanvas = forwardRef(({
           width: '100%',
           height: 'auto',
           aspectRatio: containerAspect,
-          maxHeight: '75vh',
           maxWidth: '100%'
         }}
       >
@@ -485,7 +494,7 @@ const MemeCanvas = forwardRef(({
           <div
             className="absolute inset-x-0 top-0"
             style={{
-              height: `${meme.paddingTop * containerAspect}%`,
+              height: `${paddingTopPct}%`,
               backgroundColor: meme.paddingTopColor || '#ffffff'
             }}
           />
@@ -496,7 +505,7 @@ const MemeCanvas = forwardRef(({
           <div
             className="absolute inset-x-0 bottom-0"
             style={{
-              height: `${meme.paddingBottom * containerAspect}%`,
+              height: `${paddingBottomPct}%`,
               backgroundColor: meme.paddingBottomColor || '#ffffff'
             }}
           />
@@ -505,8 +514,8 @@ const MemeCanvas = forwardRef(({
         <div
           className="absolute inset-x-0"
           style={{
-            top: `${(meme.paddingTop || 0) * containerAspect}%`,
-            bottom: `${(meme.paddingBottom || 0) * containerAspect}%`
+            top: `${paddingTopPct}%`,
+            bottom: `${paddingBottomPct}%`
           }}
         >
           {meme.panels?.map((panel) => {
@@ -566,7 +575,7 @@ const MemeCanvas = forwardRef(({
                       crossOrigin="anonymous"
                       onLoadedMetadata={handleMediaLoad}
                       style={{
-                        objectFit: panel.objectFit || "cover",
+                        objectFit: meme.layout === 'single' ? (panel.objectFit || "contain") : (panel.objectFit || "cover"),
                         objectPosition: `${panel.posX ?? 50}% ${panel.posY ?? 50}%`,
                         filter: `
                                           contrast(${panel.filters?.contrast ?? 100}%)
@@ -588,7 +597,7 @@ const MemeCanvas = forwardRef(({
                       crossOrigin="anonymous"
                       onLoad={handleMediaLoad}
                       style={{
-                        objectFit: panel.objectFit || "cover",
+                        objectFit: meme.layout === 'single' ? (panel.objectFit || "contain") : (panel.objectFit || "cover"),
                         objectPosition: `${panel.posX ?? 50}% ${panel.posY ?? 50}%`,
                         filter: `
                                           contrast(${panel.filters?.contrast ?? 100}%)

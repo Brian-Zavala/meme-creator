@@ -421,7 +421,8 @@ body {
 
 }
 
-/* --- REMIX CAROUSEL --- */
+/* --- REMIX CAROUSEL (12 Buttons) --- */
+/* Mobile & Tablet: Horizontal scrolling carousel */
 .remix-carousel {
   display: flex;
   gap: 0.5rem;
@@ -429,7 +430,6 @@ body {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   padding: 0.5rem 1rem;
-  /* Added horizontal padding for mobile edge spacing */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -445,30 +445,19 @@ body {
   min-height: 56px;
 }
 
-/* Tablet: 3-column grid */
-@media (min-width: 640px) {
+/* Desktop: 3-column grid (4 rows) */
+@media (min-width: 1024px) {
   .remix-carousel {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+    gap: 1rem;
     overflow: visible;
     padding: 0;
   }
 
   .remix-btn {
     min-width: auto;
-  }
-}
-
-/* Desktop: 3-column grid (2 rows) to let buttons breathe */
-@media (min-width: 1024px) {
-  .remix-carousel {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-
-  .remix-btn {
-     min-height: 80px;
+    min-height: 80px;
   }
 }
 

@@ -1550,6 +1550,217 @@ export default function Main() {
     }
   }
 
+  // ========== NEW REMIX HANDLERS ==========
+
+  async function handleStickerfy() {
+    try {
+      // Fetch 3-5 random trending stickers from Giphy
+      const stickers = await searchGiphy('', 'sticker');
+
+      if (!stickers || stickers.length === 0) {
+        toast("No stickers available", {
+          icon: <ToastIcon src="/animations/filter-frenzy.json" />
+        });
+        return;
+      }
+
+      const count = 3 + Math.floor(Math.random() * 3); // 3-5 stickers
+      const selected = stickers.slice(0, count);
+
+      // Create all new stickers at once with random properties
+      const newStickers = selected.map((sticker) => ({
+        id: crypto.randomUUID(),
+        url: sticker.url, // The actual GIF URL
+        type: 'giphy',
+        x: 20 + Math.random() * 60, // 20-80%
+        y: 20 + Math.random() * 60,
+        scale: 0.3 + Math.random() * 0.5, // 30-80% size
+        rotation: -15 + Math.random() * 30, // -15 to +15 degrees
+        isAnimated: true,
+        animation: null
+      }));
+
+      // Add all stickers in one state update
+      updateState((prev) => ({
+        ...prev,
+        stickers: [...prev.stickers, ...newStickers]
+      }));
+
+      toast("Stickerfy applied", {
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      });
+    } catch (error) {
+      console.error("Stickerfy error:", error);
+      toast("Failed to load stickers", {
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      });
+    }
+  }
+
+  function handleNuked() {
+    const nukedFilters = {
+      ...DEFAULT_FILTERS,
+      deepFry: 75, // Beyond normal max
+      saturate: 400,
+      contrast: 250,
+      brightness: 130,
+      blur: 2
+    };
+
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? { ...p, filters: nukedFilters, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        )
+      }));
+    });
+
+    remixClickCountRef.current.nuked = (remixClickCountRef.current.nuked || 0) + 1;
+    toast("Nuked applied", {
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+    });
+  }
+
+  function handleGlitch() {
+    const glitchFilters = {
+      ...DEFAULT_FILTERS,
+      hueRotate: Math.floor(Math.random() * 360),
+      saturate: 150,
+      contrast: 130,
+      invert: Math.random() > 0.5 ? 50 : 0 // Sometimes invert
+    };
+
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        // Offset text positions slightly for glitch effect
+        texts: prev.texts.map(t => ({
+          ...t,
+          x: t.x + (Math.random() - 0.5) * 6,
+          y: t.y + (Math.random() - 0.5) * 6
+        })),
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? { ...p, filters: glitchFilters, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        )
+      }));
+    });
+
+    remixClickCountRef.current.glitch = (remixClickCountRef.current.glitch || 0) + 1;
+    toast("Glitch applied", {
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+    });
+  }
+
+  function handleCursed() {
+    const cursedFilters = {
+      ...DEFAULT_FILTERS,
+      invert: 100,
+      grayscale: 100,
+      contrast: 300,
+      brightness: 80
+    };
+
+    // Scatter texts to random positions
+    const positions = [
+      { x: 10, y: 10 }, { x: 90, y: 10 },
+      { x: 10, y: 90 }, { x: 90, y: 90 },
+      { x: 50, y: 10 }, { x: 50, y: 90 }
+    ];
+
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        texts: prev.texts.map((t, i) => ({
+          ...t,
+          ...(positions[i % positions.length] || { x: 50, y: 50 })
+        })),
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? { ...p, filters: cursedFilters, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        )
+      }));
+    });
+
+    remixClickCountRef.current.cursed = (remixClickCountRef.current.cursed || 0) + 1;
+    toast("Cursed applied", {
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+    });
+  }
+
+  function handleConfettiBlast() {
+    // Add 8-12 random emoji particles
+    const confettiEmojis = ['🎉', '🎊', '✨', '💫', '⭐', '🌟', '💥', '🔥', '💯', '🚀'];
+    const count = 8 + Math.floor(Math.random() * 5); // 8-12 emojis
+
+    // Create circular explosion pattern from center
+    const newStickers = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * 2 * Math.PI;
+      const distance = 20 + Math.random() * 15; // 20-35% from center
+      const x = 50 + Math.cos(angle) * distance;
+      const y = 50 + Math.sin(angle) * distance;
+      const randomEmoji = confettiEmojis[Math.floor(Math.random() * confettiEmojis.length)];
+      const randomScale = 0.2 + Math.random() * 0.4; // 20-60% size
+      const randomRotation = Math.random() * 360;
+
+      newStickers.push({
+        id: crypto.randomUUID(),
+        url: randomEmoji,
+        type: 'emoji',
+        x,
+        y,
+        scale: randomScale,
+        rotation: randomRotation,
+        isAnimated: false,
+        animation: null
+      });
+    }
+
+    // Add all confetti in one state update
+    updateState(prev => ({
+      ...prev,
+      stickers: [...prev.stickers, ...newStickers]
+    }));
+
+    remixClickCountRef.current.confetti = (remixClickCountRef.current.confetti || 0) + 1;
+    toast("Confetti Blast applied", {
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+    });
+  }
+
+  function handleTimeWarp() {
+    const warpFilters = {
+      ...DEFAULT_FILTERS,
+      blur: 8 + Math.random() * 4, // 8-12 blur
+      brightness: 140,
+      contrast: 60,
+      hueRotate: Math.floor(Math.random() * 360),
+      saturate: 80
+    };
+
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        panels: prev.panels.map(p =>
+          p.id === prev.activePanelId
+            ? { ...p, filters: warpFilters, processedImage: null, processedDeepFryLevel: 0 }
+            : p
+        )
+      }));
+    });
+
+    remixClickCountRef.current.timewarp = (remixClickCountRef.current.timewarp || 0) + 1;
+    toast("Time Warp applied", {
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+    });
+  }
+
   // Calculate current deep fry level for the active panel to pass down
   const currentDeepFryLevel = meme.panels.find(p => p.id === meme.activePanelId)?.filters?.deepFry || 0;
 
@@ -2571,6 +2782,12 @@ export default function Main() {
               onFilterFrenzy={handleFilterFrenzy}
               onVibeCheck={handleVibeCheck}
               onExtremeDeepFry={handleExtremeDeepFry}
+              onStickerfy={handleStickerfy}
+              onNuked={handleNuked}
+              onGlitch={handleGlitch}
+              onCursed={handleCursed}
+              onConfettiBlast={handleConfettiBlast}
+              onTimeWarp={handleTimeWarp}
               deepFryLevel={deferredDeepFry}
               isProcessing={isProcessing}
             />

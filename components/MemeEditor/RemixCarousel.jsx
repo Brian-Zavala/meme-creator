@@ -5,12 +5,18 @@ import StyleShuffleBackground from "../ui/StyleShuffleBackground";
 import FilterFrenzyBackground from "../ui/FilterFrenzyBackground";
 import VibeCheckBackground from "../ui/VibeCheckBackground";
 import DeepFryBackground from "../ui/DeepFryBackground";
+import StickerfyBackground from "../ui/StickerfyBackground";
+import NukedBackground from "../ui/NukedBackground";
+import GlitchBackground from "../ui/GlitchBackground";
+import CursedBackground from "../ui/CursedBackground";
+import ConfettiBlastBackground from "../ui/ConfettiBlastBackground";
+import TimeWarpBackground from "../ui/TimeWarpBackground";
 
 /**
- * RemixCarousel - 6 creative remix buttons with unique animated backgrounds
- * Mobile: Horizontal snap-scroll
- * Tablet: 3-column grid  
- * Desktop: 6-column row
+ * RemixCarousel - 12 creative remix buttons with unique animated backgrounds
+ * Mobile: 2x6 grid (scrollable)
+ * Tablet: 3x4 grid
+ * Desktop: 2 rows of 6
  */
 export default function RemixCarousel({
     onChaos,
@@ -19,11 +25,17 @@ export default function RemixCarousel({
     onFilterFrenzy,
     onVibeCheck,
     onExtremeDeepFry,
+    onStickerfy,
+    onNuked,
+    onGlitch,
+    onCursed,
+    onConfettiBlast,
+    onTimeWarp,
     deepFryLevel = 0,
     isProcessing = false
 }) {
     // Buttons that can trigger deep fry processing and should be locked during processing
-    const deepFryTriggerButtons = ['chaos', 'filter', 'vibe', 'deepfry'];
+    const deepFryTriggerButtons = ['chaos', 'filter', 'vibe', 'deepfry', 'nuked', 'glitch', 'cursed', 'timewarp'];
 
     const remixModes = [
         {
@@ -67,6 +79,48 @@ export default function RemixCarousel({
             handler: onExtremeDeepFry,
             Background: DeepFryBackground,
             ariaLabel: "Apply extreme deep fry effect"
+        },
+        {
+            id: "stickerfy",
+            label: "Stickerfy",
+            handler: onStickerfy,
+            Background: StickerfyBackground,
+            ariaLabel: "Add random trending stickers from Giphy"
+        },
+        {
+            id: "nuked",
+            label: "Nuked",
+            handler: onNuked,
+            Background: NukedBackground,
+            ariaLabel: "Extreme compression artifacts - needs more JPEG"
+        },
+        {
+            id: "glitch",
+            label: "Glitch",
+            handler: onGlitch,
+            Background: GlitchBackground,
+            ariaLabel: "RGB channel split and chromatic aberration"
+        },
+        {
+            id: "cursed",
+            label: "Cursed",
+            handler: onCursed,
+            Background: CursedBackground,
+            ariaLabel: "Dark inverted void with chaotic positioning"
+        },
+        {
+            id: "confetti",
+            label: "Confetti Blast",
+            handler: onConfettiBlast,
+            Background: ConfettiBlastBackground,
+            ariaLabel: "Emoji particle explosion celebration"
+        },
+        {
+            id: "timewarp",
+            label: "Time Warp",
+            handler: onTimeWarp,
+            Background: TimeWarpBackground,
+            ariaLabel: "Extreme distortion and motion blur"
         }
     ];
 

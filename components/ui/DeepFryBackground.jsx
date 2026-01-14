@@ -9,7 +9,7 @@ export default function DeepFryBackground() {
             <LottieAnimation
                 src="/animations/extreme-deep-fry.json"
                 className="w-full h-full object-cover opacity-90"
-                style={{ width: '100%', height: '100%', transform: 'scale(1.65)' }}
+                style={{ width: '100%', height: '100%', transform: 'scale(1.40)' }}
             />
         </div>
     );

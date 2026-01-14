@@ -9,7 +9,7 @@ export default function VibeCheckBackground() {
             <LottieAnimation
                 src="/animations/vibe-check.json"
                 className="w-full h-full object-cover opacity-80"
-                style={{ width: '100%', height: '100%', transform: 'scale(1.75)' }}
+                style={{ width: '100%', height: '100%', transform: 'scale(1.35)' }}
             />
         </div>
     );

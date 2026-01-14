@@ -239,10 +239,38 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
                 {/* Group -1: Layout (Caption Bars) - Only show if we have text to layout */}
                 {(hasText || hasStickers) && (
-                <div className="w-full flex flex-wrap justify-center items-center gap-4 px-2 sm:px-4 min-w-0 animate-in fade-in duration-300">
-                  {/* Pair 1: Top Bar Control (Color + Toggle) */}
-                  <div className="flex flex-1 items-center gap-3">
-                    {/* Top Caption Bar */}
+                <div className="w-full flex flex-col gap-3 animate-in fade-in duration-300">
+                  {/* Creative Header */}
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-widest animate-text-shimmer bg-gradient-to-r from-brand via-yellow-300 to-brand bg-[length:200%_auto] bg-clip-text text-transparent">
+                      Caption Bars
+                    </span>
+                  </div>
+
+                  {/* Button Controls Row */}
+                  <div className="w-full max-w-full flex flex-nowrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 px-2 sm:px-4 min-w-0">
+                  {/* Pair 1: Top Bar Control (Color on LEFT + Toggle) - Interlocked */}
+                  <div className="flex flex-1 items-center caption-bar-group max-w-[50%]">
+                    {/* Top Bar Color Picker with Icon - rounded left, flat right */}
+                    <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-l rounded-l-xl rounded-r-none overflow-hidden ${meme.paddingTop > 0 ? 'border-brand' : 'border-slate-600'}`}>
+                      <div className="relative w-full h-full cursor-pointer">
+                        <input
+                          type="color"
+                          value={meme.paddingTopColor || "#ffffff"}
+                          onChange={(e) => handleStyleChange(e)}
+                          name="paddingTopColor"
+                          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                          title="Top Bar Color"
+                        />
+                      </div>
+                      {/* Icon overlay */}
+                      <svg className="absolute inset-0 m-auto w-4 h-4 pointer-events-none text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <rect x="3" y="3" width="18" height="6" rx="2" fill="currentColor" />
+                      </svg>
+                    </div>
+
+                    {/* Top Caption Bar Button - flat left, rounded right */}
                     <button
                       onClick={() => {
                         if (navigator.vibrate) navigator.vibrate(10);
@@ -262,52 +290,19 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             }, 50);
                         });
                       }}
-                      className={`flex flex-1 items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider touch-target ${meme.paddingTop > 0
-                        ? "btn-brand"
-                        : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
+                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-r-xl rounded-l-none transition-all active:scale-[0.98] border-y border-r uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${meme.paddingTop > 0
+                        ? "bg-brand text-slate-900 border-brand"
+                        : "bg-slate-800/80 text-slate-400 border-slate-600 hover:border-slate-500 hover:text-white hover:bg-slate-700/80"
                         }`}
                       style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                     >
-                      {/* Custom SVG with filled top bar */}
-                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <rect x="3" y="3" width="18" height="6" rx="2" fill="currentColor" />
-                      </svg>
-                      <span className="hidden sm:inline whitespace-nowrap">Top Bar {meme.paddingTop > 0 ? "On" : "Off"}</span>
+                      <span className="whitespace-nowrap">Top {meme.paddingTop > 0 ? "On" : "Off"}</span>
                     </button>
-
-                    {/* Top Bar Color Picker */}
-                    <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
-                      <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
-                        <input
-                          type="color"
-                          value={meme.paddingTopColor || "#ffffff"}
-                          onChange={(e) => handleStyleChange(e)}
-                          name="paddingTopColor"
-                          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                          title="Top Bar Color"
-                        />
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Pair 2: Bottom Bar Control (Color + Toggle) */}
-                  <div className="flex flex-1 items-center gap-3">
-                    {/* Bottom Bar Color Picker */}
-                    <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
-                      <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
-                        <input
-                          type="color"
-                          value={meme.paddingBottomColor || "#ffffff"}
-                          onChange={(e) => handleStyleChange(e)}
-                          name="paddingBottomColor"
-                          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                          title="Bottom Bar Color"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Bottom Caption Bar */}
+                  {/* Pair 2: Bottom Bar Control (Toggle + Color on RIGHT) - Interlocked, mirrored */}
+                  <div className="flex flex-1 items-center caption-bar-group max-w-[50%]">
+                    {/* Bottom Caption Bar Button - rounded left, flat right */}
                     <button
                       onClick={() => {
                         if (navigator.vibrate) navigator.vibrate(10);
@@ -327,20 +322,35 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             }, 50);
                         });
                       }}
-                      className={`flex flex-1 items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider touch-target ${(meme.paddingBottom || 0) > 0
-                        ? "btn-brand"
-                        : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white hover:bg-white/10"
+                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-l-xl rounded-r-none transition-all active:scale-[0.98] border-y border-l uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${(meme.paddingBottom || 0) > 0
+                        ? "bg-brand text-slate-900 border-brand"
+                        : "bg-slate-800/80 text-slate-400 border-slate-600 hover:border-slate-500 hover:text-white hover:bg-slate-700/80"
                         }`}
                       style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                     >
-                      {/* Custom SVG with filled bottom bar */}
-                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <span className="whitespace-nowrap">Bottom {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
+                    </button>
+
+                    {/* Bottom Bar Color Picker with Icon - flat left, rounded right */}
+                    <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-r rounded-r-xl rounded-l-none overflow-hidden ${(meme.paddingBottom || 0) > 0 ? 'border-brand' : 'border-slate-600'}`}>
+                      <div className="relative w-full h-full cursor-pointer">
+                        <input
+                          type="color"
+                          value={meme.paddingBottomColor || "#ffffff"}
+                          onChange={(e) => handleStyleChange(e)}
+                          name="paddingBottomColor"
+                          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
+                          title="Bottom Bar Color"
+                        />
+                      </div>
+                      {/* Icon overlay */}
+                      <svg className="absolute inset-0 m-auto w-4 h-4 pointer-events-none text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" />
                         <rect x="3" y="15" width="18" height="6" rx="2" fill="currentColor" />
                       </svg>
-                      <span className="hidden sm:inline whitespace-nowrap">Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
-                    </button>
+                    </div>
                   </div>
+                </div>
                 </div>
                 )}
 

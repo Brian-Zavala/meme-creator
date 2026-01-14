@@ -9,7 +9,7 @@ export default function FilterFrenzyBackground() {
             <LottieAnimation
                 src="/animations/filter-frenzy.json"
                 className="w-full h-full object-cover opacity-80"
-                style={{ width: '100%', height: '100%', transform: 'scale(1.20)' }}
+                style={{ width: '100%', height: '100%', transform: 'scale(0.90)' }}
             />
         </div>
     );

@@ -57,12 +57,12 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
             </div>
 
             {/* Custom Position Dropdown */}
-            <div className="relative group/pos order-2 sm:order-3 sm:mr-2" ref={dropdownRef}>
+            <div className="relative group/pos order-2 sm:order-3 sm:mr-2 shrink-0" ref={dropdownRef}>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-1.5 min-w-[100px] justify-between transition-all active:scale-95 group/btn"
+                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-1 lg:px-2.5 lg:py-1.5 justify-between transition-all active:scale-95 group/btn"
                 >
-                    <span className="text-[clamp(10px,2.5vw,12px)] font-bold text-slate-300 uppercase tracking-widest truncate">
+                    <span className="text-[10px] lg:text-xs font-bold text-slate-300 uppercase tracking-wider">
                          Position
                     </span>
                     <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand' : 'group-hover/btn:text-brand'}`} />

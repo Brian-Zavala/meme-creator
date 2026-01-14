@@ -30,7 +30,7 @@ export function ModeSelector({ mode, onModeChange }) {
         className={`w-full rounded-xl bg-slate-900/50 border border-slate-700 px-4 py-3 flex items-center justify-center relative transition-all active:scale-[0.99] ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
       >
         <div className="flex items-center gap-3">
-            {mode === "image" ? <ImageIcon className="w-5 h-5 text-brand shrink-0 " /> : <Video className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" />}
+            {mode === "image" ? <ImageIcon className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" /> : <Video className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" />}
             <span className="font-bold text-lg animate-text-shimmer whitespace-nowrap">
             {mode === "image" ? "Images" : "GIFs"}
             </span>

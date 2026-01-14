@@ -56,24 +56,25 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
 
   return (
     <div
-      className="w-full md:w-auto flex flex-row flex-nowrap items-end md:items-center justify-evenly md:justify-end gap-2 sm:gap-6 md:gap-8 min-w-0 animate-in slide-in-from-right duration-500 px-2 md:px-0 pb-2 pt-10 md:pt-2 shrink-0 overflow-visible no-scrollbar"
-      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      className="w-full flex flex-col items-stretch justify-start gap-4 min-w-0 animate-in slide-in-from-right duration-500 px-0 pb-2 pt-0 shrink-0 overflow-visible"
     >
 
       {/* Text Color + Opacity */}
-      <div className="flex flex-col items-center gap-2.5 md:gap-3 shrink-0">
-        <div className="relative flex items-center justify-center w-auto md:w-20" title="Text Color">
+      <div className="flex flex-row items-center gap-4 shrink-0 w-full">
+        {/* Label */}
+        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider w-16 sm:w-20 shrink-0 text-left">Text</span>
+
+        <div className="relative flex items-center justify-center w-auto shrink-0" title="Text Color">
           {(meme.textColor.substring(0, 7) !== '#ffffff' || getOpacity(meme.textColor) < 100) && (
             <button
               onClick={() => handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true)}
-              className="absolute -top-8 md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+              className="absolute -top-3 -left-2 sm:-left-3 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
             >
               Reset
             </button>
           )}
           <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-slate-400 shrink-0 hidden sm:block" aria-hidden="true" />
-            <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
+            <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
               <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                 <input
                   type="color" name="textColor"
@@ -87,13 +88,13 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           </div>
         </div>
         {hasText && (
-          <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
+          <div className="relative h-auto flex items-center justify-center touch-none shrink-0 flex-1">
             <OptimizedSlider
               min="0" max="100"
               value={getOpacity(meme.textColor)}
               onChange={(e) => changeOpacity('textColor', e.target.value, false)}
               onCommit={(e) => changeOpacity('textColor', e.target.value, true)}
-              className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+              className="range-slider cursor-pointer h-1.5 w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
               title="Text Opacity"
             />
           </div>
@@ -101,19 +102,21 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
       </div>
 
       {/* Outline Color + Opacity */}
-      <div className="flex flex-col items-center gap-2.5 md:gap-3 animate-in fade-in zoom-in duration-300 shrink-0">
-        <div className="relative flex items-center justify-center w-auto md:w-20" title="Outline Color">
+      <div className="flex flex-row items-center gap-4 shrink-0 w-full animate-in fade-in zoom-in duration-300">
+        {/* Label */}
+        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider w-16 sm:w-20 shrink-0 text-left">Outline</span>
+
+        <div className="relative flex items-center justify-center w-auto shrink-0" title="Outline Color">
           {((meme.textShadow || '#000000').substring(0, 7) !== '#000000' || getOpacity(meme.textShadow || '#000000') < 100) && (
             <button
               onClick={() => handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true)}
-              className="absolute -top-8 md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+              className="absolute -top-3 -left-2 sm:-left-3 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
             >
               Reset
             </button>
           )}
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 text-slate-400 shrink-0 flex items-center justify-center font-black text-[10px] border border-slate-400 rounded-sm pointer-events-none hidden sm:flex">T</div>
-            <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
+            <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
               <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                 <input
                   type="color" name="textShadow"
@@ -127,13 +130,13 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           </div>
         </div>
         {hasText && (
-          <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
+          <div className="relative h-auto flex items-center justify-center touch-none shrink-0 flex-1">
             <OptimizedSlider
               min="0" max="100"
               value={getOpacity(meme.textShadow || '#000000')}
               onChange={(e) => changeOpacity('textShadow', e.target.value, false)}
               onCommit={(e) => changeOpacity('textShadow', e.target.value, true)}
-              className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+              className="range-slider cursor-pointer h-1.5 w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
               title="Outline Opacity"
             />
           </div>
@@ -142,19 +145,21 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
 
       {/* Background Color + Opacity */}
       {hasText && (
-        <div className="flex flex-col items-center gap-2.5 md:gap-3 animate-in fade-in zoom-in duration-300 shrink-0">
-          <div className="relative flex items-center justify-center w-auto md:w-20" title="Background Color">
+        <div className="flex flex-row items-center gap-4 shrink-0 w-full animate-in fade-in zoom-in duration-300">
+          {/* Label */}
+          <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider w-16 sm:w-20 shrink-0 text-left">Backdrop</span>
+
+          <div className="relative flex items-center justify-center w-auto shrink-0" title="Background Color">
             {meme.textBgColor !== 'transparent' && (
               <button
                 onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
-                className="absolute -top-8 md:-top-[40px] left-1/2 -translate-x-1/2 text-[8px] md:text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 md:px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+                className="absolute -top-3 -left-2 sm:-left-3 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
               >
                 Reset
               </button>
             )}
             <div className="flex items-center gap-2">
-              <Brush className="w-4 h-4 text-slate-400 shrink-0 hidden sm:block" aria-hidden="true" />
-              <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
+              <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
                 <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                   <input
                     type="color" name="textBgColor"
@@ -167,13 +172,13 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               </div>
             </div>
           </div>
-          <div className="relative w-full h-1.5 md:w-full md:h-auto flex items-center justify-center touch-none shrink-0">
+          <div className="relative h-auto flex items-center justify-center touch-none shrink-0 flex-1">
             <OptimizedSlider
               min="0" max="100"
               value={getOpacity(meme.textBgColor)}
               onChange={(e) => changeOpacity('textBgColor', e.target.value, false)}
               onCommit={(e) => changeOpacity('textBgColor', e.target.value, true)}
-              className="range-slider cursor-pointer h-1.5 w-12 md:w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
+              className="range-slider cursor-pointer h-1.5 w-full rounded-full opacity-70 hover:opacity-100 transition-opacity touch-none"
               title="Background Opacity"
             />
           </div>

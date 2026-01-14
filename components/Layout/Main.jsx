@@ -385,6 +385,7 @@ export default function Main() {
             ...p,
             url: url,
             isVideo: false,
+            sourceBlob: null,
             objectFit: "cover",
             filters: { ...DEFAULT_FILTERS },
             processedImage: null,
@@ -776,7 +777,7 @@ export default function Main() {
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
           p.id === prev.activePanelId
-            ? { ...p, url: first.url, sourceUrl: first.shareUrl, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+            ? { ...p, url: first.url, sourceUrl: first.shareUrl, isVideo: true, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
             : p
         );
         return {
@@ -818,7 +819,7 @@ export default function Main() {
         updateState((prev) => {
           const newPanels = prev.panels.map(p =>
             p.id === prev.activePanelId
-              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: true, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: true, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
               : p
           );
           return {
@@ -837,7 +838,7 @@ export default function Main() {
           updateState((prev) => {
             const newPanels = prev.panels.map(p =>
               p.id === prev.activePanelId
-                ? { ...p, url, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+                ? { ...p, url, isVideo: false, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
                 : p
             );
             return {

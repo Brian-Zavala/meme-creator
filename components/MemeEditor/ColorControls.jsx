@@ -68,7 +68,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           {(meme.textColor.substring(0, 7) !== '#ffffff' || getOpacity(meme.textColor) < 100) && (
             <button
               onClick={() => handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true)}
-              className="absolute -top-6 -left-2 sm:-left-3 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+              className="absolute -top-6 -left-2 sm:-left-3 text-[8px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
             >
               Reset
             </button>
@@ -110,7 +110,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
           {((meme.textShadow || '#000000').substring(0, 7) !== '#000000' || getOpacity(meme.textShadow || '#000000') < 100) && (
             <button
               onClick={() => handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true)}
-              className="absolute -top-6 -left-2 sm:-left-3 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+              className="absolute -top-6 -left-2 sm:-left-3 text-[8px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
             >
               Reset
             </button>
@@ -153,7 +153,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             {meme.textBgColor !== 'transparent' && (
               <button
                 onClick={() => handleStyleChange({ currentTarget: { name: 'textBgColor', value: 'transparent' } }, true)}
-                className="absolute -top-6 -left-2 sm:-left-3 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
+                className="absolute -top-6 -left-2 sm:-left-3 text-[8px] uppercase font-bold text-slate-500 hover:text-white transition-colors bg-slate-800/80 px-1 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50 z-10"
               >
                 Reset
               </button>

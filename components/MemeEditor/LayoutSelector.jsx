@@ -39,8 +39,8 @@ export function LayoutSelector({ layout, onLayoutChange }) {
         aria-label="Select Layout"
         className={`w-full rounded-xl bg-slate-900/50 border border-slate-700 px-4 py-3 flex items-center justify-center relative transition-all active:scale-[0.99] ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
       >
-        <div className="flex items-center gap-3 pr-9">
-            <LayoutTemplate className="w-5 h-5 text-brand" />
+        <div className="flex items-center gap-3">
+            <LayoutTemplate className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" />
             <span className="font-bold text-lg whitespace-nowrap">
                 {activeLayout.label}
             </span>

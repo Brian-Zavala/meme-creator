@@ -247,17 +247,20 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       onClick={() => {
                         if (navigator.vibrate) navigator.vibrate(10);
                         const isOn = meme.paddingTop > 0;
-                        handleStyleChange({ currentTarget: { name: 'paddingTop', value: isOn ? 0 : 15 } }, true);
 
-                        setTimeout(() => {
-                          if (!isOn && meme.paddingBottom === 0) {
-                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
-                            handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                          } else if (isOn && meme.paddingBottom === 0) {
-                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
-                            handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
-                          }
-                        }, 50);
+                        startTransition(() => {
+                            handleStyleChange({ currentTarget: { name: 'paddingTop', value: isOn ? 0 : 15 } }, true);
+
+                            setTimeout(() => {
+                            if (!isOn && meme.paddingBottom === 0) {
+                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                                handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                            } else if (isOn && meme.paddingBottom === 0) {
+                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                                handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                            }
+                            }, 50);
+                        });
                       }}
                       className={`flex flex-1 items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider touch-target ${meme.paddingTop > 0
                         ? "btn-brand"
@@ -309,17 +312,20 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       onClick={() => {
                         if (navigator.vibrate) navigator.vibrate(10);
                         const isOn = (meme.paddingBottom || 0) > 0;
-                        handleStyleChange({ currentTarget: { name: 'paddingBottom', value: isOn ? 0 : 15 } }, true);
 
-                        setTimeout(() => {
-                          if (!isOn && meme.paddingTop === 0) {
-                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
-                            handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                          } else if (isOn && meme.paddingTop === 0) {
-                            handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
-                            handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
-                          }
-                        }, 50);
+                        startTransition(() => {
+                            handleStyleChange({ currentTarget: { name: 'paddingBottom', value: isOn ? 0 : 15 } }, true);
+
+                            setTimeout(() => {
+                            if (!isOn && meme.paddingTop === 0) {
+                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                                handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                            } else if (isOn && meme.paddingTop === 0) {
+                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                                handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                            }
+                            }, 50);
+                        });
                       }}
                       className={`flex flex-1 items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2.5 rounded-full transition-all active:scale-95 border uppercase font-bold tracking-wider touch-target ${(meme.paddingBottom || 0) > 0
                         ? "btn-brand"
@@ -347,7 +353,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                           key={font.name}
                           onClick={() => {
                             if (navigator.vibrate) navigator.vibrate(10);
-                            handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
+                            startTransition(() => {
+                                handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
+                            });
                           }}
                           className={`snap-center shrink-0 px-4 py-2 rounded-lg border text-sm transition-all active:scale-95 ${(meme.fontFamily || "Impact") === font.name
                             ? "bg-slate-100 text-slate-900 border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
@@ -381,7 +389,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             isActive={isActive}
                             onClick={() => {
                               if (navigator.vibrate) navigator.vibrate(10);
-                              if (onAnimationChange) onAnimationChange(anim.id);
+                              if (onAnimationChange) {
+                                startTransition(() => {
+                                    onAnimationChange(anim.id);
+                                });
+                              }
                             }}
                             variant="text"
                           />
@@ -410,7 +422,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             isActive={isActive}
                             onClick={() => {
                               if (navigator.vibrate) navigator.vibrate(10);
-                              if (onStickerAnimationChange) onStickerAnimationChange(anim.id);
+                              if (onStickerAnimationChange) {
+                                startTransition(() => {
+                                    onStickerAnimationChange(anim.id);
+                                });
+                              }
                             }}
                             variant="sticker"
                           />
@@ -777,7 +793,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     <img src="/images/canvas/eraser_32.png" className="w-5 h-5 object-contain" alt="Eraser" />
                   </button>
                   <button
-                    onClick={onClearDrawings}
+                    onClick={() => startTransition(() => onClearDrawings())}
                     className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all flex items-center justify-center"
                     title="Clear All"
                     aria-label="Clear All Drawings"

@@ -56,7 +56,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={onMagicCaption}
+            onClick={() => startTransition(() => onMagicCaption())}
             disabled={isMagicGenerating}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-all active:scale-90 border border-brand/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Generate Magic Caption"

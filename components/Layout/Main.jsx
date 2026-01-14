@@ -585,9 +585,17 @@ export default function Main() {
           let y = ((e.clientY - rect.top) / rect.height) * 100 - dragOffsetRef.current.y;
           // Boundary clamping: creates invisible walls at edges
           // Horizontal bounds more aggressive (10-90%) since text extends wider
-          // Vertical bounds (5-95%) are less restrictive
+          // Vertical bounds adjust based on caption bars - allow text in caption areas
+          const hasTopCaption = (meme.paddingTop || 0) > 0;
+          const hasBottomCaption = (meme.paddingBottom || 0) > 0;
+
+          // When caption bars exist, extend boundaries to allow text in caption areas
+          // Default: 5-95%, With caption: 2-98% (allowing text to reach caption edges)
+          const minY = hasTopCaption ? 2 : 5;
+          const maxY = hasBottomCaption ? 98 : 95;
+
           x = Math.max(10, Math.min(90, x));
-          y = Math.max(5, Math.min(95, y));
+          y = Math.max(minY, Math.min(maxY, y));
 
           updateTransient((prev) => {
             const isText = prev.texts.some((t) => t.id === draggedId);
@@ -1904,17 +1912,26 @@ export default function Main() {
   function handleQuickPosition(pos) {
     if (!meme.selectedId) return;
 
-    // Map string positions to coordinates if needed, or use direct values
+    // Calculate vertical positions that account for caption bars
+    // When caption bars are present, extend positions into those areas
+    const hasTopCaption = (meme.paddingTop || 0) > 0;
+    const hasBottomCaption = (meme.paddingBottom || 0) > 0;
+
+    // Vertical positions: extend into caption areas when they exist
+    const topY = hasTopCaption ? 8 : 20;      // Closer to edge with caption
+    const bottomY = hasBottomCaption ? 92 : 80; // Closer to edge with caption
+
+    // Map string positions to coordinates
     const positions = {
-      'top-left': { x: 20, y: 20 },
-      'top-center': { x: 50, y: 20 },
-      'top-right': { x: 80, y: 20 },
+      'top-left': { x: 20, y: topY },
+      'top-center': { x: 50, y: topY },
+      'top-right': { x: 80, y: topY },
       'center-left': { x: 20, y: 50 },
       'center': { x: 50, y: 50 },
       'center-right': { x: 80, y: 50 },
-      'bottom-left': { x: 20, y: 80 },
-      'bottom-center': { x: 50, y: 80 },
-      'bottom-right': { x: 80, y: 80 },
+      'bottom-left': { x: 20, y: bottomY },
+      'bottom-center': { x: 50, y: bottomY },
+      'bottom-right': { x: 80, y: bottomY },
     };
 
     const targetPos = typeof pos === 'string' ? positions[pos] : pos;

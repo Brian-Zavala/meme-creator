@@ -57,7 +57,7 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
             </div>
 
             {/* Custom Position Dropdown */}
-            <div className="relative group/pos order-2 sm:order-3" ref={dropdownRef}>
+            <div className="relative group/pos order-2 sm:order-3 sm:mr-2" ref={dropdownRef}>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-1.5 min-w-[100px] justify-between transition-all active:scale-95 group/btn"

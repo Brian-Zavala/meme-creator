@@ -1,4 +1,5 @@
-const API_KEY = import.meta.env.VITE_GIPHY_KEY;
+// No API KEY needed on client side anymore
+// const API_KEY = import.meta.env.VITE_GIPHY_KEY;
 
 /**
  * Maps GIPHY API Object to our App's Internal Format
@@ -16,23 +17,18 @@ function mapGiphyResult(item) {
 }
 
 /**
- * Search GIPHY for GIFs or Stickers
+ * Search GIPHY for GIFs or Stickers via Netlify Function
  * @param {string} query - Search term
  * @param {string} type - 'gif' or 'sticker'
  * @returns {Promise<Array>}
  */
 export async function searchGiphy(query, type = 'gif') {
-  if (!API_KEY) {
-    console.error("GIPHY API Key Missing! Set VITE_GIPHY_KEY in .env");
-    return [];
-  }
-
   const isSticker = type === 'sticker';
   const resourceType = isSticker ? 'stickers' : 'gifs';
   const endpoint = query ? 'search' : 'trending';
 
-  // Base URL
-  let url = `https://api.giphy.com/v1/${resourceType}/${endpoint}?api_key=${API_KEY}&limit=50&rating=g`;
+  // Construct URL to our own Netlify Function
+  let url = `/.netlify/functions/giphy?type=${resourceType}&endpoint=${endpoint}&limit=50`;
 
   if (query) {
     url += `&q=${encodeURIComponent(query)}`;
@@ -40,6 +36,9 @@ export async function searchGiphy(query, type = 'gif') {
 
   try {
     const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Proxy error: ${response.status}`);
+    }
     const data = await response.json();
 
     if (data.meta && data.meta.status !== 200) {
@@ -59,24 +58,22 @@ export async function searchGiphy(query, type = 'gif') {
  * @param {string} id - Giphy ID
  */
 export async function registerShare(id) {
-  // GIPHY doesn't technically require a "register share" call like Tenor
-  // for simple API usage, but we can implement analytics here if needed.
-  // Usually, simply loading the image from their CDN counts.
-  // However, checking documentation, they have a 'pingback' requirement for SDKs.
-  // For standard API, this is often treated as a no-op or handled via tracking pixels.
-  // We'll leave it as a placeholder or log it for now.
-  // See: https://developers.giphy.com/docs/api/schema#response-object
+  // Logic remains same (placeholder)
 }
 
 /**
- * Get Autocomplete suggestions
+ * Get Autocomplete suggestions via Proxy
  * @param {string} query
  */
 export async function getAutocomplete(query) {
   if (!query || query.length < 2) return [];
-  if (!API_KEY) return [];
 
-  const url = `https://api.giphy.com/v1/gifs/search/tags?api_key=${API_KEY}&q=${encodeURIComponent(query)}&limit=5`;
+  // We map this to gifs/search/tags in the proxy logic or pass explicitly
+  // Let's pass parameters that the proxy understands.
+  // The proxy is generic: /type/endpoint
+  // Giphy autocomplete endpoint is: /gifs/search/tags
+
+  const url = `/.netlify/functions/giphy?type=gifs&endpoint=search/tags&q=${encodeURIComponent(query)}&limit=5`;
 
   try {
     const res = await fetch(url);
@@ -88,13 +85,10 @@ export async function getAutocomplete(query) {
 }
 
 /**
- * Get Categories (Tags)
- * NOTE: GIPHY categories endpoint structure is different.
- * We often just fetch 'categories' or 'trending' tags.
+ * Get Categories (Tags) via Proxy
  */
 export async function getCategories() {
-  if (!API_KEY) return [];
-  const url = `https://api.giphy.com/v1/gifs/categories?api_key=${API_KEY}`; // Standard categories
+  const url = `/.netlify/functions/giphy?type=gifs&endpoint=categories`;
   try {
     const res = await fetch(url);
     const data = await res.json();

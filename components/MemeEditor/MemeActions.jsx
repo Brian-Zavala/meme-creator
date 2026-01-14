@@ -15,7 +15,7 @@ export function MemeActions({ onFileUpload, onDownload, onShare }) {
         }}
       >
         <ImagePlus className="w-4 h-4" /> <span>Upload Image / GIF</span>
-        <input type="file" className="hidden" accept="image/*,video/*" onChange={onFileUpload} tabIndex="-1" />
+        <input id="main-file-upload" name="file-upload" type="file" className="hidden" accept="image/*,video/*" onChange={onFileUpload} tabIndex="-1" />
       </label>
       <button
         onClick={onDownload}

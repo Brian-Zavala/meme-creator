@@ -452,6 +452,7 @@ const MemeCanvas = forwardRef(({
     >
       {/* Hidden Global File Input for Ghost Slots */}
       <input
+        id="ghost-slot-file-input"
         ref={fileInputRef}
         type="file"
         accept="image/*,video/*"
@@ -461,6 +462,7 @@ const MemeCanvas = forwardRef(({
 
       {/* iOS Keyboard Helper Input */}
       <input
+        id="ios-keyboard-helper"
         ref={dummyInputRef}
         type="text"
         className="fixed w-1 h-1 opacity-0 pointer-events-none"
@@ -795,7 +797,7 @@ const MemeCanvas = forwardRef(({
                 fontSize: `${meme.fontSize * (textItem.scale ?? 1) * scaleFactor}px`,
                 letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                 whiteSpace: 'nowrap',
-                fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
+                fontFamily: `${meme.fontFamily || 'Roboto'}, sans-serif`,
                 WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
                 paintOrder: "stroke fill",
                 filter: hasContent ? "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))" : "none",

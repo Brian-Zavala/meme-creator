@@ -14,12 +14,15 @@ export default function OptimizedSlider({
   disabled = false,
   vibrate = true,
   title,
+  id,
   ...props
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [isPending, startTransition] = useTransition();
   const lastVibrateRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
+  const defaultId = useRef(`slider-${Math.random().toString(36).substr(2, 9)}`);
+  const effectiveId = id || name || defaultId.current;
 
   const inputRef = useRef(null);
   const glowRef = useRef(null);
@@ -187,6 +190,7 @@ export default function OptimizedSlider({
       {/* --- INTERACTION LAYER (Input) --- */}
       <input
         ref={inputRef}
+        id={effectiveId}
         type="range"
         min={min}
         max={max}

@@ -255,6 +255,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-l rounded-l-xl rounded-r-none overflow-hidden ${meme.paddingTop > 0 ? 'border-brand' : 'border-slate-600'}`}>
                       <div className="relative w-full h-full cursor-pointer">
                         <input
+                          id="top-bar-color"
                           type="color"
                           value={meme.paddingTopColor || "#ffffff"}
                           onChange={(e) => handleStyleChange(e)}
@@ -335,6 +336,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-r rounded-r-xl rounded-l-none overflow-hidden ${(meme.paddingBottom || 0) > 0 ? 'border-brand' : 'border-slate-600'}`}>
                       <div className="relative w-full h-full cursor-pointer">
                         <input
+                          id="bottom-bar-color"
                           type="color"
                           value={meme.paddingBottomColor || "#ffffff"}
                           onChange={(e) => handleStyleChange(e)}
@@ -367,7 +369,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                 handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
                             });
                           }}
-                          className={`snap-center shrink-0 px-4 py-2 rounded-lg border text-sm transition-all active:scale-95 ${(meme.fontFamily || "Impact") === font.name
+                          className={`snap-center shrink-0 px-4 py-2 rounded-lg border text-sm transition-all active:scale-95 ${(meme.fontFamily || "Roboto") === font.name
                             ? "bg-slate-100 text-slate-900 border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
                             : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
                             }`}

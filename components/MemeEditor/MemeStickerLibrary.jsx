@@ -241,6 +241,8 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
             <Upload className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
             <span className="text-xs font-bold uppercase tracking-wide">Upload Custom Sticker</span>
             <input
+              id="sticker-upload-input"
+              name="sticker-upload"
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif"
               className="hidden"
@@ -254,6 +256,8 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
           <div className="flex flex-col gap-4">
             <form onSubmit={(e) => { e.preventDefault(); handleTenorSearch(query); }} className="relative mb-2">
               <input
+                id="sticker-search-input"
+                name="sticker-search"
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}

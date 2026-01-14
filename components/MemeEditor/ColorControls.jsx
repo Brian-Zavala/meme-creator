@@ -77,6 +77,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
               <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                 <input
+                  id="text-color-picker"
                   type="color" name="textColor"
                   value={toSafeHex(meme.textColor)}
                   onChange={(e) => onColorPick('textColor', e.target.value)}
@@ -119,6 +120,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
               <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                 <input
+                  id="outline-color-picker"
                   type="color" name="textShadow"
                   value={toSafeHex(meme.textShadow || '#000000')}
                   onChange={(e) => onColorPick('textShadow', e.target.value)}
@@ -162,6 +164,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
                 <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                   <input
+                    id="backdrop-color-picker"
                     type="color" name="textBgColor"
                     value={toSafeHex(meme.textBgColor)}
                     onChange={(e) => onColorPick('textBgColor', e.target.value)}

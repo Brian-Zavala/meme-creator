@@ -17,6 +17,8 @@ export function GifSearch({
     <div className="relative z-50 mb-2" ref={containerRef} role="search">
       <div className="relative">
         <input
+          id="gif-search-input"
+          name="gif-search"
           type="text"
           value={searchQuery}
           onFocus={onFocus}

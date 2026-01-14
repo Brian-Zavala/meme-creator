@@ -217,7 +217,7 @@ export default function Main() {
     textColor: "#ffffff",
     textBgColor: "transparent",
     textShadow: "#000000",
-    fontFamily: "Impact",
+    fontFamily: "Roboto",
     fontSize: 40,
     paddingTop: 0,
     paddingBottom: 0,

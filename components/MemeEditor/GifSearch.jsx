@@ -16,25 +16,31 @@ export function GifSearch({
   return (
     <div className="relative z-50 mb-2" ref={containerRef} role="search">
       <div className="relative">
-        <input 
-          type="text" 
-          value={searchQuery} 
-          onFocus={onFocus} 
+        <input
+          type="text"
+          value={searchQuery}
+          onFocus={onFocus}
           onChange={onSearchInput}
-          onKeyDown={onKeyDown} 
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           aria-label="Search for GIFs"
-          className="w-full bg-slate-900/80 border-2 border-slate-700 text-white rounded-xl py-3 pl-10 pr-10 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm transition-all" 
+          className="w-full bg-slate-900/80 border-2 border-slate-700 text-white rounded-xl py-3 pl-10 pr-24 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm transition-all"
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" aria-hidden="true" />
+
+        {/* Attribution: Always visible on right */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+             <img src="/giphy/giphy-attribution-marks/Giphy Attribution Marks/Static Logos/Small/Light Backgrounds/PoweredBy_200px-White_HorizLogo.png" alt="Powered by Giphy" className="h-4 opacity-70" />
+        </div>
+
         {searchQuery && (
-          <button onClick={onClear} aria-label="Clear Search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+          <button onClick={onClear} aria-label="Clear Search" className="absolute right-24 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1">
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
       {showSuggestions && (
-        <div 
+        <div
             className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95"
             role="listbox"
             aria-label="Search Suggestions"
@@ -42,9 +48,9 @@ export function GifSearch({
             {suggestions.length > 0 ? (
                 <div className="p-2" role="group">
                     {suggestions.map((t, i) => (
-                    <button 
-                        key={i} 
-                        onClick={() => onSelectSuggestion(t)} 
+                    <button
+                        key={i}
+                        onClick={() => onSelectSuggestion(t)}
                         role="option"
                         className="w-full text-left px-3 py-2 hover:bg-slate-800 rounded-lg text-slate-300 flex items-center gap-2"
                     >
@@ -55,16 +61,16 @@ export function GifSearch({
             ) : categories.length > 0 && !searchQuery ? (
                 <div className="p-2 grid grid-cols-2 gap-2" role="group">
                     {categories.map((c, i) => (
-                    <button 
-                        key={i} 
-                        onClick={() => onSelectSuggestion(c.searchterm)} 
+                    <button
+                        key={i}
+                        onClick={() => onSelectSuggestion(c.searchterm)}
                         role="option"
                         className="relative h-16 rounded-lg overflow-hidden group"
                     >
-                        <img 
-                          src={`https://wsrv.nl/?url=${encodeURIComponent(c.image)}&w=200&h=100&fit=cover`} 
+                        <img
+                          src={`https://wsrv.nl/?url=${encodeURIComponent(c.image)}&w=200&h=100&fit=cover`}
                           alt={c.name}
-                          className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
+                          className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
                           crossOrigin="anonymous"
                           onError={(e) => {
                             e.target.onerror = null;

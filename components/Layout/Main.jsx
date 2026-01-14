@@ -3,7 +3,7 @@ import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, Trendi
 import toast from "react-hot-toast";
 import { triggerFireworks } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
-import { searchTenor, registerShare, getAutocomplete, getCategories } from "../../services/tenor";
+import { searchGiphy, registerShare, getAutocomplete, getCategories } from "../../services/giphy";
 import { exportGif, exportStickersAsPng, exportImageAsPng } from "../../services/gifExporter";
 import { hasAnimatedText } from "../../constants/textAnimations";
 import { deepFryImage } from "../../services/imageProcessor";
@@ -768,22 +768,39 @@ export default function Main() {
   async function performSearch(term) {
     if (!term.trim()) return;
     setIsSearching(true);
-    const results = await searchTenor(term);
+    // FIX: Use searchGiphy instead of searchTenor
+    const results = await searchGiphy(term);
     if (results.length > 0) {
       setAllGifs(results);
       setVideoDeck([]);
       const first = results[0];
 
+      // FIX: Dynamically detect if it's a video or GIF
+      const isVideo = first.url.match(/\.(mp4|webm|mov)$/i);
+
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
           p.id === prev.activePanelId
-            ? { ...p, url: first.url, sourceUrl: first.shareUrl, isVideo: true, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS } }
+            ? {
+                ...p,
+                url: first.url,
+                sourceUrl: first.shareUrl,
+                isVideo: !!isVideo, // Set correct flag
+                sourceBlob: null,
+                objectFit: "cover",
+                filters: { ...DEFAULT_FILTERS }
+              }
             : p
         );
         return {
           ...prev,
           panels: newPanels,
           name: first.name.replace(/\s+/g, "-"),
+          // Keep mode as video if it's a video, otherwise determine best mode or keep current?
+          // Actually if it's a GIF, 'video' mode is usually fine as it implies "Time-based media"
+          // But let's check if 'gif' mode exists.
+          // Looking at defaultState, mode is "image".
+          // If we load a GIF/Video, users usually expect "video" controls (timeline etc).
           mode: "video",
           fontSize: calculateSmartFontSize(first.width, first.height, prev.texts),
         };
@@ -802,7 +819,7 @@ export default function Main() {
       if (activeMode === "video") {
         let currentGifs = allGifs;
         if (currentGifs.length === 0) {
-          const results = await searchTenor("");
+          const results = await searchGiphy("");
           if (requestId !== requestCounterRef.current) return;
           if (results.length > 0) {
             currentGifs = results;
@@ -816,10 +833,13 @@ export default function Main() {
         const newMeme = getNextItem(currentGifs, videoDeck, setVideoDeck);
         if (requestId !== requestCounterRef.current) return;
 
+        // FIX: Detect video type dynamically
+        const isVideo = !!newMeme.url.match(/\.(mp4|webm|mov)$/i);
+
         updateState((prev) => {
           const newPanels = prev.panels.map(p =>
             p.id === prev.activePanelId
-              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: true, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: isVideo, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
               : p
           );
           return {
@@ -901,13 +921,13 @@ export default function Main() {
           "explosion", "fire", "based", "sus", "cursed", "skibidi"
         ];
         const keyword = chaosKeywords[Math.floor(Math.random() * chaosKeywords.length)];
-        const results = await searchTenor(keyword);
+        const results = await searchGiphy(keyword);
 
         if (results && results.length > 0) {
           const randomGif = results[Math.floor(Math.random() * results.length)];
           selectedMedia = randomGif.url;
           sourceUrl = randomGif.shareUrl;
-          isVideo = true;
+          isVideo = !!selectedMedia.match(/\.(mp4|webm|mov)$/i);
         }
       }
 
@@ -2692,7 +2712,7 @@ export default function Main() {
                           }
                         }}
                         containerRef={searchContainerRef}
-                        placeholder={isMobileScreen ? "Search GIFs..." : "Search GIFs (e.g. funny cat, dancing)..."}
+                        placeholder={isMobileScreen ? "Search GIFs..." : "Search GIFs..."}
                       />
                     </div>
                   </Suspense>
@@ -2707,7 +2727,7 @@ export default function Main() {
                       </div>
                       <input
                         type="text"
-                        placeholder={isMobileScreen ? "Search images..." : "Search images (e.g. Drake, Distracted Boyfriend)..."}
+                        placeholder={isMobileScreen ? "Search images..." : "Search images..."}
                         value={memeSearchQuery}
                         onChange={(e) => {
                           setMemeSearchQuery(e.target.value);

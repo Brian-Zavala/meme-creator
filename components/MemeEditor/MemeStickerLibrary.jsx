@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Smile, Search, Loader2, Image as ImageIcon, Upload, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
-import { searchTenor } from "../../services/tenor";
+import { searchGiphy } from "../../services/giphy";
 import { removeImageBackground } from "../../services/backgroundRemover";
 
 // Moved from MemeInputs.jsx
@@ -129,7 +129,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
     setLoading(true);
     try {
       // ✅ Request 'sticker' type for transparent backgrounds
-      const results = await searchTenor(searchTerm, 'sticker');
+      const results = await searchGiphy(searchTerm, 'sticker');
       setTenorStickers(results);
     } catch (e) {
       console.error(e);
@@ -178,8 +178,8 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
               } catch (err) {
                 console.error(err);
                 toast.error("Failed. Using original.", { id: toastId });
-                // Helper to read original file as base64 too if desired, 
-                // but for now strict URL fallback is okay IF it's a remote URL. 
+                // Helper to read original file as base64 too if desired,
+                // but for now strict URL fallback is okay IF it's a remote URL.
                 // But `file` is a File object, so `URL.createObjectURL(file)` is ALSO temporary.
                 // We should convert the ORIGINAL file to base64 too if persistence is needed for raw uploads.
 
@@ -222,7 +222,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "tenor" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-slate-800 text-slate-400"
             }`}
         >
-          <ImageIcon className="w-4 h-4" /> Tenor
+          <ImageIcon className="w-4 h-4" /> Giphy
         </button>
         <button
           onClick={() => setActiveTab("emoji")}
@@ -252,15 +252,20 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
         {/* TENOR TAB */}
         {activeTab === "tenor" && (
           <div className="flex flex-col gap-4">
-            <form onSubmit={(e) => { e.preventDefault(); handleTenorSearch(query); }} className="relative">
+            <form onSubmit={(e) => { e.preventDefault(); handleTenorSearch(query); }} className="relative mb-2">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search stickers (e.g. 'cat', 'fire')..."
-                className="w-full bg-slate-800 text-white text-sm rounded-xl py-3 pl-10 pr-4 focus:ring-2 focus:ring-brand outline-none border border-slate-700"
+                placeholder="Search stickers..."
+                className="w-full bg-slate-800 text-white text-sm rounded-xl py-3 pl-10 pr-24 focus:ring-2 focus:ring-brand outline-none border border-slate-700"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <img
+                src="/giphy/giphy-attribution-marks/Giphy Attribution Marks/Static Logos/Small/Light Backgrounds/PoweredBy_200px-White_HorizLogo.png"
+                alt="Powered by Giphy"
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 opacity-70 pointer-events-none"
+              />
             </form>
 
             {loading ? (
@@ -290,6 +295,8 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
               </div>
             )}
             {!loading && tenorStickers.length === 0 && <div className="text-center text-slate-500 text-xs">No stickers found.</div>}
+
+
           </div>
         )}
 

@@ -125,7 +125,14 @@ const TOAST_ANIMATIONS = [
   "/animations/performing-arts.json",
   "/animations/speech-bubble.json",
   "/animations/vibe-check-toast.json",
-  "/animations/waste-basket.json"
+  "/animations/waste-basket.json",
+  // Preload new remix button animations
+  "/animations/stickerfy.json",
+  "/animations/nuclear.json",
+  "/animations/time-warp.json",
+  "/animations/glitch.json",
+  "/animations/confetti.json",
+  "/animations/cursed.json"
 ];
 
 export default function Main() {
@@ -1625,12 +1632,30 @@ export default function Main() {
   }
 
   function handleGlitch() {
+    // Curated glitch presets - cycles through distinct digital corruption effects
+    const glitchPresets = [
+      // 1. Cyberpunk Red/Cyan shift
+      { name: "RGB Split", hueRotate: 180, saturate: 200, contrast: 140, brightness: 110, invert: 0, sepia: 0, grayscale: 0 },
+      // 2. Corrupt Data - harsh magenta
+      { name: "Data Corrupt", hueRotate: 300, saturate: 250, contrast: 160, brightness: 95, invert: 0, sepia: 0, grayscale: 0 },
+      // 3. VHS Tracking Error - cyan/green tint
+      { name: "VHS Error", hueRotate: 120, saturate: 180, contrast: 120, brightness: 105, invert: 0, sepia: 20, grayscale: 0 },
+      // 4. Digital Noise - high contrast with slight color shift
+      { name: "Digital Noise", hueRotate: 45, saturate: 220, contrast: 180, brightness: 100, invert: 0, sepia: 0, grayscale: 0 },
+      // 5. Broken Signal - inverted neon
+      { name: "Broken Signal", hueRotate: 240, saturate: 300, contrast: 150, brightness: 120, invert: 100, sepia: 0, grayscale: 0 },
+      // 6. Retro CRT - warm distortion
+      { name: "CRT Burn", hueRotate: -30, saturate: 160, contrast: 130, brightness: 115, invert: 0, sepia: 30, grayscale: 0 }
+    ];
+
+    const currentIndex = (remixClickCountRef.current.glitch || 0) % glitchPresets.length;
+    const preset = glitchPresets[currentIndex];
+
     const glitchFilters = {
       ...DEFAULT_FILTERS,
-      hueRotate: Math.floor(Math.random() * 360),
-      saturate: 150,
-      contrast: 130,
-      invert: Math.random() > 0.5 ? 50 : 0 // Sometimes invert
+      ...preset,
+      blur: 0,
+      deepFry: 0
     };
 
     startTransition(() => {
@@ -1651,7 +1676,7 @@ export default function Main() {
     });
 
     remixClickCountRef.current.glitch = (remixClickCountRef.current.glitch || 0) + 1;
-    toast("Glitch applied", {
+    toast(`${preset.name} glitch applied`, {
       icon: <ToastIcon src="/animations/filter-frenzy.json" />
     });
   }
@@ -1735,13 +1760,29 @@ export default function Main() {
   }
 
   function handleTimeWarp() {
+    // Curated time warp presets - cycles through temporal/dreamy effects
+    const timePresets = [
+      // 1. Motion Blur - fast movement feel
+      { name: "Motion Blur", blur: 3, brightness: 110, contrast: 90, saturate: 120, hueRotate: 0, sepia: 0, grayscale: 0, invert: 0 },
+      // 2. Slow Motion - dreamy soft focus
+      { name: "Slow Motion", blur: 2, brightness: 120, contrast: 85, saturate: 90, hueRotate: 0, sepia: 15, grayscale: 0, invert: 0 },
+      // 3. Flashback - warm sepia memory
+      { name: "Flashback", blur: 1.5, brightness: 115, contrast: 95, saturate: 80, hueRotate: -10, sepia: 50, grayscale: 0, invert: 0 },
+      // 4. Fast Forward - high exposure speed
+      { name: "Fast Forward", blur: 4, brightness: 140, contrast: 110, saturate: 70, hueRotate: 0, sepia: 0, grayscale: 0, invert: 0 },
+      // 5. Rewind - cool desaturated
+      { name: "Rewind", blur: 2.5, brightness: 100, contrast: 80, saturate: 60, hueRotate: 180, sepia: 0, grayscale: 30, invert: 0 },
+      // 6. Frozen Moment - ethereal glow
+      { name: "Frozen Moment", blur: 5, brightness: 130, contrast: 70, saturate: 110, hueRotate: 0, sepia: 10, grayscale: 0, invert: 0 }
+    ];
+
+    const currentIndex = (remixClickCountRef.current.timewarp || 0) % timePresets.length;
+    const preset = timePresets[currentIndex];
+
     const warpFilters = {
       ...DEFAULT_FILTERS,
-      blur: 8 + Math.random() * 4, // 8-12 blur
-      brightness: 140,
-      contrast: 60,
-      hueRotate: Math.floor(Math.random() * 360),
-      saturate: 80
+      ...preset,
+      deepFry: 0
     };
 
     startTransition(() => {
@@ -1756,7 +1797,7 @@ export default function Main() {
     });
 
     remixClickCountRef.current.timewarp = (remixClickCountRef.current.timewarp || 0) + 1;
-    toast("Time Warp applied", {
+    toast(`${preset.name} applied`, {
       icon: <ToastIcon src="/animations/filter-frenzy.json" />
     });
   }

@@ -10,6 +10,7 @@ export function ToastIcon({ src, size = 32 }) {
         width="100%"
         height="100%"
         style={{ width: '100%', height: '100%' }}
+        renderConfig={{ devicePixelRatio: 1 }}
       />
     </div>
   );

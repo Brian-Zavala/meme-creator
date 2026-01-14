@@ -33,10 +33,11 @@ export default function OptimizedSlider({
   const offsetRef = useRef(0);
   const localValueRef = useRef(localValue);
 
-  // Sync ref with state
+  // Consolidated: Sync ref and update visuals
   useEffect(() => {
     localValueRef.current = localValue;
-  }, [localValue]);
+    updateVisuals(localValue);
+  }, [localValue, min, max, filledColor, trackColor]);
 
   // Sync local state if parent value changes externally
   useEffect(() => {
@@ -48,11 +49,6 @@ export default function OptimizedSlider({
       setLocalValue(value);
     }
   }, [value, isDragging, isPending, localValue]);
-
-  // Initial Paint (Static) & Updates
-  useEffect(() => {
-    updateVisuals(localValueRef.current);
-  }, [localValue, min, max, filledColor, trackColor]);
 
   // Animation Loop
   // We strictly manage the "Flow" (offset) and "Opacity" classes here.

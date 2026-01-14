@@ -231,7 +231,7 @@ async function loadMemeAssets(meme, stickers) {
         }
     }));
 
-    await Promise.all((stickers || []).filter(s => s.type === 'image').map(async (s) => {
+    await Promise.all((stickers || []).filter(s => s.type === 'image' || s.type === 'giphy' || s.type === 'tenor').map(async (s) => {
         let processor = null;
         if (s.isAnimated || s.url.includes('.gif')) {
             processor = await createGifProcessor(s.url);
@@ -453,7 +453,7 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
         ctx.rotate(animRotation);
         ctx.scale(animScaleX, animScaleY);
 
-        if (sticker.type === 'image') {
+        if (sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') {
             let drawCanvas = null;
             let sw = 0, sh = 0;
 

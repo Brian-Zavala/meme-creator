@@ -31,6 +31,7 @@ const LottieAnimation = ({
     });
 
     React.useEffect(() => {
+        let timeoutId;
         const updateQuality = () => {
             // Check if Desktop (lg breakpoint)
             if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
@@ -47,12 +48,21 @@ const LottieAnimation = ({
             }
         };
 
+        // Debounced version to reduce layout thrashing
+        const debouncedUpdateQuality = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(updateQuality, 150);
+        };
+
         // Initial check
         updateQuality();
 
-        // Optional: Listen for resize if users switch modes (though usually overkill)
-        window.addEventListener('resize', updateQuality);
-        return () => window.removeEventListener('resize', updateQuality);
+        // Listen for resize with debouncing
+        window.addEventListener('resize', debouncedUpdateQuality);
+        return () => {
+            window.removeEventListener('resize', debouncedUpdateQuality);
+            clearTimeout(timeoutId);
+        };
     }, []);
 
     return (

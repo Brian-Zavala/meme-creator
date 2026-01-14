@@ -77,16 +77,24 @@ const MemeCanvas = forwardRef(({
   const [containerWidth, setContainerWidth] = useState(800);
   const containerRef = useRef(null);
 
-  // Sync container width for scaling
+  // Sync container width for scaling (debounced to reduce layout thrashing)
   useEffect(() => {
+    let timeoutId;
     const updateWidth = () => {
       if (containerRef.current) {
         setContainerWidth(containerRef.current.offsetWidth);
       }
     };
+    const debouncedUpdateWidth = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateWidth, 100);
+    };
     updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    window.addEventListener('resize', debouncedUpdateWidth);
+    return () => {
+      window.removeEventListener('resize', debouncedUpdateWidth);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const scaleFactor = containerWidth / 800;
@@ -693,7 +701,7 @@ const MemeCanvas = forwardRef(({
                 left: `${sticker.x}%`,
                 top: `${sticker.y}%`,
                 fontSize: `${(meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor}px`,
-                width: sticker.type === 'image' ? `${(meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor}px` : 'auto',
+                width: (sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') ? `${(meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor}px` : 'auto',
                 transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`,
               }}
               role="img"
@@ -703,12 +711,13 @@ const MemeCanvas = forwardRef(({
                 if (e.key === 'Delete' || e.key === 'Backspace') onRemoveSticker(sticker.id);
               }}
             >
-              {sticker.type === 'image' ? (
+              {(sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') ? (
                 <img
                   src={sticker.url}
                   alt="sticker"
                   className="w-full h-full object-contain pointer-events-none select-none drop-shadow-md"
                   draggable="false"
+                  crossOrigin="anonymous"
                 />
               ) : (
                 sticker.url

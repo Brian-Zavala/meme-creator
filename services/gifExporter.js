@@ -134,7 +134,11 @@ async function loadMemeAssets(meme, stickers) {
         if (!processor) {
             try {
                 const img = new Image();
-                img.crossOrigin = "anonymous";
+                // FIX: Do NOT set crossOrigin for Data URLs or Blob URLs (local uploads)
+                // Setting it on data: URIs can sometimes cause Tainted Canvas issues in specific browsers
+                if (!panel.url.startsWith('data:') && !panel.url.startsWith('blob:')) {
+                    img.crossOrigin = "anonymous";
+                }
                 img.src = panel.url;
                 await img.decode();
                 staticImages[panel.id] = img;
@@ -154,7 +158,10 @@ async function loadMemeAssets(meme, stickers) {
         if (!processor) {
             try {
                 const img = new Image();
-                img.crossOrigin = "anonymous";
+                // FIX: Do NOT set crossOrigin for Data URLs or Blob URLs (local uploads)
+                if (!s.url.startsWith('data:') && !s.url.startsWith('blob:')) {
+                    img.crossOrigin = "anonymous";
+                }
                 img.src = s.url;
                 await img.decode();
                 stickerImages[s.id] = img;

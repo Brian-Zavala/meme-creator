@@ -14,6 +14,7 @@ import MemeToolbar from "../MemeEditor/MemeToolbar";
 import MemeInputs from "../MemeEditor/MemeInputs";
 import { LayoutSelector } from "../MemeEditor/LayoutSelector";
 import { ExportConfirmModal } from "../Modals/ExportConfirmModal";
+import { saveState, loadState } from "../../services/storage";
 const RemixCarousel = lazy(() => import("../MemeEditor/RemixCarousel"));
 
 const MemeActions = lazy(() => import("../MemeEditor/MemeActions").then((module) => ({ default: module.MemeActions })));
@@ -134,7 +135,121 @@ export default function Main() {
     TOAST_ANIMATIONS.forEach(src => {
       fetch(src).catch(() => { });
     });
+
+    // Hydrate state from IndexedDB
+    loadState().then((saved) => {
+      if (saved) {
+        // Apply migration logic similar to before, but now async
+        try {
+          // We can assume saved is the object proper if we stored it that way
+          // But if we need migration logic, we should apply it here.
+          // Since we just swapped storage backend, the logic is likely the same.
+          // However, let's keep it robust.
+          let parsed = saved;
+
+          // Migration logic
+          if (!parsed.panels) {
+            parsed.panels = [{
+              id: "p1",
+              url: parsed.imageUrl || defaultState.panels[0].url,
+              sourceUrl: parsed.sourceUrl || null,
+              isVideo: parsed.isVideo || false,
+              objectFit: "cover",
+              posX: 50,
+              posY: 50,
+              filters: parsed.filters || { ...DEFAULT_FILTERS }
+            }];
+            parsed.activePanelId = "p1";
+            parsed.layout = "single";
+            delete parsed.imageUrl;
+            delete parsed.isVideo;
+            delete parsed.filters;
+          }
+          // Ensure existing panels have posX/posY AND dimensions (x, y, w, h)
+          if (parsed.panels) {
+            const layoutDef = DEFAULT_LAYOUTS[parsed.layout || 'single'];
+            parsed.panels = parsed.panels.map((p, idx) => {
+              const layoutSlot = layoutDef[idx] || { x: 0, y: 0, w: 100, h: 100 };
+              return {
+                ...p,
+                // Add missing dimensions from layout definition
+                x: p.x ?? layoutSlot.x,
+                y: p.y ?? layoutSlot.y,
+                w: p.w ?? layoutSlot.w,
+                h: p.h ?? layoutSlot.h,
+                posX: p.posX ?? 50,
+                posY: p.posY ?? 50,
+                // Clear processedImage on reload - blob URLs aren't valid across sessions
+                processedImage: null,
+                processedDeepFryLevel: 0
+              };
+            });
+          }
+
+          if (parsed.texts) {
+            parsed.texts = parsed.texts.map((t) => ({ ...t, rotation: t.rotation ?? 0, animation: t.animation ?? null }));
+          }
+
+          // Hydrate!
+          updateState(prev => ({ ...defaultState, ...parsed }));
+        } catch (e) {
+          console.error("Hydration failed", e);
+        }
+      }
+      setIsHydrated(true);
+    });
+
   }, []);
+
+  /* 
+    Updated to use IndexedDB via storage.js for better persistence of large images (Data URLs).
+    The initial state is now pure default, and we hydrate asynchronously.
+  */
+  const defaultState = useMemo(() => ({
+    id: null,
+    name: "Meme Name",
+    mode: "image",
+
+    // Global Styles
+    textColor: "#ffffff",
+    textBgColor: "transparent",
+    textShadow: "#000000",
+    fontFamily: "Impact",
+    fontSize: 40,
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingTopColor: "#ffffff",
+    paddingBottomColor: "#ffffff",
+    letterSpacing: 0,
+    drawColor: "#ff0000",
+    drawWidth: 5,
+    maxWidth: 100,
+
+    // Layout State
+    layout: "single",
+    activePanelId: "p1",
+    panels: [
+      {
+        id: "p1",
+        // Dimensions for single layout (100% width/height)
+        x: 0, y: 0, w: 100, h: 100,
+        url: "http://i.imgflip.com/1bij.jpg",
+        sourceUrl: null,
+        isVideo: false,
+        objectFit: "contain",
+        posX: 50,
+        posY: 50,
+        filters: { ...DEFAULT_FILTERS }
+      }
+    ],
+
+    texts: [{ id: "top", content: "", x: 50, y: 5, rotation: 0, animation: null },
+    { id: "bottom", content: "", x: 50, y: 95, rotation: 0, animation: null },
+    ],
+    stickers: [],
+    drawings: [],
+    selectedId: null,
+  }), []);
 
   const {
     state: meme,
@@ -144,112 +259,16 @@ export default function Main() {
     redo,
     canUndo,
     canRedo,
-  } = useHistory(() => {
-    const saved = localStorage.getItem("meme-generator-state");
-    const defaultState = {
-      id: null,
-      name: "Meme Name",
-      mode: "image",
-
-      // Global Styles
-      textColor: "#ffffff",
-      textBgColor: "transparent",
-      textShadow: "#000000",
-      fontFamily: "Impact",
-      fontSize: 40,
-      paddingTop: 0,
-      paddingBottom: 0,
-      paddingTopColor: "#ffffff",
-      paddingBottomColor: "#ffffff",
-      letterSpacing: 0,
-      drawColor: "#ff0000",
-      drawWidth: 5,
-      maxWidth: 100,
-
-      // Layout State
-      layout: "single",
-      activePanelId: "p1",
-      panels: [
-        {
-          id: "p1",
-          // Dimensions for single layout (100% width/height)
-          x: 0, y: 0, w: 100, h: 100,
-          url: "http://i.imgflip.com/1bij.jpg",
-          sourceUrl: null,
-          isVideo: false,
-          objectFit: "contain",
-          posX: 50,
-          posY: 50,
-          filters: { ...DEFAULT_FILTERS }
-        }
-      ],
-
-      texts: [{ id: "top", content: "", x: 50, y: 5, rotation: 0, animation: null },
-      { id: "bottom", content: "", x: 50, y: 95, rotation: 0, animation: null },
-      ],
-      stickers: [],
-      drawings: [],
-      selectedId: null,
-    };
-
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Migration logic
-        if (!parsed.panels) {
-          parsed.panels = [{
-            id: "p1",
-            url: parsed.imageUrl || defaultState.panels[0].url,
-            sourceUrl: parsed.sourceUrl || null,
-            isVideo: parsed.isVideo || false,
-            objectFit: "cover",
-            posX: 50,
-            posY: 50,
-            filters: parsed.filters || { ...DEFAULT_FILTERS }
-          }];
-          parsed.activePanelId = "p1";
-          parsed.layout = "single";
-          delete parsed.imageUrl;
-          delete parsed.isVideo;
-          delete parsed.filters;
-        }
-        // Ensure existing panels have posX/posY AND dimensions (x, y, w, h)
-        if (parsed.panels) {
-          const layoutDef = DEFAULT_LAYOUTS[parsed.layout || 'single'];
-          parsed.panels = parsed.panels.map((p, idx) => {
-            const layoutSlot = layoutDef[idx] || { x: 0, y: 0, w: 100, h: 100 };
-            return {
-              ...p,
-              // Add missing dimensions from layout definition
-              x: p.x ?? layoutSlot.x,
-              y: p.y ?? layoutSlot.y,
-              w: p.w ?? layoutSlot.w,
-              h: p.h ?? layoutSlot.h,
-              posX: p.posX ?? 50,
-              posY: p.posY ?? 50,
-              // Clear processedImage on reload - blob URLs aren't valid across sessions
-              processedImage: null,
-              processedDeepFryLevel: 0
-            };
-          });
-        }
-
-        if (parsed.texts) {
-          parsed.texts = parsed.texts.map((t) => ({ ...t, rotation: t.rotation ?? 0, animation: t.animation ?? null }));
-        }
-        return { ...defaultState, ...parsed };
-      } catch (e) {
-        console.error("State hydration failed", e);
-      }
-    }
-    return defaultState;
-  });
+    replaceState // We might need to expose this from useHistory if not already, or just use updateState with absolute value
+  } = useHistory(() => defaultState);
 
   const [allMemes, setAllMemes] = useState([]);
   const [allGifs, setAllGifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  // NEW: Track hydration status to prevent overwriting DB with default state
+  const [isHydrated, setIsHydrated] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
   const [activeTool, setActiveTool] = useState("move");
   const [flashColor, setFlashColor] = useState(null);
@@ -689,12 +708,9 @@ export default function Main() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("meme-generator-state", JSON.stringify(meme));
-    } catch (e) {
-      console.warn("Storage quota exceeded");
-    }
-  }, [meme]);
+    if (!isHydrated) return;
+    saveState(meme);
+  }, [meme, isHydrated]);
 
   const handleSearchInput = (e) => {
     const val = e.target.value;

@@ -572,7 +572,7 @@ const MemeCanvas = forwardRef(({
                       autoPlay
                       playsInline
                       muted
-                      crossOrigin="anonymous"
+                      crossOrigin={(!showUrl.startsWith('data:') && !showUrl.startsWith('blob:')) ? "anonymous" : undefined}
                       onLoadedMetadata={handleMediaLoad}
                       style={{
                         objectFit: meme.layout === 'single' ? (panel.objectFit || "contain") : (panel.objectFit || "cover"),
@@ -594,7 +594,7 @@ const MemeCanvas = forwardRef(({
                       src={showUrl}
                       alt={meme.name ? `Meme panel: ${meme.name}` : "Meme panel"}
                       className="w-full h-full block pointer-events-none select-none"
-                      crossOrigin="anonymous"
+                      crossOrigin={(!showUrl.startsWith('data:') && !showUrl.startsWith('blob:')) ? "anonymous" : undefined}
                       onLoad={handleMediaLoad}
                       style={{
                         objectFit: meme.layout === 'single' ? (panel.objectFit || "contain") : (panel.objectFit || "cover"),

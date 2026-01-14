@@ -32,7 +32,7 @@ export function ModeSelector({ mode, onModeChange }) {
         <div className="flex items-center gap-3">
             {mode === "image" ? <ImageIcon className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" /> : <Video className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" />}
             <span className="font-bold text-lg animate-text-shimmer whitespace-nowrap">
-            {mode === "image" ? "Static Images" : "Animated GIFs"}
+            {mode === "image" ? "Static Images" : "GIFs"}
             </span>
         </div>
         <ChevronDown className={`absolute right-4 w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand' : ''}`} />
@@ -65,7 +65,7 @@ export function ModeSelector({ mode, onModeChange }) {
             >
                 <Video className={`w-5 h-5 shrink-0 ${mode === "video" ? "text-brand" : "text-slate-400 group-hover:text-white"}`} />
                 <span className={`font-bold whitespace-nowrap ${mode === "video" ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
-                    Animated GIFs
+                    GIFs
                 </span>
                 {mode === "video" && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
             </button>

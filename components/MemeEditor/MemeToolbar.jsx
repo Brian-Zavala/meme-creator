@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 import OptimizedSlider from "../ui/OptimizedSlider";
+import MemeInputs from "./MemeInputs";
 
 const ColorControls = lazy(() => import("./ColorControls"));
 
@@ -86,7 +87,10 @@ function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
   );
 }
 
-export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange, editingId }) {
+export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange, editingId,
+  // New props for MemeInputs
+  handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, onExportStickers, onEditingChange
+}) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
   const [showSliders, setShowSliders] = useState(false); // Collapsed by default on mobile
@@ -123,10 +127,10 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
   }, [hasText, hasStickers]);
 
   // Determine if drawer should be collapsed:
-  // - Collapse if no text/stickers on text tab
-  // - Collapse if actively editing AND drawer hasn't been opened yet (first text being added)
-  // - Once drawer has opened, keep it open even while editing subsequent texts
-  const isCollapsed = (activeTab === 'text' && !hasText && !hasStickers) || (isActivelyEditing && !drawerHasOpened);
+  // - NEVER collapse text tab (we want to show inputs)
+  // - For other tabs: collapse if no content and not explicit draw tab
+  // - Collapse if actively editing AND drawer hasn't been opened yet (BUT NOT for text tab, since inputs are inside)
+  const isCollapsed = activeTab === 'text' ? false : ((!hasStickers && activeTab !== 'draw') || (isActivelyEditing && !drawerHasOpened));
   const wasCollapsedRef = useRef(isCollapsed);
 
   // Notify parent when drawer TRANSITIONS from collapsed to expanded
@@ -213,7 +217,8 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
             {activeTab === "text" && (
               <div id="text-tools-panel" role="tabpanel" className="flex flex-col items-center justify-start w-full gap-6">
 
-                {/* Group -1: Layout (Caption Bars) */}
+                {/* Group -1: Layout (Caption Bars) - Only show if we have text to layout */}
+                {(hasText || hasStickers) && (
                 <div className="w-full flex flex-nowrap justify-center items-center gap-4 sm:gap-5 md:gap-6 px-2 sm:px-4 min-w-0 animate-in fade-in duration-300">
                   {/* Top Bar Color Picker */}
                   <div className="color-picker-ring w-8 h-8 md:w-10 md:h-10 rounded-full shrink-0">
@@ -305,6 +310,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Group 0: Font Selector (Horizontal Scroll) */}
                 {hasText && (
@@ -403,8 +409,26 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </div>
                 )}
 
-                {/* Divider */}
-                {hasText && !hasStickers && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
+
+
+
+                {/* Text Content Area (Inputs) - Moved Here */}
+                <div className="w-full animate-in fade-in duration-300">
+                  <MemeInputs
+                    embedded={true}
+                    texts={meme.texts}
+                    handleTextChange={handleTextChange}
+                    onAddSticker={onAddSticker}
+                    onMagicCaption={onMagicCaption}
+                    isMagicGenerating={isMagicGenerating}
+                    onChaos={onChaos}
+                    hasStickers={hasStickers}
+                    onExportStickers={onExportStickers}
+                    selectedId={meme.selectedId}
+                    editingId={editingId}
+                    onEditingChange={onEditingChange}
+                  />
+                </div>
 
                 {/* Collapsible Text Styling Section */}
                 {(hasText || hasStickers) && (

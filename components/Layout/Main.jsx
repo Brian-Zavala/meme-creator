@@ -12,7 +12,7 @@ import { MEME_QUOTES } from "../../constants/memeQuotes";
 
 import MemeCanvas from "../MemeEditor/MemeCanvas";
 import MemeToolbar from "../MemeEditor/MemeToolbar";
-import MemeInputs from "../MemeEditor/MemeInputs";
+
 import { LayoutSelector } from "../MemeEditor/LayoutSelector";
 import { ExportConfirmModal } from "../Modals/ExportConfirmModal";
 import { saveState, loadState } from "../../services/storage";
@@ -2603,21 +2603,7 @@ export default function Main() {
             />
 
             <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
-              <MemeInputs
-                texts={meme.texts}
-                handleTextChange={handleTextChange}
-                onAddSticker={addSticker}
-                onMagicCaption={generateMagicCaption}
-                isMagicGenerating={isMagicGenerating}
-                onChaos={handleChaos}
-                hasStickers={meme.stickers.length > 0}
-                onExportStickers={handleExportStickers}
-                selectedId={meme.selectedId}
-                // Only pass editingId if the text has content (not a new empty text from canvas)
-                // This prevents the input panel from expanding while user types on canvas
-                editingId={editingId && meme.texts.find(t => t.id === editingId)?.content?.trim() ? editingId : null}
-                onEditingChange={setEditingId}
-              />
+              {/* Controls moved to Toolbar */}
 
               {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
               <div className="hidden lg:block space-y-4">
@@ -2671,6 +2657,14 @@ export default function Main() {
                   onAnimationChange={handleAnimationChange}
                   onStickerAnimationChange={handleStickerAnimationChange}
                   editingId={editingId}
+                  // New props for embedded MemeInputs
+                  handleTextChange={handleTextChange}
+                  onAddSticker={addSticker}
+                  onMagicCaption={generateMagicCaption}
+                  isMagicGenerating={isMagicGenerating}
+                  onChaos={handleChaos}
+                  onExportStickers={handleExportStickers}
+                  onEditingChange={setEditingId}
                 />
 
                 {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}

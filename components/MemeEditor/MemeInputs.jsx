@@ -3,7 +3,7 @@ import { Type, Sparkles, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { MemeStickerSection } from "./MemeStickerSection";
 
-export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange }) {
+export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false }) {
   // Track which text IDs have been rendered before to prevent re-animation
   const renderedIdsRef = useRef(new Set());
   const inputRefs = useRef({});
@@ -23,7 +23,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
   }, [editingId]);
 
   return (
-    <div className="flex flex-col bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm relative transition-all duration-300 z-40">
+    <div className={`flex flex-col relative transition-all duration-300 z-40 ${embedded ? '' : 'bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm'}`}>
       {/* Header with Magic AI */}
       <div className="flex items-center justify-between p-6 pb-2">
         <div className="flex items-center gap-2 text-slate-400 uppercase text-xs font-bold tracking-wider" aria-hidden="true">

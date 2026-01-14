@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, HelpCircle, Smile } from "lucide-react";
 import toast from "react-hot-toast";
 import MemeStickerLibrary from "./MemeStickerLibrary";
@@ -6,16 +7,62 @@ import MemeStickerLibrary from "./MemeStickerLibrary";
 export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const buttonRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
+
+  // Calculate dropdown position when opened
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const updatePosition = () => {
+        if (!buttonRef.current) return;
+        const rect = buttonRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const dropdownHeight = 400;
+
+        // Check if dropdown would overflow bottom of viewport
+        const spaceBelow = viewportHeight - rect.bottom;
+        const openUpward = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+        setDropdownStyle({
+          position: 'fixed',
+          left: rect.left,
+          width: rect.width + 48 + 8, // button width + help button + gap
+          zIndex: 9999, // Super high z-index
+          ...(openUpward
+            ? { bottom: viewportHeight - rect.top + 8, top: 'auto' }
+            : { top: rect.bottom + 8, bottom: 'auto' }
+          ),
+        });
+      };
+
+      updatePosition();
+      // Update on scroll/resize to keep attached
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      // Check if click is inside dropdown or button
+      const isDropdown = dropdownRef.current && dropdownRef.current.contains(event.target);
+      const isButton = buttonRef.current && buttonRef.current.contains(event.target);
+
+      if (!isDropdown && !isButton) {
         setIsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const showStickerHelp = (e) => {
     e.stopPropagation();
@@ -32,9 +79,10 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       <div className="flex gap-2">
         <button
+          ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
           aria-haspopup="true"
           aria-expanded={isOpen}
@@ -71,9 +119,12 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
         </button>
       )}
 
-      {isOpen && (
+      {/* Use Portal for Dropdown */}
+      {isOpen && createPortal(
         <div
-          className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in zoom-in-95 fade-in duration-200 origin-top h-[400px]"
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 origin-top h-[400px]"
           role="menu"
           aria-label="Sticker Categories"
         >
@@ -81,7 +132,8 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
             onAddSticker={onAddSticker}
             onClose={() => setIsOpen(false)}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

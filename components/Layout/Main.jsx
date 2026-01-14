@@ -2533,7 +2533,7 @@ export default function Main() {
   }
 
   return (
-    <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 animate-in fade-in duration-500 relative">
+    <main className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 animate-in fade-in duration-500 relative">
       <div
         className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
         style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }}
@@ -2602,7 +2602,7 @@ export default function Main() {
               isStickerOnly={isStickerExport}
             />
 
-            <div className="lg:col-span-5 space-y-8 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
+            <div className="lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
               {/* Controls moved to Toolbar */}
 
               {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
@@ -2623,7 +2623,7 @@ export default function Main() {
               <ProductHuntBadge />
             </div>
 
-            <div className="lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
+            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
                   <ModeSelector
@@ -2644,28 +2644,30 @@ export default function Main() {
                 />
               </div>
               <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
-                <MemeToolbar
-                  meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
-                  activeTool={activeTool}
-                  setActiveTool={setActiveTool}
-                  handleStyleChange={handleStyleChange}
-                  handleFilterChange={handleFilterChange}
-                  handleStyleCommit={handleStyleCommit}
-                  onResetFilters={resetFilters}
-                  onClearDrawings={handleClearDrawings}
-                  onDrawerExpand={handleToolbarExpand}
-                  onAnimationChange={handleAnimationChange}
-                  onStickerAnimationChange={handleStickerAnimationChange}
-                  editingId={editingId}
-                  // New props for embedded MemeInputs
-                  handleTextChange={handleTextChange}
-                  onAddSticker={addSticker}
-                  onMagicCaption={generateMagicCaption}
-                  isMagicGenerating={isMagicGenerating}
-                  onChaos={handleChaos}
-                  onExportStickers={handleExportStickers}
-                  onEditingChange={setEditingId}
-                />
+                {/* MemeToolbar - Mobile/Tablet Only (inside card) */}
+                <div className="lg:hidden">
+                  <MemeToolbar
+                    meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
+                    activeTool={activeTool}
+                    setActiveTool={setActiveTool}
+                    handleStyleChange={handleStyleChange}
+                    handleFilterChange={handleFilterChange}
+                    handleStyleCommit={handleStyleCommit}
+                    onResetFilters={resetFilters}
+                    onClearDrawings={handleClearDrawings}
+                    onDrawerExpand={handleToolbarExpand}
+                    onAnimationChange={handleAnimationChange}
+                    onStickerAnimationChange={handleStickerAnimationChange}
+                    editingId={editingId}
+                    handleTextChange={handleTextChange}
+                    onAddSticker={addSticker}
+                    onMagicCaption={generateMagicCaption}
+                    isMagicGenerating={isMagicGenerating}
+                    onChaos={handleChaos}
+                    onExportStickers={handleExportStickers}
+                    onEditingChange={setEditingId}
+                  />
+                </div>
 
                 {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}
 
@@ -2885,6 +2887,36 @@ export default function Main() {
                 {remixActionControls}
               </div>
 
+            </div>
+
+            {/* NEW: Right Toolbar Column - Desktop Only */}
+            <div className="hidden lg:flex lg:col-span-4 order-3 flex-1">
+              <div className="sticky top-8 w-full flex flex-col">
+                <div className="toolbar-sidebar flex-1 w-full">
+                  <MemeToolbar
+                    className="h-full glass-panel rounded-2xl shadow-xl"
+                    meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
+                    activeTool={activeTool}
+                    setActiveTool={setActiveTool}
+                    handleStyleChange={handleStyleChange}
+                    handleFilterChange={handleFilterChange}
+                    handleStyleCommit={handleStyleCommit}
+                    onResetFilters={resetFilters}
+                    onClearDrawings={handleClearDrawings}
+                    onDrawerExpand={handleToolbarExpand}
+                    onAnimationChange={handleAnimationChange}
+                    onStickerAnimationChange={handleStickerAnimationChange}
+                    editingId={editingId}
+                    handleTextChange={handleTextChange}
+                    onAddSticker={addSticker}
+                    onMagicCaption={generateMagicCaption}
+                    isMagicGenerating={isMagicGenerating}
+                    onChaos={handleChaos}
+                    onExportStickers={handleExportStickers}
+                    onEditingChange={setEditingId}
+                  />
+                </div>
+              </div>
             </div>
           </>
         );

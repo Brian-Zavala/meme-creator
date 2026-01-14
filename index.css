@@ -472,6 +472,36 @@ body {
   }
 }
 
+/* === RIGHT TOOLBAR RESPONSIVE SCALING === */
+/* Smaller laptops (1024px-1279px) */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .toolbar-sidebar {
+    font-size: 0.8125rem;
+  }
+  .toolbar-sidebar button {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .toolbar-sidebar .range-slider {
+    height: 4px;
+  }
+  .toolbar-sidebar .range-slider::-webkit-slider-thumb {
+    height: 12px;
+    width: 12px;
+  }
+  .toolbar-sidebar .range-slider::-moz-range-thumb {
+    height: 12px;
+    width: 12px;
+  }
+}
+
+/* Standard laptops (1280px+) */
+@media (min-width: 1280px) {
+  .toolbar-sidebar {
+    font-size: 0.875rem;
+  }
+}
+
 /* === MEME TEXT ANIMATIONS (Preview) === */
 
 /* Wave - oscillating up/down motion */

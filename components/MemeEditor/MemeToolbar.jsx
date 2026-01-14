@@ -89,7 +89,8 @@ function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
 
 export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange, editingId,
   // New props for MemeInputs
-  handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, onExportStickers, onEditingChange
+  handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, onExportStickers, onEditingChange,
+  className = ""
 }) {
   const [activeTab, setActiveTab] = useState("text");
   const [isPending, startTransition] = useTransition();
@@ -147,7 +148,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
   return (
     <div
-      className="flex flex-col glass-panel border-b-0 z-20 relative rounded-t-2xl"
+      className={`flex flex-col z-20 relative overflow-hidden ${className}`}
       role="region"
       aria-label="Editing Tools"
     >

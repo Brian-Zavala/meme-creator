@@ -30,7 +30,7 @@ export function ModeSelector({ mode, onModeChange }) {
         className={`w-full rounded-xl bg-slate-900/50 border border-slate-700 px-4 py-3 flex items-center justify-center relative transition-all active:scale-[0.99] ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
       >
         <div className="flex items-center gap-3">
-            {mode === "image" ? <ImageIcon className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" /> : <Video className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-4" />}
+            {mode === "image" ? <ImageIcon className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" /> : <Video className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" />}
             <span className="font-bold text-lg animate-text-shimmer whitespace-nowrap">
             {mode === "image" ? "Static Images" : "Animated GIFs"}
             </span>
@@ -54,7 +54,7 @@ export function ModeSelector({ mode, onModeChange }) {
                 <span className={`font-bold whitespace-nowrap ${mode === "image" ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
                     Static Images
                 </span>
-                {mode === "image" && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0" />}
+                {mode === "image" && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
             </button>
 
             <button
@@ -67,7 +67,7 @@ export function ModeSelector({ mode, onModeChange }) {
                 <span className={`font-bold whitespace-nowrap ${mode === "video" ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
                     Animated GIFs
                 </span>
-                {mode === "video" && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0" />}
+                {mode === "video" && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
             </button>
         </div>
       )}

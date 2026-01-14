@@ -66,7 +66,7 @@ export function LayoutSelector({ layout, onLayoutChange }) {
                     <span className={`font-bold ${layout === l.id ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
                         {l.label}
                     </span>
-                    {layout === l.id && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0" />}
+                    {layout === l.id && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
                 </button>
             ))}
         </div>

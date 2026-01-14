@@ -41,7 +41,7 @@ export function LayoutSelector({ layout, onLayoutChange }) {
       >
         <div className="flex items-center gap-3 pr-9">
             <LayoutTemplate className="w-5 h-5 text-brand" />
-            <span className="font-bold text-lg">
+            <span className="font-bold text-lg whitespace-nowrap">
                 {activeLayout.label}
             </span>
         </div>

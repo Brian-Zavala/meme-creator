@@ -2541,22 +2541,23 @@ export default function Main() {
 
       {/* Reusable Remix Controls Group */}
       {(() => {
-        const remixControls = (
-          <div className="space-y-4">
-            {/* Remix Carousel */}
-            <Suspense fallback={<div className="h-14 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-              <RemixCarousel
-                onChaos={handleChaos}
-                onCaptionRemix={handleCaptionRemix}
-                onStyleShuffle={handleStyleShuffle}
-                onFilterFrenzy={handleFilterFrenzy}
-                onVibeCheck={handleVibeCheck}
-                onExtremeDeepFry={handleExtremeDeepFry}
-                deepFryLevel={deferredDeepFry}
-                isProcessing={isProcessing}
-              />
-            </Suspense>
+        const remixCarouselControl = (
+          <Suspense fallback={<div className="h-14 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+            <RemixCarousel
+              onChaos={handleChaos}
+              onCaptionRemix={handleCaptionRemix}
+              onStyleShuffle={handleStyleShuffle}
+              onFilterFrenzy={handleFilterFrenzy}
+              onVibeCheck={handleVibeCheck}
+              onExtremeDeepFry={handleExtremeDeepFry}
+              deepFryLevel={deferredDeepFry}
+              isProcessing={isProcessing}
+            />
+          </Suspense>
+        );
 
+        const remixActionControls = (
+          <div className="space-y-4">
             {/* Undo / Redo Controls */}
             <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
               <button
@@ -2619,8 +2620,9 @@ export default function Main() {
               />
 
               {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
-              <div className="hidden lg:block">
-                {remixControls}
+              <div className="hidden lg:block space-y-4">
+                {remixCarouselControl}
+                {remixActionControls}
               </div>
 
               <Suspense fallback={<div className="h-16 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
@@ -2873,18 +2875,20 @@ export default function Main() {
                 )}
               </div>
 
-              {/* MOBILE: Remix Controls BELOW Canvas (Default) */}
-              <div className="block lg:hidden">
-                {remixControls}
-              </div>
+              {/* MOBILE: Remix Carousel -> Stickers -> Actions */}
+              <div className="flex flex-col gap-4 lg:hidden">
+                {remixCarouselControl}
 
-              {/* Mobile-Only Sticker Section */}
-              <div className="block lg:hidden bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
-                <MemeStickerSection
-                  onAddSticker={addSticker}
-                  hasStickers={meme.stickers.length > 0}
-                  onExportStickers={handleExportStickers}
-                />
+                {/* Mobile-Only Sticker Section */}
+                <div className="bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
+                  <MemeStickerSection
+                    onAddSticker={addSticker}
+                    hasStickers={meme.stickers.length > 0}
+                    onExportStickers={handleExportStickers}
+                  />
+                </div>
+
+                {remixActionControls}
               </div>
 
             </div>

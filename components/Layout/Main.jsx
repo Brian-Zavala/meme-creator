@@ -2171,6 +2171,7 @@ export default function Main() {
       const filename = `${safeName}-${stickersOnly ? 'stickers' : ''}-${Date.now()}.gif`;
       await triggerDownload(blob, filename);
       triggerFireworks();
+
       // Artificial delay to let the "Encoding..." toast be visible for a moment longer
       await new Promise(resolve => setTimeout(resolve, 1000));
 

@@ -53,7 +53,7 @@ export default defineConfig({
       },
       manifest: {
         id: '/meme-creator/',
-        name: 'Meme Creator Ultra',
+        name: 'Meme Creator',
         short_name: 'MemeCreator',
         description: 'Create ultra-high quality memes with AI and localized processing.',
         theme_color: '#ffffff',

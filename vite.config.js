@@ -63,10 +63,48 @@ export default defineConfig({
         description: 'Create ultra-high quality memes with AI and localized processing.',
         theme_color: '#ef4444',
         background_color: '#1a1a1a',
+        display: 'standalone',
+        display_override: ['window-controls-overlay', 'standalone'],
         orientation: 'portrait',
         dir: 'ltr',
         lang: 'en',
         categories: ['entertainment', 'photo', 'social'],
+        handle_links: 'preferred',
+        launch_handler: {
+          client_mode: 'navigate-existing'
+        },
+        shortcuts: [
+          {
+            name: 'Create New Meme',
+            short_name: 'New Meme',
+            description: 'Start with a fresh canvas',
+            url: '/?action=new',
+            icons: [{ src: '/images/favicons/favicon-96x96.png', sizes: '96x96', type: 'image/png' }]
+          },
+          {
+            name: 'Search GIFs',
+            short_name: 'GIFs',
+            description: 'Browse trending GIFs from Giphy',
+            url: '/?action=gif-search',
+            icons: [{ src: '/images/favicons/favicon-96x96.png', sizes: '96x96', type: 'image/png' }]
+          }
+        ],
+        share_target: {
+          action: '/',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
+            files: [
+              {
+                name: 'media',
+                accept: ['image/*', 'image/gif', 'image/png', 'image/jpeg', 'image/webp']
+              }
+            ]
+          }
+        },
         screenshots: [
           {
             src: '/images/screenshots/PWA_Landscape.png',

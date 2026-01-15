@@ -55,6 +55,8 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/, /^\/ph/]
       },
       manifest: {
+        start_url: '/',
+        scope: '/',
         id: '/meme-creator/',
         name: 'Meme Creator',
         short_name: 'MemeCreator',
@@ -62,6 +64,8 @@ export default defineConfig({
         theme_color: '#ef4444',
         background_color: '#1a1a1a',
         orientation: 'portrait',
+        dir: 'ltr',
+        lang: 'en',
         categories: ['entertainment', 'photo', 'social'],
         screenshots: [
           {

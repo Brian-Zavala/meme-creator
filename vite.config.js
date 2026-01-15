@@ -55,9 +55,9 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/, /^\/ph/]
       },
       manifest: {
-        start_url: '/',
-        scope: '/',
-        id: '/meme-creator/',
+        start_url: 'https://meme-creator.app/',
+        scope: 'https://meme-creator.app/',
+        id: 'meme-creator',
         name: 'Meme Creator',
         short_name: 'MemeCreator',
         description: 'Create ultra-high quality memes with AI and localized processing.',

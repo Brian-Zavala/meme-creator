@@ -52,10 +52,30 @@ export default defineConfig({
         ]
       },
       manifest: {
+        id: '/meme-creator/',
         name: 'Meme Creator Ultra',
         short_name: 'MemeCreator',
         description: 'Create ultra-high quality memes with AI and localized processing.',
         theme_color: '#ffffff',
+        background_color: '#1a1a1a',
+        orientation: 'portrait',
+        categories: ['entertainment', 'photo', 'social'],
+        screenshots: [
+          {
+            src: '/images/screenshots/PWA_Landscape.png',
+            sizes: '2543x1296',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'Desktop meme editor with AI tools'
+          },
+          {
+            src: '/images/screenshots/PWA_Mobile.png',
+            sizes: '536x1165',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Mobile meme creation experience'
+          }
+        ],
         icons: [
           {
             src: '/images/favicons/android-chrome-192x192.png',
@@ -74,6 +94,12 @@ export default defineConfig({
             sizes: '96x96',
             type: 'image/png',
             purpose: 'any'
+          },
+          {
+            src: '/images/maskable-icon/maskable_icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }

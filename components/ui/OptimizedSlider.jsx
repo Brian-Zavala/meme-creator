@@ -1,4 +1,4 @@
-import { useState, useEffect, useTransition, useRef } from 'react';
+import { useState, useEffect, useTransition, useRef, useId } from 'react';
 
 export default function OptimizedSlider({
   value,
@@ -21,8 +21,8 @@ export default function OptimizedSlider({
   const [isPending, startTransition] = useTransition();
   const lastVibrateRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
-  const defaultId = useRef(`slider-${Math.random().toString(36).substr(2, 9)}`);
-  const effectiveId = id || name || defaultId.current;
+  const generatedId = useId();
+  const effectiveId = id || name || generatedId;
 
   const inputRef = useRef(null);
   const glowRef = useRef(null);

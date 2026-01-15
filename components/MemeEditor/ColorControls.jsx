@@ -1,10 +1,11 @@
 import { Palette, Paintbrush as Brush } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useId } from "react";
 import OptimizedSlider from "../ui/OptimizedSlider";
 
 export default function ColorControls({ meme, handleStyleChange, handleStyleCommit }) {
   const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
   const [isMobile, setIsMobile] = useState(false);
+  const baseId = useId();
 
   useEffect(() => {
     // Initial check
@@ -77,7 +78,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
               <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                 <input
-                  id="text-color-picker"
+                  id={`${baseId}-text-color`}
                   type="color" name="textColor"
                   value={toSafeHex(meme.textColor)}
                   onChange={(e) => onColorPick('textColor', e.target.value)}
@@ -120,7 +121,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
             <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
               <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                 <input
-                  id="outline-color-picker"
+                  id={`${baseId}-outline-color`}
                   type="color" name="textShadow"
                   value={toSafeHex(meme.textShadow || '#000000')}
                   onChange={(e) => onColorPick('textShadow', e.target.value)}
@@ -164,7 +165,7 @@ export default function ColorControls({ meme, handleStyleChange, handleStyleComm
               <div className="color-picker-ring w-8 h-8 rounded-full shrink-0">
                 <div className="relative overflow-hidden w-full h-full rounded-full cursor-pointer">
                   <input
-                    id="backdrop-color-picker"
+                    id={`${baseId}-backdrop-color`}
                     type="color" name="textBgColor"
                     value={toSafeHex(meme.textBgColor)}
                     onChange={(e) => onColorPick('textBgColor', e.target.value)}

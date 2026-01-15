@@ -9,7 +9,7 @@ export default function StickerfyBackground() {
             <LottieAnimation
                 src="/animations/stickerfy.json"
                 className="w-full h-full opacity-90"
-                style={{ width: '100%', height: '100%', transform: 'scale(1.2)' }}
+                style={{ width: '100%', height: '100%', transform: 'scale(1.0)' }}
             />
         </div>
     );

@@ -9,6 +9,7 @@ import { hasAnimatedText } from "../../constants/textAnimations";
 import { deepFryImage } from "../../services/imageProcessor";
 import { processFileInWorker } from "../../services/fileLoader";
 import { MEME_QUOTES } from "../../constants/memeQuotes";
+import { STICKER_KEYWORDS } from "../../constants/stickerKeywords";
 
 import MemeCanvas from "../MemeEditor/MemeCanvas";
 import MemeToolbar from "../MemeEditor/MemeToolbar";
@@ -1561,8 +1562,17 @@ export default function Main() {
 
   async function handleStickerfy() {
     try {
-      // Fetch 3-5 random trending stickers from Giphy
-      const stickers = await searchGiphy('', 'sticker');
+      // Pick a random keyword to ensure variety
+      const randomKeyword = STICKER_KEYWORDS[Math.floor(Math.random() * STICKER_KEYWORDS.length)];
+
+      // Fetch 3-5 random stickers from Giphy based on the keyword
+      let stickers = await searchGiphy(randomKeyword, 'sticker');
+
+      // Fallback to trending if no results found for the keyword
+      if (!stickers || stickers.length === 0) {
+        console.warn(`No stickers found for "${randomKeyword}", falling back to trending`);
+        stickers = await searchGiphy('', 'sticker');
+      }
 
       if (!stickers || stickers.length === 0) {
         toast("No stickers available", {
@@ -1571,8 +1581,11 @@ export default function Main() {
         return;
       }
 
+      // Shuffle the results to avoid always picking the top 5
+      const shuffled = stickers.sort(() => 0.5 - Math.random());
+
       const count = 3 + Math.floor(Math.random() * 3); // 3-5 stickers
-      const selected = stickers.slice(0, count);
+      const selected = shuffled.slice(0, count);
 
       // Create all new stickers at once with random properties
       const newStickers = selected.map((sticker) => ({
@@ -1593,7 +1606,7 @@ export default function Main() {
         stickers: [...prev.stickers, ...newStickers]
       }));
 
-      toast("Stickerfy applied", {
+      toast(`Stickerfy: ${randomKeyword}!`, {
         icon: <ToastIcon src="/animations/filter-frenzy.json" />
       });
     } catch (error) {
@@ -2854,7 +2867,16 @@ export default function Main() {
                 <Redo2 className="w-4 h-4" /> Redo
               </button>
               <button
-                onClick={() => toast("Tip: Ctrl+Z/Y work too!", { icon: "💡" })}
+                onClick={() => toast("Tip: Ctrl+Z/Y work too!", {
+                  icon: (
+                    <picture>
+                      <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/512.webp" type="image/webp" />
+                      <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/512.gif" alt="💡" width="32" height="32" />
+                    </picture>
+                  ),
+                  style: { borderRadius: '10px', background: '#333', color: '#fff' },
+                  duration: 3000
+                })}
                 className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95 touch-target"
               >
                 <HelpCircle className="w-5 h-5" />

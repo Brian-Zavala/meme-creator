@@ -2150,7 +2150,7 @@ export default function Main() {
         textShadow: "#000000",
         letterSpacing: 0,
         maxWidth: 100,
-        stickerSize: 60,
+        stickerSize: 100,
         panels: prev.panels.map(p => ({ ...p, filters: { ...DEFAULT_FILTERS } }))
       }));
     });

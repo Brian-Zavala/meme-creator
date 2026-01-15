@@ -417,7 +417,7 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
     for (const sticker of (stickers || [])) {
         const x = (sticker.x / 100) * exportWidth;
         const y = (sticker.y / 100) * exportHeight;
-        const size = (meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor;
+        const size = (meme.stickerSize || 100) * (sticker.scale ?? 1) * scaleFactor;
 
         // Animation Transform
         let animX = x;

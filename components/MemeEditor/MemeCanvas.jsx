@@ -700,8 +700,8 @@ const MemeCanvas = forwardRef(({
               style={{
                 left: `${sticker.x}%`,
                 top: `${sticker.y}%`,
-                fontSize: `${(meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor}px`,
-                width: (sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') ? `${(meme.stickerSize || 60) * (sticker.scale ?? 1) * scaleFactor}px` : 'auto',
+                fontSize: `${(meme.stickerSize || 100) * (sticker.scale ?? 1) * scaleFactor}px`,
+                width: (sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') ? `${(meme.stickerSize || 100) * (sticker.scale ?? 1) * scaleFactor}px` : 'auto',
                 transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`,
               }}
               role="img"

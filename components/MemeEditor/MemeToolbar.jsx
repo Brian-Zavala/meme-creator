@@ -448,20 +448,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </div>
                 )}
 
-                {/* Sticker Size Slider - Moved here */}
-                {hasStickers && (
-                  <div className="w-full flex items-center gap-4 animate-in slide-in-from-top-1 fade-in duration-300">
-                    <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="5" max="250" name="stickerSize"
-                      value={meme.stickerSize || 60}
-                      onChange={handleStyleChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer rounded-full opacity-90 h-2"
-                      title="Sticker Size"
-                    />
-                  </div>
-                )}
+
 
 
 
@@ -538,6 +525,23 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                       title="Font Size"
                                     />
                                   </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Sticker Size Slider - Inside Text Styling */}
+                            {hasStickers && (
+                              <div className="flex flex-col w-full gap-2 animate-in fade-in duration-300">
+                                <div className="flex items-center gap-4 w-full">
+                                  <Smile className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+                                  <OptimizedSlider
+                                    min="5" max="250" name="stickerSize"
+                                    value={meme.stickerSize || 100}
+                                    onChange={handleStyleChange}
+                                    onCommit={handleStyleCommit}
+                                    className="range-slider w-full cursor-pointer rounded-full h-2"
+                                    title="Sticker Size"
+                                  />
                                 </div>
                               </div>
                             )}

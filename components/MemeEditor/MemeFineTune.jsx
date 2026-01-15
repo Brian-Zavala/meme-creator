@@ -37,11 +37,11 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
         onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
     >
-        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between pb-2 border-b border-slate-800/50 gap-y-3">
+        <div className="flex flex-wrap items-center justify-between pb-2 border-b border-slate-800/50 gap-y-3">
             <span className="text-[clamp(10px,2.5vw,12px)] font-bold uppercase tracking-wider text-slate-500 order-1">Fine Tune</span>
 
             {/* Size Adjuster */}
-            <div className="flex items-center gap-3 px-0 sm:px-4 w-full sm:w-auto sm:flex-1 justify-center order-3 sm:order-2">
+            <div className="flex items-center gap-3 px-0 w-full justify-center order-3">
                 <span className="text-[clamp(10px,2.5vw,12px)] font-bold text-slate-500 uppercase tracking-wider">Size</span>
                 <OptimizedSlider
                     min="0.1" max="5" step="0.1"
@@ -49,20 +49,20 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
                     onChange={(e) => onFineTune('scale', e.target.value)}
                     onCommit={onFineTuneCommit}
                     trackColor="rgb(30 41 59)"
-                    className="range-slider w-full sm:w-32 h-1.5 rounded-full cursor-pointer"
+                    className="range-slider w-full h-1.5 rounded-full cursor-pointer"
                 />
-                <span className="text-[clamp(9px,2vw,11px)] font-mono text-slate-400 w-6 text-right">
+                <span className="text-[clamp(9px,2vw,11px)] font-mono text-slate-400 w-10 text-right">
                     {Math.round((selectedElement.scale ?? 1) * 100)}%
                 </span>
             </div>
 
             {/* Custom Position Dropdown */}
-            <div className="relative group/pos order-2 sm:order-3 sm:mr-2 shrink-0" ref={dropdownRef}>
+            <div className="relative group/pos order-2 mr-2 shrink-0" ref={dropdownRef}>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-1 lg:px-2.5 lg:py-1.5 justify-between transition-all active:scale-95 group/btn"
+                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-2.5 py-1.5 justify-between transition-all active:scale-95 group/btn"
                 >
-                    <span className="text-[10px] lg:text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                          Position
                     </span>
                     <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand' : 'group-hover/btn:text-brand'}`} />

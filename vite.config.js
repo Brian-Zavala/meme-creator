@@ -49,14 +49,17 @@ export default defineConfig({
               }
             }
           }
-        ]
+        ],
+        // Offline fallback for navigation requests
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/, /^\/ph/]
       },
       manifest: {
         id: '/meme-creator/',
         name: 'Meme Creator',
         short_name: 'MemeCreator',
         description: 'Create ultra-high quality memes with AI and localized processing.',
-        theme_color: '#ffffff',
+        theme_color: '#ef4444',
         background_color: '#1a1a1a',
         orientation: 'portrait',
         categories: ['entertainment', 'photo', 'social'],

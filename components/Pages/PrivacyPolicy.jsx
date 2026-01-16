@@ -73,6 +73,33 @@ export function PrivacyPolicy({ onBack }) {
             </p>
           </section>
 
+          <section id="delete-data">
+            <h2 className="text-xl font-semibold text-white mb-3">Delete Your Data</h2>
+            <p className="mb-3">
+              To delete all data associated with your use of Meme Creator:
+            </p>
+            <ol className="list-decimal list-inside space-y-2 ml-2 mb-3">
+              <li>
+                <strong>Local data:</strong> Clear your browser's site data for this app, 
+                or uninstall the app from your device.
+              </li>
+              <li>
+                <strong>Analytics data:</strong> To request deletion of anonymous analytics 
+                data, email us at{" "}
+                <a 
+                  href="mailto:privacy@meme-creator.app?subject=Data%20Deletion%20Request"
+                  className="text-purple-400 hover:text-purple-300 underline"
+                >
+                  privacy@meme-creator.app
+                </a>{" "}
+                with the subject "Data Deletion Request".
+              </li>
+            </ol>
+            <p>
+              We will process your request within 30 days.
+            </p>
+          </section>
+
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">Children's Privacy</h2>
             <p>

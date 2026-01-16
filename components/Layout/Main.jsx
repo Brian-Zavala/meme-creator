@@ -2975,8 +2975,8 @@ export default function Main() {
               <ProductHuntBadge />
             </div>
 
-            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
                 <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
                   <ModeSelector
                     mode={meme.mode}

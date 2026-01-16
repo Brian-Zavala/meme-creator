@@ -575,7 +575,7 @@ const MemeCanvas = forwardRef(({
                 }}
               >
                 {showUrl ? (
-                  (panel.isVideo && !panel.processedImage && !showUrl.toLowerCase().includes('.gif') && !showUrl.startsWith('data:image/gif')) ? (
+                  (panel.isVideo && !panel.isGif && !panel.processedImage && !showUrl.toLowerCase().includes('.gif') && !showUrl.startsWith('data:image/gif')) ? (
                     <video
                       src={showUrl}
                       className="w-full h-full block pointer-events-none select-none"

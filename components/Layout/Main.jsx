@@ -2033,6 +2033,7 @@ export default function Main() {
                 // CRITICAL: Attach raw Blob for efficient storage
                 sourceBlob: file,
                 isVideo: isVideo || isGif,
+                isGif: isGif, // Track GIF separately for proper rendering
                 objectFit: "cover",
                 filters: { ...DEFAULT_FILTERS },
                 processedImage: null,
@@ -2066,6 +2067,7 @@ export default function Main() {
                 // CRITICAL: Attach raw Blob for efficient storage
                 sourceBlob: file,
                 isVideo: isVideo || isGif,
+                isGif: isGif, // Track GIF separately for proper rendering
                 objectFit: "cover",
                 filters: { ...DEFAULT_FILTERS },
                 processedImage: null,
@@ -2088,7 +2090,7 @@ export default function Main() {
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
           p.id === panelId
-            ? { ...p, url: null, sourceUrl: null, isVideo: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+            ? { ...p, url: null, sourceUrl: null, isVideo: false, isGif: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
             : p
         );
         return {

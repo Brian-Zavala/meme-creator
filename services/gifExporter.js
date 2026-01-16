@@ -486,16 +486,40 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
                 const aspect = sh / sw;
                 const drawWidth = size;
                 const drawHeight = size * aspect;
+                
+                // Match CSS drop-shadow-md from preview: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))
+                // Canvas shadow is simpler, so we approximate with a single shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                ctx.shadowBlur = 3 * scaleFactor;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 3 * scaleFactor;
+                
                 // Draw centered at (0,0) because we translated to center
                 ctx.drawImage(drawCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+                
+                // Reset shadow after drawing sticker
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
             }
         } else {
+            // Emoji stickers - apply same drop shadow as image stickers
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+            ctx.shadowBlur = 3 * scaleFactor;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 3 * scaleFactor;
+            
             ctx.font = `${size}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            // Determine text color - default black unless dark mode logic needed?
-            // Stick to meme creator default (usually just renders the emoji text as is)
             ctx.fillText(sticker.url, 0, 0);
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
         }
         ctx.restore();
     }
@@ -1019,7 +1043,8 @@ function drawText(ctx, texts, meme, width, height, offsetY, currentTimeMs = 0, t
         ctx.rotate(animRotation);
         ctx.scale(animScaleX, animScaleY);
 
-        ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Impact'}, sans-serif`;
+        // Match CSS fontFamily default: MemeCanvas uses 'Roboto' as default
+        ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Roboto'}, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 

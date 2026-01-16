@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo } from "react";
-import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser, Sparkles } from "lucide-react";
+import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
@@ -2921,7 +2921,19 @@ export default function Main() {
                 onClick={handleRemoveEffects}
                 className="flex-1 bg-teal-900/20 hover:bg-teal-900/40 text-teal-400 font-semibold py-3 px-3 flex items-center justify-center gap-2 transition-all active:scale-[0.98] touch-target"
               >
-                <Sparkles className="w-4 h-4" />
+                <div
+                  className="w-5 h-5 bg-teal-400"
+                  style={{
+                    maskImage: 'url("/images/stickers/icons/effects-remover.png")',
+                    maskSize: 'contain',
+                    maskRepeat: 'no-repeat',
+                    maskPosition: 'center',
+                    WebkitMaskImage: 'url("/images/stickers/icons/effects-remover.png")',
+                    WebkitMaskSize: 'contain',
+                    WebkitMaskRepeat: 'no-repeat',
+                    WebkitMaskPosition: 'center'
+                  }}
+                />
                 <span className="text-sm">Remove Effects</span>
               </button>
             </div>

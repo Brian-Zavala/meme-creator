@@ -459,6 +459,14 @@ const MemeCanvas = forwardRef(({
       role="img"
       aria-label={description}
     >
+      {/* Hover Border Overlay - Shows when hovering over text/stickers (outside active border) */}
+      {isHoveringElement && (
+        <div
+          data-html2canvas-ignore="true"
+          className="absolute inset-0 border-2 border-dashed border-white z-[101] pointer-events-none"
+        />
+      )}
+
       {/* Hidden Global File Input for Ghost Slots */}
       <input
         id="ghost-slot-file-input"
@@ -500,6 +508,14 @@ const MemeCanvas = forwardRef(({
           maxWidth: '100%'
         }}
       >
+        {/* Active Selection Border Overlay - On parent canvas */}
+        {(activePanelId || dragOverPanel) && (
+          <div
+            data-html2canvas-ignore="true"
+            className="absolute inset-0 border-2 border-dashed border-brand z-[100] shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none"
+          />
+        )}
+
         {/* Top Caption Bar */}
         {meme.paddingTop > 0 && (
           <div
@@ -562,7 +578,7 @@ const MemeCanvas = forwardRef(({
                     onDrop(file, panel.id);
                   }
                 }}
-                className={`absolute overflow-hidden transition-all duration-200 border-2 rounded-b-2xl ${isHoveringElement ? 'border-white' : 'border-[#2f3336]'}
+                className={`absolute overflow-hidden transition-all duration-200 border-2 border-[#2f3336]
                             ${dragOverPanel === panel.id ? 'bg-brand/20' : ''}
                             ${canDrag ? 'cursor-move' : ''}
                         `}
@@ -638,13 +654,6 @@ const MemeCanvas = forwardRef(({
                   </div>
                 )}
 
-                {/* Active Selection Border Overlay - Separated for Export Ignoring */}
-                {(isActive || dragOverPanel === panel.id) && (
-                  <div
-                    data-html2canvas-ignore="true"
-                    className="absolute inset-0 border-2 border-brand z-10 shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none rounded-b-2xl"
-                  />
-                )}
                 {isActive && (
                   <div
                     data-html2canvas-ignore="true"

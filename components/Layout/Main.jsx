@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo } from "react";
 import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser } from "lucide-react";
 import toast from "react-hot-toast";
-import { triggerFireworks } from "../ui/Confetti";
+import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
 import { searchGiphy, registerShare, getAutocomplete, getCategories } from "../../services/giphy";
 import { exportGif, exportStickersAsPng, exportImageAsPng } from "../../services/gifExporter";
@@ -1733,31 +1733,36 @@ export default function Main() {
   }
 
   function handleConfettiBlast() {
-    // Add 8-12 random emoji particles
-    const confettiEmojis = ['🎉', '🎊', '✨', '💫', '⭐', '🌟', '💥', '🔥', '💯', '🚀'];
-    const count = 8 + Math.floor(Math.random() * 5); // 8-12 emojis
+    // Trigger visual confetti celebration effect immediately
+    triggerConfettiBurst();
 
-    // Create circular explosion pattern from center
+    // Add 10-15 confetti-specific emoji particles with animations
+    const confettiEmojis = ['🎉', '🎊', '✨', '🎇', '🎆'];
+    const confettiAnimations = ['bounce', 'float', 'spin', 'pulse', 'tada', 'wobble', 'heartbeat', 'jelly'];
+    const count = 10 + Math.floor(Math.random() * 6); // 10-15 emojis
+
+    // Create explosion pattern from center with more varied positions
     const newStickers = [];
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * 2 * Math.PI;
-      const distance = 20 + Math.random() * 15; // 20-35% from center
+      const angle = (i / count) * 2 * Math.PI + (Math.random() * 0.5 - 0.25); // Add some randomness to angle
+      const distance = 15 + Math.random() * 30; // 15-45% from center for better spread
       const x = 50 + Math.cos(angle) * distance;
       const y = 50 + Math.sin(angle) * distance;
       const randomEmoji = confettiEmojis[Math.floor(Math.random() * confettiEmojis.length)];
-      const randomScale = 0.2 + Math.random() * 0.4; // 20-60% size
+      const randomScale = 0.25 + Math.random() * 0.5; // 25-75% size
       const randomRotation = Math.random() * 360;
+      const randomAnimation = confettiAnimations[Math.floor(Math.random() * confettiAnimations.length)];
 
       newStickers.push({
         id: crypto.randomUUID(),
         url: randomEmoji,
         type: 'emoji',
-        x,
-        y,
+        x: Math.max(5, Math.min(95, x)), // Clamp to keep within canvas
+        y: Math.max(5, Math.min(95, y)),
         scale: randomScale,
         rotation: randomRotation,
-        isAnimated: false,
-        animation: null
+        isAnimated: true,
+        animation: randomAnimation
       });
     }
 
@@ -1768,8 +1773,8 @@ export default function Main() {
     }));
 
     remixClickCountRef.current.confetti = (remixClickCountRef.current.confetti || 0) + 1;
-    toast("Confetti Blast applied", {
-      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+    toast("Confetti Blast! 🎉", {
+      icon: <ToastIcon src="/animations/confetti.json" />
     });
   }
 

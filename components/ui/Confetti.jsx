@@ -109,4 +109,52 @@ export function triggerFireworks() {
   }, 250)
 }
 
+/**
+ * Triggers a quick confetti burst from the center of the screen
+ * Perfect for celebration moments like confetti blast button
+ */
+export function triggerConfettiBurst() {
+  // First burst - center explosion
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { x: 0.5, y: 0.5 },
+    colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#ff69b4'],
+    ticks: 200,
+    gravity: 0.8,
+    scalar: 1.2,
+    drift: 0,
+  })
+
+  // Delayed side bursts for extra flair
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.6 },
+      colors: ['#ff0000', '#ffa500', '#ffff00', '#ff69b4'],
+    })
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.6 },
+      colors: ['#00ff00', '#00ffff', '#0000ff', '#ff00ff'],
+    })
+  }, 150)
+
+  // Final top burst
+  setTimeout(() => {
+    confetti({
+      particleCount: 30,
+      angle: 270,
+      spread: 100,
+      origin: { x: 0.5, y: 0 },
+      gravity: 1.5,
+      colors: ['#ffd700', '#ff6347', '#32cd32', '#1e90ff'],
+    })
+  }, 300)
+}
+
 export default Confetti

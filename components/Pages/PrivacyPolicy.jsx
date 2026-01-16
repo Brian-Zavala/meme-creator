@@ -87,10 +87,10 @@ export function PrivacyPolicy({ onBack }) {
                 <strong>Analytics data:</strong> To request deletion of anonymous analytics 
                 data, email us at{" "}
                 <a 
-                  href="mailto:privacy@meme-creator.app?subject=Data%20Deletion%20Request"
+                  href="mailto:meme.creator.app.privacy@gmail.com?subject=Data%20Deletion%20Request"
                   className="text-purple-400 hover:text-purple-300 underline"
                 >
-                  privacy@meme-creator.app
+                  meme.creator.app.privacy@gmail.com
                 </a>{" "}
                 with the subject "Data Deletion Request".
               </li>

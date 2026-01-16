@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useTransition } from "react";
-import { Type, Sparkles, Loader2 } from "lucide-react";
+import { Type, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { MemeStickerSection } from "./MemeStickerSection";
 import LottieAnimation from "../Animations/LottieAnimation";
@@ -65,7 +65,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
             {isMagicGenerating ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
             ) : (
-              <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" aria-hidden="true" />
+              <span className="text-sm group-hover:rotate-12 transition-transform select-none" aria-hidden="true">👾</span>
             )}
             <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">
               {isMagicGenerating ? "Generating..." : "Magic AI"}

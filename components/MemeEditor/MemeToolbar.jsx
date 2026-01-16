@@ -360,7 +360,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 {/* Group 0: Font Selector (Horizontal Scroll) */}
                 {hasText && (
                   <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                    <div className="flex gap-2 overflow-x-auto pt-6 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
                       {FONTS.map((font) => (
                         <button
                           key={font.name}
@@ -391,7 +391,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         Text Animation {hasAnimatedText && <span className="text-amber-400">• GIF Export</span>}
                       </span>
                     </div>
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                    <div className="flex gap-2 overflow-x-auto pt-6 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
                       {TEXT_ANIMATIONS.map((anim) => {
                         // Check if ANY text has this animation
                         const isActive = meme.texts.some(t => t.animation === anim.id);
@@ -424,7 +424,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         Sticker Animation {hasAnimatedSticker && <span className="text-amber-400">• GIF Export</span>}
                       </span>
                     </div>
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                    <div className="flex gap-2 overflow-x-auto pt-6 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
                       {TEXT_ANIMATIONS.map((anim) => {
                         // Check if ANY sticker has this animation
                         const isActive = meme.stickers.some(s => s.animation === anim.id);

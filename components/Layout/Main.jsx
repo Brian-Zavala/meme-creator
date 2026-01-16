@@ -3210,6 +3210,8 @@ export default function Main() {
 
               {/* MOBILE: Remix Carousel -> Stickers -> Actions */}
               <div className="flex flex-col gap-4 lg:hidden">
+                {remixActionControls}
+
                 {remixCarouselControl}
 
                 {/* Mobile-Only Sticker Section */}
@@ -3220,8 +3222,6 @@ export default function Main() {
                     onExportStickers={handleExportStickers}
                   />
                 </div>
-
-                {remixActionControls}
               </div>
 
             </div>

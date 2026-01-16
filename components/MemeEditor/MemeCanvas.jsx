@@ -455,7 +455,7 @@ const MemeCanvas = forwardRef(({
       ref={containerRef}
       onPointerDown={onCanvasPointerDown}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none"
+      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none rounded-none"
       role="img"
       aria-label={description}
     >

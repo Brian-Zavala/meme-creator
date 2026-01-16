@@ -3185,8 +3185,8 @@ export default function Main() {
                       className="absolute inset-0 border-2 border-dashed border-brand z-[100] shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none"
                     />
                   )}
-                  {/* Hover Border Overlay - Shows when hovering over text/stickers */}
-                  {isHoveringCanvasElement && (
+                  {/* Hover Border Overlay - Shows when hovering over OR actively dragging text/stickers */}
+                  {(isHoveringCanvasElement || draggedId) && (
                     <div
                       data-html2canvas-ignore="true"
                       className="absolute inset-0 border-2 border-dashed border-white z-[101] pointer-events-none"

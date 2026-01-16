@@ -563,7 +563,7 @@ const MemeCanvas = forwardRef(({
                     onDrop(file, panel.id);
                   }
                 }}
-                className={`absolute overflow-hidden transition-all duration-200 border-2 border-[#2f3336] rounded-none
+                className={`absolute overflow-hidden transition-all duration-200 rounded-none
                             ${dragOverPanel === panel.id ? 'bg-brand/20' : ''}
                             ${canDrag ? 'cursor-move' : ''}
                         `}
@@ -693,6 +693,8 @@ const MemeCanvas = forwardRef(({
                 fontSize: `${(meme.stickerSize || 100) * (sticker.scale ?? 1) * scaleFactor}px`,
                 width: (sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') ? `${(meme.stickerSize || 100) * (sticker.scale ?? 1) * scaleFactor}px` : 'auto',
                 transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`,
+                border: draggedId === sticker.id ? "2px dashed rgba(255,255,255,0.5)" : "none",
+                borderRadius: "0.5em",
               }}
               role="img"
               aria-label={`Sticker: ${sticker.url}`}

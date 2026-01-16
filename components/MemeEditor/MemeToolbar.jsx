@@ -63,11 +63,11 @@ function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
       onBlur={() => setIsHovered(false)}
       role="radio"
       aria-checked={isActive}
-      className={`snap-center shrink-0 px-3 py-2 rounded-lg border text-sm transition-all active:scale-95 flex items-center gap-2 group ${isActive
+      className={`snap-center shrink-0 px-3 py-2 rounded-lg text-sm transition-all active:scale-95 flex items-center gap-2 group ${isActive
         ? activeClasses
         : anim.id === 'none'
-          ? "bg-slate-900 text-slate-500 border-slate-700 hover:border-slate-500 hover:text-white"
-          : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+          ? "bg-[#181818] text-slate-500 border border-[#2f3336] hover:border-[#3e4347] hover:text-white"
+          : "bg-[#181818] text-slate-400 border border-[#2f3336] hover:border-[#3e4347] hover:text-white"
         }`}
       style={{ touchAction: 'manipulation' }}
     >
@@ -173,7 +173,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
       aria-label="Editing Tools"
     >
       {/* Mode Switcher */}
-      <div className="flex border-b border-slate-800 relative" role="tablist">
+      <div className="flex border-b border-[#2f3336] relative" role="tablist">
         {/* Animated Active Tab Indicator */}
         <div
           className={`absolute bottom-0 h-0.5 bg-brand transition-all duration-300 ease-out z-10 w-1/3 ${activeTab === "text" ? "left-0" : activeTab === "image" ? "left-1/3" : "left-2/3"
@@ -194,7 +194,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           Text
         </button>
 
-        <div className="w-px bg-slate-800 z-0" role="presentation"></div>
+        <div className="w-px bg-[#181818] z-0" role="presentation"></div>
 
         <button
           onClick={() => handleTabChange("image")}
@@ -210,7 +210,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           Image
         </button>
 
-        <div className="w-px bg-slate-800 z-0" role="presentation"></div>
+        <div className="w-px bg-[#181818] z-0" role="presentation"></div>
 
         <button
           onClick={() => handleTabChange("draw")}
@@ -253,7 +253,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   {/* Pair 1: Top Bar Control (Color on LEFT + Toggle) - Interlocked */}
                   <div className="flex flex-1 items-center caption-bar-group max-w-[50%]">
                     {/* Top Bar Color Picker with Icon - rounded left, flat right */}
-                    <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-l rounded-l-xl rounded-r-none overflow-hidden ${meme.paddingTop > 0 ? 'border-brand' : 'border-slate-600'}`}>
+                    <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-l rounded-l-xl rounded-r-none overflow-hidden ${meme.paddingTop > 0 ? 'border-brand' : 'border-[#2f3336]'}`}>
                       <div className="relative w-full h-full cursor-pointer">
                         <input
                           id={`${baseId}-top-bar-color`}
@@ -292,9 +292,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             }, 50);
                         });
                       }}
-                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-r-xl rounded-l-none transition-all active:scale-[0.98] border-y border-r uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${meme.paddingTop > 0
-                        ? "bg-brand text-slate-900 border-brand"
-                        : "bg-slate-800/80 text-slate-400 border-slate-600 hover:border-slate-500 hover:text-white hover:bg-slate-700/80"
+                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-r-xl rounded-l-none transition-all active:scale-[0.98] uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${meme.paddingTop > 0
+                        ? "bg-brand text-slate-900 border-y border-r border-brand"
+                        : "bg-[#181818] text-slate-400 border-y border-r border-[#2f3336] hover:border-[#3e4347] hover:text-white"
                         }`}
                       style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                     >
@@ -324,9 +324,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             }, 50);
                         });
                       }}
-                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-l-xl rounded-r-none transition-all active:scale-[0.98] border-y border-l uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${(meme.paddingBottom || 0) > 0
-                        ? "bg-brand text-slate-900 border-brand"
-                        : "bg-slate-800/80 text-slate-400 border-slate-600 hover:border-slate-500 hover:text-white hover:bg-slate-700/80"
+                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-l-xl rounded-r-none transition-all active:scale-[0.98] uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${(meme.paddingBottom || 0) > 0
+                        ? "bg-brand text-slate-900 border-y border-l border-brand"
+                        : "bg-[#181818] text-slate-400 border-y border-l border-[#2f3336] hover:border-[#3e4347] hover:text-white"
                         }`}
                       style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                     >
@@ -334,7 +334,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     </button>
 
                     {/* Bottom Bar Color Picker with Icon - flat left, rounded right */}
-                    <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-r rounded-r-xl rounded-l-none overflow-hidden ${(meme.paddingBottom || 0) > 0 ? 'border-brand' : 'border-slate-600'}`}>
+                    <div className={`relative w-9 h-9 md:w-10 md:h-10 shrink-0 border-y border-r rounded-r-xl rounded-l-none overflow-hidden ${(meme.paddingBottom || 0) > 0 ? 'border-brand' : 'border-[#2f3336]'}`}>
                       <div className="relative w-full h-full cursor-pointer">
                         <input
                           id={`${baseId}-bottom-bar-color`}
@@ -370,9 +370,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                 handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
                             });
                           }}
-                          className={`snap-center shrink-0 px-4 py-2 rounded-lg border text-sm transition-all active:scale-95 ${(meme.fontFamily || "Roboto") === font.name
-                            ? "bg-slate-100 text-slate-900 border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-                            : "bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
+                          className={`snap-center shrink-0 px-4 py-2 rounded-lg text-sm transition-all active:scale-95 ${(meme.fontFamily || "Roboto") === font.name
+                            ? "bg-slate-100 text-slate-900 border border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                            : "bg-[#181818] text-slate-400 border border-[#2f3336] hover:border-[#3e4347] hover:text-white"
                             }`}
                           style={{ fontFamily: `${font.name}, sans-serif` }}
                         >
@@ -482,7 +482,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                         if (navigator.vibrate) navigator.vibrate(10);
                         startTransition(() => setShowTextStyling(!showTextStyling));
                       }}
-                      className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-slate-800/50 border border-brand text-slate-400 hover:text-white hover:border-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all active:scale-[0.98]"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-[#181818] border border-[#2f3336] text-slate-400 hover:text-white hover:border-[#3e4347] focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all active:scale-[0.98]"
                     >
                       <span className="text-xs font-bold uppercase tracking-wider">
                         {showTextStyling ? 'Hide' : 'Show'} Text Styling
@@ -510,7 +510,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                         if (navigator.vibrate) navigator.vibrate(10);
                                         handleStyleChange({ currentTarget: { name: 'fontSize', value: 40 } }, true);
                                       }}
-                                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-[#181818]/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-[#2f3336]"
                                     >
                                       Reset
                                     </button>
@@ -549,7 +549,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                           </div>
 
                           {/* Divider */}
-                          {(hasText || hasStickers) && <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />}
+                          {(hasText || hasStickers) && <div className="w-full h-px bg-[#181818] shrink-0" aria-hidden="true" />}
 
                           {/* Group 2: Width Control */}
                           {hasText && (
@@ -562,7 +562,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                         if (navigator.vibrate) navigator.vibrate(10);
                                         handleStyleChange({ currentTarget: { name: 'maxWidth', value: 100 } }, true);
                                       }}
-                                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-[#181818]/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-[#2f3336]"
                                     >
                                       Reset
                                     </button>
@@ -582,7 +582,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                               </div>
 
                               {/* Divider */}
-                              <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+                              <div className="w-full h-px bg-[#181818] shrink-0" aria-hidden="true" />
 
                               {/* Group 2.5: Letter Spacing */}
                               <div className="flex-1 w-full flex flex-col gap-2 animate-in fade-in duration-300">
@@ -593,7 +593,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                                         if (navigator.vibrate) navigator.vibrate(10);
                                         handleStyleChange({ currentTarget: { name: 'letterSpacing', value: 0 } }, true);
                                       }}
-                                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-slate-800/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-slate-700/50"
+                                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-[#181818]/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-[#2f3336]"
                                     >
                                       Reset
                                     </button>
@@ -613,11 +613,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                               </div>
 
                               {/* Divider */}
-                              <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+                              <div className="w-full h-px bg-[#181818] shrink-0" aria-hidden="true" />
 
                               {/* Group 3: Color Controls - Centered */}
                               <div className="w-[calc(100%+24px)] -mx-3 flex justify-center py-2 overflow-visible">
-                                <Suspense fallback={<div className="w-full md:w-auto h-20 bg-slate-800/20 rounded animate-pulse shrink-0" />}>
+                                <Suspense fallback={<div className="w-full md:w-auto h-20 bg-[#181818]/20 rounded animate-pulse shrink-0" />}>
                                   <ColorControls
                                     meme={meme}
                                     handleStyleChange={handleStyleChange}
@@ -759,7 +759,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </div>
                 </div>
 
-                <div className="w-full h-px bg-slate-800 shrink-0 my-2" aria-hidden="true" />
+                <div className="w-full h-px bg-[#181818] shrink-0 my-2" aria-hidden="true" />
 
                 {/* Deep Fry Control */}
                 <div className="flex flex-col gap-4 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -795,7 +795,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 <div className="flex gap-4">
                   <button
                     onClick={() => setActiveTool('pen')}
-                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-[#181818] text-slate-400 border-[#2f3336] hover:border-[#3e4347]'}`}
                     title="Pen Tool"
                     aria-label="Use Pen Tool"
                   >
@@ -803,7 +803,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </button>
                   <button
                     onClick={() => setActiveTool('eraser')}
-                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-[#181818] text-slate-400 border-[#2f3336] hover:border-[#3e4347]'}`}
                     title="Eraser Tool"
                     aria-label="Use Eraser Tool"
                   >
@@ -811,7 +811,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </button>
                   <button
                     onClick={() => startTransition(() => onClearDrawings())}
-                    className="p-3 rounded-xl border bg-slate-800 text-red-400 border-slate-700 hover:bg-red-900/20 hover:border-red-500/50 transition-all flex items-center justify-center"
+                    className="p-3 rounded-xl border bg-[#181818] text-red-400 border-[#2f3336] hover:bg-red-900/20 hover:border-red-500/50 transition-all flex items-center justify-center"
                     title="Clear All"
                     aria-label="Clear All Drawings"
                   >
@@ -819,14 +819,14 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   </button>
                 </div>
 
-                <div className="w-full h-px bg-slate-800 shrink-0" aria-hidden="true" />
+                <div className="w-full h-px bg-[#181818] shrink-0" aria-hidden="true" />
 
                 {/* Settings */}
                 <div className="flex items-center gap-8 w-full max-w-md px-4">
                   {/* Color */}
                   <div className="flex flex-col gap-2 items-center">
                     <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Color</span>
-                    <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-slate-700 hover:ring-slate-500 transition-all cursor-pointer shadow-sm">
+                    <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-[#2f3336] hover:ring-[#3e4347] transition-all cursor-pointer shadow-sm">
                       <input
                         type="color"
                         value={meme.drawColor || "#ff0000"}

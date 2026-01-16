@@ -19,25 +19,25 @@ export function WelcomeModal({ isOpen, onClose }) {
           {/* New Features Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div className="gradient-border-card">
-               <div className="bg-slate-900 rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
+               <div className="card-bg rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
                   <h3 className="text-white font-bold text-sm">Comic Layouts</h3>
                   <p className="text-slate-400 text-xs">Create stories with multi-panel grids. Tap any ghost slot to upload!</p>
                </div>
              </div>
              <div className="gradient-border-card">
-               <div className="bg-slate-900 rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
+               <div className="card-bg rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
                   <h3 className="text-white font-bold text-sm">Magic AI</h3>
                   <p className="text-slate-400 text-xs">Stuck? Let AI generate hilarious captions matching your image.</p>
                </div>
              </div>
              <div className="gradient-border-card">
-               <div className="bg-slate-900 rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
+               <div className="card-bg rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
                   <h3 className="text-white font-bold text-sm">Vibe Check</h3>
                   <p className="text-slate-400 text-xs">Deep Fry, Chaos Mode, and Skibidi filters for ultimate dankness.</p>
                </div>
              </div>
              <div className="gradient-border-card">
-               <div className="bg-slate-900 rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
+               <div className="card-bg rounded-2xl p-4 flex flex-col items-center text-center h-full w-full relative z-10">
                   <h3 className="text-white font-bold text-sm">Animated GIFs</h3>
                   <p className="text-slate-400 text-xs">Create smooth GIFs with animated text & stickers. Export in seconds!</p>
                </div>

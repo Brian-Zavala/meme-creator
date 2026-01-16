@@ -32,12 +32,12 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
 
   return (
     <div
-        className="w-full bg-slate-900 border-t border-slate-800 p-4 animate-in slide-in-from-bottom-5 duration-300 flex flex-col gap-3 rounded-b-2xl relative z-30"
+        className="w-full card-bg border-t border-[#2f3336] p-4 animate-in slide-in-from-bottom-5 duration-300 flex flex-col gap-3 rounded-b-2xl relative z-30"
         onPointerDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
     >
-        <div className="flex flex-wrap items-center justify-between pb-2 border-b border-slate-800/50 gap-y-3">
+        <div className="flex flex-wrap items-center justify-between pb-2 border-b border-[#2f3336]/50 gap-y-3">
             <span className="text-[clamp(10px,2.5vw,12px)] font-bold uppercase tracking-wider text-slate-500 order-1">Fine Tune</span>
 
             {/* Size Adjuster */}
@@ -60,7 +60,7 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
             <div className="relative group/pos order-2 mr-2 shrink-0" ref={dropdownRef}>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-2.5 py-1.5 justify-between transition-all active:scale-95 group/btn"
+                    className="flex items-center gap-1.5 bg-[#181818] hover:bg-[#222222] border border-[#2f3336] hover:border-[#3e4347] rounded-lg px-2.5 py-1.5 justify-between transition-all active:scale-95 group/btn"
                 >
                     <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                          Position
@@ -69,7 +69,7 @@ export default function MemeFineTune({ selectedElement, onFineTune, onFineTuneCo
                 </button>
 
                 {isOpen && (
-                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 origin-bottom-right z-50 flex flex-col p-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-[#181818]/95 backdrop-blur-xl border border-[#2f3336] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 origin-bottom-right z-50 flex flex-col p-1 max-h-[300px] overflow-y-auto custom-scrollbar">
                         <div className="px-3 py-2 text-[clamp(9px,2vw,11px)] font-black uppercase tracking-widest text-slate-500 border-b border-white/5 mb-1 bg-slate-900/50">
                             Snap To
                         </div>

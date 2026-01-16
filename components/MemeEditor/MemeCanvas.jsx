@@ -38,6 +38,7 @@ const MemeCanvas = forwardRef(({
   const currentPathRef = useRef([]);
   const [dragOverPanel, setDragOverPanel] = useState(null);
   const [draggingPanel, setDraggingPanel] = useState(null);
+  const [isHoveringElement, setIsHoveringElement] = useState(false); // Track text/sticker hover
 
   // Long-press cursor indicator state
   const [longPressCursor, setLongPressCursor] = useState(null); // { x, y, progress }
@@ -454,7 +455,7 @@ const MemeCanvas = forwardRef(({
       ref={containerRef}
       onPointerDown={onCanvasPointerDown}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-slate-950 border-2 border-dashed border-slate-800/60 w-full select-none"
+      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none"
       role="img"
       aria-label={description}
     >
@@ -561,7 +562,7 @@ const MemeCanvas = forwardRef(({
                     onDrop(file, panel.id);
                   }
                 }}
-                className={`absolute overflow-hidden transition-all duration-200 border-2 border-slate-800/50 hover:border-slate-600
+                className={`absolute overflow-hidden transition-all duration-200 border-2 rounded-b-2xl ${isHoveringElement ? 'border-white' : 'border-[#2f3336]'}
                             ${dragOverPanel === panel.id ? 'bg-brand/20' : ''}
                             ${canDrag ? 'cursor-move' : ''}
                         `}
@@ -626,9 +627,9 @@ const MemeCanvas = forwardRef(({
                   // GHOST SLOT STATE
                   <div
                     data-html2canvas-ignore="true"
-                    className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50 group-hover:bg-slate-900/70 transition-colors cursor-pointer group/ghost"
+                    className="w-full h-full flex flex-col items-center justify-center card-bg group-hover:bg-slate-900/70 transition-colors cursor-pointer group/ghost"
                   >
-                    <div className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center mb-2 transition-all ${isActive ? 'border-brand text-brand scale-110' : 'border-slate-600 text-slate-500 group-hover/ghost:border-brand group-hover/ghost:text-brand'}`}>
+                    <div className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center mb-2 transition-all ${isActive ? 'border-brand text-brand scale-110' : 'border-[#2f3336] text-slate-500 group-hover/ghost:border-brand group-hover/ghost:text-brand'}`}>
                       <Plus className="w-6 h-6" />
                     </div>
                     <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-brand' : 'text-slate-500 group-hover/ghost:text-slate-300'}`}>
@@ -641,7 +642,7 @@ const MemeCanvas = forwardRef(({
                 {(isActive || dragOverPanel === panel.id) && (
                   <div
                     data-html2canvas-ignore="true"
-                    className="absolute inset-0 border-2 border-brand z-10 shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none"
+                    className="absolute inset-0 border-2 border-brand z-10 shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none rounded-b-2xl"
                   />
                 )}
                 {isActive && (
@@ -695,6 +696,8 @@ const MemeCanvas = forwardRef(({
               key={sticker.id}
               onPointerDown={(e) => onPointerDown(e, sticker.id)}
               onDoubleClick={() => onRemoveSticker(sticker.id)}
+              onMouseEnter={() => setIsHoveringElement(true)}
+              onMouseLeave={() => setIsHoveringElement(false)}
               className={`absolute select-none touch-none z-30 flex items-center justify-center transition-transform will-change-transform ${draggedId === sticker.id ? "scale-125 cursor-grabbing" : "cursor-grab"
                 } ${animationClass}`}
               style={{
@@ -791,6 +794,8 @@ const MemeCanvas = forwardRef(({
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
               onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onMouseEnter={() => setIsHoveringElement(true)}
+              onMouseLeave={() => setIsHoveringElement(false)}
               className={`absolute uppercase tracking-tighter select-none touch-none z-40 will-change-transform ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
                 } ${isSelected || isEditing ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
               style={{

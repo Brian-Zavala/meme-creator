@@ -26,7 +26,7 @@ export function GifSearch({
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           aria-label="Search for GIFs"
-          className="w-full bg-slate-900/80 border-2 border-slate-700 text-white rounded-xl py-3 pl-10 pr-24 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm transition-all"
+          className="w-full input-field py-3 pl-10 pr-24 placeholder:text-xs md:placeholder:text-sm"
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" aria-hidden="true" />
 
@@ -43,7 +43,7 @@ export function GifSearch({
       </div>
       {showSuggestions && (
         <div
-            className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95"
+            className="absolute left-0 right-0 top-full mt-2 card-bg border border-[#2f3336] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95"
             role="listbox"
             aria-label="Search Suggestions"
         >
@@ -54,7 +54,7 @@ export function GifSearch({
                         key={i}
                         onClick={() => onSelectSuggestion(t)}
                         role="option"
-                        className="w-full text-left px-3 py-2 hover:bg-slate-800 rounded-lg text-slate-300 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 hover:bg-[#222222] rounded-lg text-slate-300 flex items-center gap-2"
                     >
                         <TrendingUp className="w-3 h-3" /> {t}
                     </button>

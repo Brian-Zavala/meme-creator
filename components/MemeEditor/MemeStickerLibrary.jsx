@@ -219,14 +219,14 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
       <div className="p-3 border-b border-white/5 flex gap-2 shrink-0">
         <button
           onClick={() => setActiveTab("tenor")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "tenor" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-slate-800 text-slate-400"
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "tenor" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-[#222222] text-slate-400"
             }`}
         >
           <ImageIcon className="w-4 h-4" /> Giphy
         </button>
         <button
           onClick={() => setActiveTab("emoji")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "emoji" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-slate-800 text-slate-400"
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "emoji" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-[#222222] text-slate-400"
             }`}
         >
           <Smile className="w-4 h-4" /> Emojis
@@ -237,7 +237,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
       <div className="flex-1 overflow-y-auto p-4 scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
         {/* Custom Upload Button (Always visible) */}
         <div className="mb-4">
-          <label className="flex items-center justify-center gap-2 w-full py-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 hover:text-white text-slate-400 rounded-xl cursor-pointer transition-all active:scale-95 group border-dashed">
+          <label className="flex items-center justify-center gap-2 w-full py-3 bg-[#181818]/50 hover:bg-[#222222] border border-[#2f3336] hover:border-[#3e4347] hover:text-white text-slate-400 rounded-xl cursor-pointer transition-all active:scale-95 group border-dashed">
             <Upload className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
             <span className="text-xs font-bold uppercase tracking-wide">Upload Custom Sticker</span>
             <input
@@ -262,7 +262,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search stickers..."
-                className="w-full bg-slate-800 text-white text-sm rounded-xl py-3 pl-10 pr-24 focus:ring-2 focus:ring-brand outline-none border border-slate-700"
+                className="w-full input-field text-sm py-3 pl-10 pr-24"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <img
@@ -280,7 +280,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
                   <button
                     key={sticker.id}
                     onClick={() => { onAddSticker(sticker.url, 'image', true); if (onClose) onClose(); }}
-                    className="aspect-square relative bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-brand transition-all active:scale-95 group"
+                    className="aspect-square relative bg-[#181818]/50 rounded-lg overflow-hidden border border-[#2f3336]/50 hover:border-brand transition-all active:scale-95 group"
                     style={{ touchAction: 'manipulation' }}
                   >
                     <img
@@ -311,14 +311,14 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
               <div key={category}>
                 <div className="px-1 py-2 flex items-center gap-2">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{category}</span>
-                  <span className="h-px flex-1 bg-slate-800"></span>
+                  <span className="h-px flex-1 bg-[#2f3336]"></span>
                 </div>
                 <div className="grid grid-cols-5 gap-1">
                   {stickers.map((sticker, index) => (
                     <button
                       key={`${sticker}-${index}`}
                       onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
-                      className="h-10 flex items-center justify-center text-2xl hover:bg-slate-800 rounded-lg transition-all active:scale-75 hover:scale-110"
+                      className="h-10 flex items-center justify-center text-2xl hover:bg-[#222222] rounded-lg transition-all active:scale-75 hover:scale-110"
                       style={{ touchAction: 'manipulation' }}
                     >
                       {sticker}

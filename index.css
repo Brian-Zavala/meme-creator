@@ -4,6 +4,11 @@
 @theme {
   --color-brand: oklch(53% 0.187 39);
   --color-brand-dark: oklch(48% 0.187 39);
+  /* X/Twitter Dark Mode - Neutral Grays */
+  --color-card: #0f0f0f;
+  --color-control: #181818;
+  --color-border: #2f3336;
+  --color-border-hover: #3e4347;
 }
 
 :root {
@@ -32,9 +37,8 @@ button,
 }
 
 body {
-  /* Ultra Dark Studio Background with subtle red/gold ambience */
-  background-image: radial-gradient(ellipse at top, var(--tw-gradient-stops));
-  @apply from-slate-900 via-slate-950 to-black text-slate-100 min-h-screen antialiased selection:bg-brand selection:text-white;
+  /* X/Twitter Pure Dark Mode */
+  @apply bg-black text-slate-100 min-h-screen antialiased selection:bg-brand selection:text-white;
 }
 
 /* Custom Scrollbar */
@@ -43,11 +47,15 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-slate-950;
+  background-color: #0f0f0f; /* card-bg color */
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-800 rounded-full hover:bg-slate-700;
+  background-color: #2f3336; /* neutral border color */
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #3e4347; /* hover border color */
 }
 
 /* Custom Animations */
@@ -258,9 +266,89 @@ body {
   will-change: transform, opacity;
 }
 
-/* Glass Panel Utility */
+/* Glass Panel Utility - X/Twitter Dark Mode */
 .glass-panel {
-  @apply bg-slate-900/80 border border-slate-700/50 backdrop-blur-md shadow-xl;
+  background-color: var(--color-card);
+  border: 1px solid #2f3336;
+  @apply backdrop-blur-md shadow-xl;
+}
+
+/* Card Background Utility - X/Twitter Dark Mode */
+.card-bg {
+  background-color: var(--color-card);
+}
+
+/* X/Twitter Control Background - for buttons, inputs, selects */
+.control-bg {
+  background-color: #181818;
+}
+
+/* X/Twitter Secondary Button - neutral gray */
+.btn-secondary {
+  background-color: #181818;
+  @apply text-white font-semibold rounded-xl transition-all active:scale-95;
+  border: 1px solid #2f3336;
+}
+.btn-secondary:hover {
+  background-color: #222222;
+  border-color: #3e4347;
+}
+
+/* X/Twitter Ghost Button - neutral */
+.btn-ghost {
+  background-color: transparent;
+  @apply text-slate-400 rounded-xl transition-all active:scale-95;
+  border: 1px solid #2f3336;
+}
+.btn-ghost:hover {
+  background-color: #181818;
+  border-color: #3e4347;
+  @apply text-white;
+}
+
+/* X/Twitter Input Field - neutral gray */
+.input-field {
+  background-color: #181818;
+  @apply text-white rounded-xl transition-all;
+  border: 1px solid #2f3336;
+  @apply placeholder:text-slate-500 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20;
+}
+
+/* X/Twitter Select/Dropdown Trigger - neutral */
+.select-trigger {
+  background-color: #181818;
+  @apply text-white rounded-xl transition-all active:scale-[0.98];
+  border: 1px solid #2f3336;
+}
+.select-trigger:hover {
+  border-color: #3e4347;
+}
+
+/* Animation Button - neutral toggle style */
+.btn-anim {
+  background-color: #181818;
+  @apply text-slate-400 text-sm rounded-lg transition-all active:scale-95 flex items-center gap-2;
+  border: 1px solid #2f3336;
+}
+.btn-anim:hover {
+  background-color: #222222;
+  border-color: #3e4347;
+  @apply text-white;
+}
+.btn-anim.active {
+  @apply bg-brand/20 text-brand border-brand font-bold;
+}
+
+/* Help/Icon Button - neutral */
+.btn-icon {
+  background-color: #181818;
+  @apply text-slate-400 rounded-xl transition-all active:scale-95 flex items-center justify-center;
+  border: 1px solid #2f3336;
+}
+.btn-icon:hover {
+  background-color: #222222;
+  border-color: #3e4347;
+  @apply text-white;
 }
 
 /* Brand Button Utility */

@@ -31,7 +31,7 @@ export function InstructionModal({ isOpen, onClose }) {
           <div className="grid grid-cols-1 gap-6">
 
             <div className="gradient-border-card">
-              <div className="bg-slate-900 rounded-2xl relative z-10 h-full w-full overflow-hidden">
+              <div className="card-bg rounded-2xl relative z-10 h-full w-full overflow-hidden">
                 <section className="bg-brand/10 p-4 space-y-3 flex flex-col items-center text-center h-full">
                   <h3 className="text-brand font-bold uppercase text-sm tracking-wider">
                     Layouts & Images
@@ -46,7 +46,7 @@ export function InstructionModal({ isOpen, onClose }) {
             </div>
 
             <div className="gradient-border-card">
-              <div className="bg-slate-900 rounded-2xl relative z-10 h-full w-full overflow-hidden">
+              <div className="card-bg rounded-2xl relative z-10 h-full w-full overflow-hidden">
                 <section className="bg-yellow-500/10 p-4 space-y-3 flex flex-col items-center text-center h-full">
                   <h3 className="text-yellow-500 font-bold uppercase text-sm tracking-wider">
                     Text & Stickers
@@ -61,7 +61,7 @@ export function InstructionModal({ isOpen, onClose }) {
             </div>
 
             <div className="gradient-border-card">
-              <div className="bg-slate-900 rounded-2xl relative z-10 h-full w-full overflow-hidden">
+              <div className="card-bg rounded-2xl relative z-10 h-full w-full overflow-hidden">
                 <section className="bg-purple-500/10 p-4 space-y-3 flex flex-col items-center text-center h-full">
                   <h3 className="text-purple-400 font-bold uppercase text-sm tracking-wider">
                      Magic & Vibes

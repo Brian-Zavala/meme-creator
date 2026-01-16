@@ -48,7 +48,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
   }, [editingId]);
 
   return (
-    <div className={`flex flex-col relative transition-all duration-300 z-40 ${embedded ? '' : 'bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm'}`}>
+    <div className={`flex flex-col relative transition-all duration-300 z-40 ${embedded ? '' : 'card-bg rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm'}`}>
       {/* Header with Magic AI */}
       <div className="flex items-center justify-between p-6 pb-2">
         <div className="flex items-center gap-2 text-slate-400 uppercase text-xs font-bold tracking-wider" aria-hidden="true">
@@ -127,9 +127,9 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                   autoCorrect="off"
                   autoCapitalize="sentences"
                   enterKeyHint="done"
-                  placeholder={isActive && !textItem.content ? "✨ Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
+                  placeholder={isActive && !textItem.content ? "Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
                   aria-label={index === 0 ? "Top Text Input" : index === 1 ? "Bottom Text Input" : `Text Input ${index + 1}`}
-                  className={`w-full bg-slate-800/50 border-2 border-slate-700/50 rounded-xl px-4 py-3 text-lg text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/50 placeholder:text-slate-400 placeholder:font-medium transition-all ${isActive ? 'bg-brand/10 border-brand/50 placeholder:text-brand/70' : ''}`}
+                  className={`w-full bg-[#181818] text-white border border-[#2f3336] rounded-xl px-4 py-3 text-lg transition-all placeholder:text-slate-500 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 ${isActive ? 'bg-brand/10 !border-brand/50 placeholder:text-brand/70' : ''}`}
                   onChange={(e) => handleTextChange(textItem.id, e.target.value)}
                   onFocus={() => {
                     // Always set editingId when focusing an input - this keeps drawer collapsed
@@ -141,7 +141,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                   }}
                   value={textItem.content}
                 />
-                <div className="absolute right-3 top-3.5 text-slate-600 pointer-events-none text-xs bg-slate-800 px-2 py-0.5 rounded uppercase" aria-hidden="true">
+                <div className="absolute right-3 top-3.5 text-slate-500 pointer-events-none text-xs bg-[#0f0f0f] px-2 py-0.5 rounded uppercase" aria-hidden="true">
                   {isActive ? "NEW" : index === 0 ? "TOP" : index === 1 ? "BOTTOM" : `#${index + 1}`}
                 </div>
               </div>

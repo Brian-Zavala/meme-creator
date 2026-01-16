@@ -87,7 +87,7 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
           aria-haspopup="true"
           aria-expanded={isOpen}
           aria-label="Add Sticker Menu"
-          className={`flex-1 flex items-center justify-between bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-xl px-4 py-3 transition-all active:scale-95 group focus:outline-none focus:ring-2 focus:ring-yellow-500 ${isOpen ? 'ring-2 ring-brand border-transparent' : ''}`}
+          className={`flex-1 flex items-center justify-between select-trigger px-4 py-3 group focus:outline-none focus:ring-2 focus:ring-yellow-500 ${isOpen ? 'ring-2 ring-brand border-transparent' : ''}`}
         >
           <div className="flex items-center gap-3">
             <div className="p-1.5 rounded-lg transition-colors" aria-hidden="true">
@@ -100,7 +100,7 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
 
         <button
           onClick={showStickerHelp}
-          className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-xl text-slate-400 hover:text-white transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+          className="w-12 btn-icon focus:outline-none focus:ring-2 focus:ring-yellow-500"
           title="Sticker Help"
           aria-label="Sticker Help"
         >
@@ -112,7 +112,7 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
       {hasStickers && (
         <button
           onClick={onExportStickers}
-          className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-700 bg-slate-800/20 text-slate-400 hover:text-white hover:border-brand/50 hover:bg-brand/5 transition-all text-xs font-bold uppercase tracking-wider group"
+          className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-[#2f3336] bg-[#181818] text-slate-400 hover:text-white hover:border-brand/50 hover:bg-brand/5 transition-all text-xs font-bold uppercase tracking-wider group"
         >
           <Smile className="w-4 h-4 group-hover:text-brand transition-colors" />
           <span>Export Stickers Only</span>
@@ -124,7 +124,7 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 origin-top h-[400px]"
+          className="card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 origin-top h-[400px]"
           role="menu"
           aria-label="Sticker Categories"
         >

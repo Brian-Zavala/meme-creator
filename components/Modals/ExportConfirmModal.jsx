@@ -22,7 +22,7 @@ export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStati
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-xl bg-black/40 animate-in fade-in duration-300">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="card-bg border border-[#2f3336] rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                 <div className="bg-brand px-6 py-5 text-center">
                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-md flex items-center justify-center gap-2">
                         <Sparkles className="w-5 h-5" />
@@ -62,7 +62,7 @@ export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStati
                         {/* Static Export Option */}
                         <button
                             onClick={handleStaticExport}
-                            className="group relative bg-slate-800/50 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-600 rounded-2xl p-4 transition-all active:scale-[0.98]"
+                            className="group relative bg-[#181818]/50 hover:bg-[#222222] border-2 border-[#2f3336] hover:border-[#3e4347] rounded-2xl p-4 transition-all active:scale-[0.98]"
                         >
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center">

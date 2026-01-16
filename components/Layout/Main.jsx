@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo } from "react";
-import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser } from "lucide-react";
+import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
@@ -2169,6 +2169,28 @@ export default function Main() {
     });
   }
 
+  // Remove Effects: Clears filters/deep fry and animations, but preserves text content and stickers
+  function handleRemoveEffects() {
+    triggerFlash("teal");
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        // Clear text animations but preserve content and positions
+        texts: prev.texts.map(t => ({ ...t, animation: null })),
+        // Clear sticker animations but keep stickers in place
+        stickers: prev.stickers.map(s => ({ ...s, animation: 'none' })),
+        // Reset all panel filters (including deep fry)
+        panels: prev.panels.map(p => ({
+          ...p,
+          filters: { ...DEFAULT_FILTERS },
+          processedImage: null,
+          processedDeepFryLevel: 0
+        }))
+      }));
+    });
+    toast.success("Effects cleared!");
+  }
+
   function addTextAtPosition(x, y) {
     const newTextId = crypto.randomUUID();
     updateState((prev) => ({
@@ -2822,7 +2844,7 @@ export default function Main() {
     <main className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 animate-in fade-in duration-500 relative">
       <div
         className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
-        style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : "rgba(34, 197, 94, 0.08)" }}
+        style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : flashColor === "teal" ? "rgba(20, 184, 166, 0.15)" : "rgba(34, 197, 94, 0.08)" }}
       />
 
       {/* Reusable Remix Controls Group */}
@@ -2855,14 +2877,14 @@ export default function Main() {
               <button
                 onClick={undo}
                 disabled={!canUndo}
-                className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95 touch-target"
+                className="btn-secondary py-3 px-4 disabled:opacity-50 flex items-center justify-center gap-2 touch-target"
               >
                 <Undo2 className="w-4 h-4" /> Undo
               </button>
               <button
                 onClick={redo}
                 disabled={!canRedo}
-                className="bg-slate-800 disabled:opacity-50 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95 touch-target"
+                className="btn-secondary py-3 px-4 disabled:opacity-50 flex items-center justify-center gap-2 touch-target"
               >
                 <Redo2 className="w-4 h-4" /> Redo
               </button>
@@ -2877,18 +2899,32 @@ export default function Main() {
                   style: { borderRadius: '10px', background: '#333', color: '#fff' },
                   duration: 3000
                 })}
-                className="w-12 flex items-center justify-center bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-400 transition-all active:scale-95 touch-target"
+                className="w-12 btn-icon touch-target"
               >
                 <HelpCircle className="w-5 h-5" />
               </button>
             </div>
 
-            <button
-              onClick={handleReset}
-              className="w-full bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-red-900/50 touch-target"
-            >
-              <Eraser className="w-4 h-4" /> <span>Remove Everything</span>
-            </button>
+            {/* Dual Action: Remove Everything / Remove Effects */}
+            <div className="flex w-full rounded-xl overflow-hidden border border-[#2f3336] shadow-lg">
+              {/* Left: Remove Everything (Red) */}
+              <button
+                onClick={handleReset}
+                className="flex-1 bg-red-900/20 hover:bg-red-900/40 text-red-400 font-semibold py-3 px-3 flex items-center justify-center gap-2 transition-all active:scale-[0.98] border-r border-[#2f3336] touch-target"
+              >
+                <Eraser className="w-4 h-4" />
+                <span className="text-sm">Remove All</span>
+              </button>
+
+              {/* Right: Remove Effects (Teal) */}
+              <button
+                onClick={handleRemoveEffects}
+                className="flex-1 bg-teal-900/20 hover:bg-teal-900/40 text-teal-400 font-semibold py-3 px-3 flex items-center justify-center gap-2 transition-all active:scale-[0.98] touch-target"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm">Remove Effects</span>
+              </button>
+            </div>
           </div>
         );
 
@@ -2944,7 +2980,7 @@ export default function Main() {
                   onLayoutChange={handleLayoutChange}
                 />
               </div>
-              <div className="flex flex-col shadow-2xl rounded-2xl border-2 border-slate-800 bg-slate-900/50 overflow-hidden">
+              <div className="flex flex-col shadow-2xl rounded-2xl border border-[#2f3336] card-bg overflow-hidden">
                 {/* MemeToolbar - Mobile/Tablet Only (inside card) */}
                 <div className="lg:hidden">
                   <MemeToolbar
@@ -2975,7 +3011,7 @@ export default function Main() {
                 {/* CASE 1: VIDEO MODE (Existing Tenor Search) */}
                 {meme.mode === "video" && (
                   <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-                    <div className="p-3 border-b border-slate-800">
+                    <div className="p-3 border-b border-[#2f3336]">
                       <GifSearch
                         searchQuery={searchQuery}
                         onSearchInput={handleSearchInput}
@@ -3000,7 +3036,7 @@ export default function Main() {
 
                 {/* CASE 2: IMAGE MODE (New Imgflip Search) */}
                 {meme.mode === "image" && (
-                  <div className="relative z-50 p-3 border-b border-slate-800" ref={memeSearchRef}>
+                  <div className="relative z-50 p-3 border-b border-[#2f3336]" ref={memeSearchRef}>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand transition-colors">
                         <Search className="w-5 h-5" />
@@ -3014,7 +3050,7 @@ export default function Main() {
                           setShowMemeSuggestions(true);
                         }}
                         onFocus={() => setShowMemeSuggestions(true)}
-                        className="w-full bg-slate-900/80 border-2 border-slate-700 text-white pl-10 pr-10 py-3 rounded-xl focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-slate-500 placeholder:text-xs md:placeholder:text-sm"
+                        className="w-full input-field pl-10 pr-10 py-3 placeholder:text-xs md:placeholder:text-sm"
                       />
                       {memeSearchQuery && (
                         <button
@@ -3028,9 +3064,9 @@ export default function Main() {
 
                     {/* Dropdown Results */}
                     {showMemeSuggestions && (
-                      <div className="absolute top-full left-0 right-0 mt-2 mx-3 bg-slate-900 border-2 border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-[60]">
+                      <div className="absolute top-full left-0 right-0 mt-2 mx-3 card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-[60]">
                         {!memeSearchQuery && (
-                          <div className="px-4 py-3 border-b border-slate-800 bg-slate-800/30 flex items-center justify-between">
+                          <div className="px-4 py-3 border-b border-[#2f3336] bg-[#181818]/30 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <TrendingUp className="w-4 h-4 text-brand" />
                               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Popular Images</span>
@@ -3039,7 +3075,7 @@ export default function Main() {
                           </div>
                         )}
                         {memeSearchQuery && filteredMemes.length > 0 && (
-                          <div className="px-4 py-2 border-b border-slate-800 bg-brand/5">
+                          <div className="px-4 py-2 border-b border-[#2f3336] bg-brand/5">
                             <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Search Results</span>
                           </div>
                         )}
@@ -3060,7 +3096,7 @@ export default function Main() {
                                   }}
                                   onMouseEnter={() => setHoveredMeme(m)}
                                   onMouseLeave={() => setHoveredMeme(null)}
-                                  className="group relative aspect-square rounded-xl overflow-hidden bg-slate-800 border-2 border-transparent hover:border-brand transition-all active:scale-95 focus:outline-none focus:border-brand"
+                                  className="group relative aspect-square rounded-xl overflow-hidden bg-[#181818] border-2 border-transparent hover:border-brand transition-all active:scale-95 focus:outline-none focus:border-brand"
                                   title={m.name}
                                 >
                                   <img
@@ -3081,8 +3117,8 @@ export default function Main() {
 
                             {/* Floating Preview Pane (Visible on Large Screens) */}
                             {hoveredMeme && (
-                              <div className="fixed left-[calc(100%+1rem)] top-0 w-64 p-3 bg-slate-900 border-2 border-brand rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 hidden xl:block z-[70] pointer-events-none">
-                                <div className="relative aspect-auto rounded-lg overflow-hidden border border-slate-800">
+                              <div className="fixed left-[calc(100%+1rem)] top-0 w-64 p-3 card-bg border-2 border-brand rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 hidden xl:block z-[70] pointer-events-none">
+                                <div className="relative aspect-auto rounded-lg overflow-hidden border border-[#2f3336]">
                                   <img
                                     src={`https://wsrv.nl/?url=${encodeURIComponent(hoveredMeme.url)}&w=600`}
                                     className="w-full h-auto max-h-[400px] object-contain"
@@ -3110,7 +3146,7 @@ export default function Main() {
                     getMemeImage();
                   }}
                   disabled={loading || generating}
-                  className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-slate-800 bg-brand hover:bg-brand-dark transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
+                  className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-[#2f3336] bg-brand hover:bg-brand-dark transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}
                 >
                   {pingKey && <span key={pingKey} className="absolute inset-0 animate-radar pointer-events-none" />}
                   <div className="relative z-10 flex items-center justify-center gap-2">
@@ -3177,7 +3213,7 @@ export default function Main() {
                 {remixCarouselControl}
 
                 {/* Mobile-Only Sticker Section */}
-                <div className="bg-slate-900/50 rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
+                <div className="card-bg rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
                   <MemeStickerSection
                     onAddSticker={addSticker}
                     hasStickers={meme.stickers.length > 0}

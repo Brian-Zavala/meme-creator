@@ -499,7 +499,7 @@ const MemeCanvas = forwardRef(({
         onPointerUp={handleCanvasLongPressEnd}
         onPointerLeave={handleCanvasLongPressEnd}
         onPointerCancel={handleCanvasLongPressEnd}
-        className="relative overflow-hidden shadow-2xl mx-auto"
+        className="relative overflow-hidden shadow-2xl mx-auto rounded-none"
         style={{
           backgroundColor: '#000000',
           width: '100%',
@@ -578,7 +578,7 @@ const MemeCanvas = forwardRef(({
                     onDrop(file, panel.id);
                   }
                 }}
-                className={`absolute overflow-hidden transition-all duration-200 border-2 border-[#2f3336]
+                className={`absolute overflow-hidden transition-all duration-200 border-2 border-[#2f3336] rounded-none
                             ${dragOverPanel === panel.id ? 'bg-brand/20' : ''}
                             ${canDrag ? 'cursor-move' : ''}
                         `}

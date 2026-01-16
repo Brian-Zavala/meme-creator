@@ -26,7 +26,8 @@ const MemeCanvas = forwardRef(({
   onPanelSelect,
   onDrop,
   onClearPanel,
-  onPanelPosChange
+  onPanelPosChange,
+  onHoverChange
 }, ref) => {
   const description = `Meme editor with ${meme.panels?.length || 1} panels`;
   const drawCanvasRef = useRef(null);
@@ -459,14 +460,6 @@ const MemeCanvas = forwardRef(({
       role="img"
       aria-label={description}
     >
-      {/* Hover Border Overlay - Shows when hovering over text/stickers (outside active border) */}
-      {isHoveringElement && (
-        <div
-          data-html2canvas-ignore="true"
-          className="absolute inset-0 border-2 border-dashed border-white z-[101] pointer-events-none"
-        />
-      )}
-
       {/* Hidden Global File Input for Ghost Slots */}
       <input
         id="ghost-slot-file-input"
@@ -508,14 +501,6 @@ const MemeCanvas = forwardRef(({
           maxWidth: '100%'
         }}
       >
-        {/* Active Selection Border Overlay - On parent canvas */}
-        {(activePanelId || dragOverPanel) && (
-          <div
-            data-html2canvas-ignore="true"
-            className="absolute inset-0 border-2 border-dashed border-brand z-[100] shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none"
-          />
-        )}
-
         {/* Top Caption Bar */}
         {meme.paddingTop > 0 && (
           <div
@@ -594,7 +579,7 @@ const MemeCanvas = forwardRef(({
                   (panel.isVideo && !panel.isGif && !panel.processedImage && !showUrl.toLowerCase().includes('.gif') && !showUrl.startsWith('data:image/gif')) ? (
                     <video
                       src={showUrl}
-                      className="w-full h-full block pointer-events-none select-none"
+                      className="w-full h-full block pointer-events-none select-none rounded-none"
                       loop
                       autoPlay
                       playsInline
@@ -620,7 +605,7 @@ const MemeCanvas = forwardRef(({
                     <img
                       src={showUrl}
                       alt={meme.name ? `Meme panel: ${meme.name}` : "Meme panel"}
-                      className="w-full h-full block pointer-events-none select-none"
+                      className="w-full h-full block pointer-events-none select-none rounded-none"
                       crossOrigin={(!showUrl.startsWith('data:') && !showUrl.startsWith('blob:')) ? "anonymous" : undefined}
                       onLoad={handleMediaLoad}
                       style={{
@@ -652,13 +637,6 @@ const MemeCanvas = forwardRef(({
                       {isActive ? "Tap to Upload" : "Tap to Select"}
                     </span>
                   </div>
-                )}
-
-                {isActive && (
-                  <div
-                    data-html2canvas-ignore="true"
-                    className="absolute top-2 left-2 w-3 h-3 bg-brand rounded-full shadow-lg animate-pulse pointer-events-none z-20"
-                  />
                 )}
 
                 {/* Remove Button - Shows when Active or Hovered */}
@@ -705,8 +683,8 @@ const MemeCanvas = forwardRef(({
               key={sticker.id}
               onPointerDown={(e) => onPointerDown(e, sticker.id)}
               onDoubleClick={() => onRemoveSticker(sticker.id)}
-              onMouseEnter={() => setIsHoveringElement(true)}
-              onMouseLeave={() => setIsHoveringElement(false)}
+              onMouseEnter={() => { setIsHoveringElement(true); onHoverChange?.(true); }}
+              onMouseLeave={() => { setIsHoveringElement(false); onHoverChange?.(false); }}
               className={`absolute select-none touch-none z-30 flex items-center justify-center transition-transform will-change-transform ${draggedId === sticker.id ? "scale-125 cursor-grabbing" : "cursor-grab"
                 } ${animationClass}`}
               style={{
@@ -826,8 +804,8 @@ const MemeCanvas = forwardRef(({
               key={textItem.id}
               onPointerDown={(e) => onPointerDown(e, textItem.id)}
               onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onMouseEnter={() => setIsHoveringElement(true)}
-              onMouseLeave={() => setIsHoveringElement(false)}
+              onMouseEnter={() => { setIsHoveringElement(true); onHoverChange?.(true); }}
+              onMouseLeave={() => { setIsHoveringElement(false); onHoverChange?.(false); }}
               className={`absolute uppercase tracking-tighter select-none touch-none z-40 will-change-transform ${draggedId === textItem.id ? "cursor-grabbing scale-105" : "cursor-grab"
                 } ${isSelected || isEditing ? "z-50" : ""} ${textItem.animation !== 'wave' ? animationClass : ''}`}
               style={{

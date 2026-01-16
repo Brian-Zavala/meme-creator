@@ -285,6 +285,7 @@ export default function Main() {
   const [activeTool, setActiveTool] = useState("move");
   const [flashColor, setFlashColor] = useState(null);
   const [editingId, setEditingId] = useState(null); // Track actively edited text (shows blinking cursor)
+  const [isHoveringCanvasElement, setIsHoveringCanvasElement] = useState(false); // Track text/sticker hover for border
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
   const globalLastTapRef = useRef(0);
@@ -2994,7 +2995,7 @@ export default function Main() {
                   onLayoutChange={handleLayoutChange}
                 />
               </div>
-              <div className="flex flex-col shadow-2xl rounded-2xl border border-[#2f3336] card-bg overflow-hidden">
+              <div className="relative flex flex-col shadow-2xl rounded-t-2xl border border-[#2f3336] card-bg overflow-hidden">
                 {/* MemeToolbar - Mobile/Tablet Only (inside card) */}
                 <div className="lg:hidden">
                   <MemeToolbar
@@ -3176,7 +3177,21 @@ export default function Main() {
                     </span>
                   </div>
                 </button>
-                <div ref={canvasContainerRef} className="scroll-mt-4">
+                <div ref={canvasContainerRef} className="relative scroll-mt-4">
+                  {/* Active Selection Border Overlay */}
+                  {meme.activePanelId && (
+                    <div
+                      data-html2canvas-ignore="true"
+                      className="absolute inset-0 border-2 border-dashed border-brand z-[100] shadow-[0_0_20px_rgba(255,199,0,0.3)] pointer-events-none"
+                    />
+                  )}
+                  {/* Hover Border Overlay - Shows when hovering over text/stickers */}
+                  {isHoveringCanvasElement && (
+                    <div
+                      data-html2canvas-ignore="true"
+                      className="absolute inset-0 border-2 border-dashed border-white z-[101] pointer-events-none"
+                    />
+                  )}
                   <MemeCanvas
                     ref={memeRef}
                     meme={meme}
@@ -3197,6 +3212,7 @@ export default function Main() {
                     onAddTextAtPosition={addTextAtPosition}
                     onStartEditing={setEditingId}
                     onCanvasPointerDown={handleCanvasPointerDown}
+                    onHoverChange={setIsHoveringCanvasElement}
 
                     // New Props
                     activePanelId={meme.activePanelId}

@@ -714,6 +714,29 @@ const MemeCanvas = forwardRef(({
                 if (e.key === 'Delete' || e.key === 'Backspace') onRemoveSticker(sticker.id);
               }}
             >
+              {/* Selected State: Marching Ants Overlay */}
+              {selectedId === sticker.id && (
+                <svg className="absolute -inset-2 w-[calc(100%+16px)] h-[calc(100%+16px)] pointer-events-none overflow-visible z-50">
+                  <rect
+                    x="2"
+                    y="2"
+                    width="calc(100% - 4px)"
+                    height="calc(100% - 4px)"
+                    fill="none"
+                    stroke="var(--color-brand)"
+                    strokeWidth="3"
+                    strokeDasharray="12 6"
+                    strokeLinecap="round"
+                    className="animate-march"
+                  />
+                  {/* Selection Handles (Visual only) - Perfectly aligned with rect corners */}
+                  <circle cx="2" cy="2" r="4" fill="var(--color-brand)" />
+                  <circle cx="calc(100% - 2px)" cy="2" r="4" fill="var(--color-brand)" />
+                  <circle cx="calc(100% - 2px)" cy="calc(100% - 2px)" r="4" fill="var(--color-brand)" />
+                  <circle cx="2" cy="calc(100% - 2px)" r="4" fill="var(--color-brand)" />
+                </svg>
+              )}
+
               {(sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') ? (
                 <img
                   src={sticker.url}

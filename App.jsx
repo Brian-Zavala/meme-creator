@@ -5,6 +5,7 @@ import Header from "./components/Layout/Header";
 import Main from "./components/Layout/Main";
 import { WelcomeModal } from "./components/Modals/WelcomeModal";
 import { InstructionModal } from "./components/Modals/InstructionModal";
+import { PrivacyPolicy } from "./components/Pages/PrivacyPolicy";
 
 const TOAST_LIMIT = 2;
 
@@ -38,6 +39,20 @@ function ToastLimiter() {
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const path = window.location.pathname;
+    if (path === "/privacy") return "privacy";
+    return "home";
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      setCurrentPage(path === "/privacy" ? "privacy" : "home");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     const preloadImages = ["/images/canvas/marker-pen_32.png", "/images/canvas/eraser_32.png"];
@@ -72,6 +87,15 @@ export default function App() {
   const openInstructions = () => {
     setShowInstructions(true);
   };
+
+  const navigateToHome = () => {
+    window.history.pushState({}, "", "/");
+    setCurrentPage("home");
+  };
+
+  if (currentPage === "privacy") {
+    return <PrivacyPolicy onBack={navigateToHome} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-slate-50 font-sans">

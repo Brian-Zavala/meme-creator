@@ -1,6 +1,9 @@
 /**
  * Text Animation Presets for Meme Creator
  * Each animation defines a function to calculate per-frame transforms
+ * 
+ * IMPORTANT: `duration` must match the CSS animation-duration in index.css
+ * This ensures exported GIFs play at the same speed as the preview.
  */
 
 export const TEXT_ANIMATIONS = [
@@ -8,6 +11,7 @@ export const TEXT_ANIMATIONS = [
         id: 'none',
         name: 'None',
         icon: '✖️',
+        duration: 1000, // Not used, but consistent
         // No animation
         getTransform: () => ({ offsetX: 0, offsetY: 0, rotation: 0, scale: 1, opacity: 1 }),
     },
@@ -15,6 +19,7 @@ export const TEXT_ANIMATIONS = [
         id: 'wave',
         name: 'Wave',
         icon: '/images/stickers/wave.png',
+        duration: 1000, // CSS: animation: meme-wave 1s
         // Oscillating sine wave - each character offset slightly
         getTransform: (frameIndex, totalFrames, charIndex = 0) => {
             const progress = (frameIndex / totalFrames) * Math.PI * 2;
@@ -32,6 +37,7 @@ export const TEXT_ANIMATIONS = [
         id: 'bounce',
         name: 'Bounce',
         icon: '/images/stickers/bounce.svg',
+        duration: 600, // CSS: animation: meme-bounce 0.6s
         // Bouncing with physics-like easing (Match CSS: 0%->0, 50%->-12px/1.05s, 100%->0)
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames);
@@ -51,6 +57,7 @@ export const TEXT_ANIMATIONS = [
         id: 'shake',
         name: 'Shake',
         icon: '/images/stickers/shake.png',
+        duration: 500, // CSS: animation: meme-shake 0.5s
         // Random tremor effect - chaotic and intense
         getTransform: (frameIndex) => {
             // Use frame index as seed for pseudo-random but deterministic shake
@@ -71,6 +78,7 @@ export const TEXT_ANIMATIONS = [
         id: 'glitch',
         name: 'Glitch',
         icon: '/images/stickers/glitch.png',
+        duration: 800, // CSS: animation: meme-glitch 0.8s
         // Match CSS keyframes exactly for consistent export
         getTransform: (frameIndex, totalFrames) => {
             const t = frameIndex / totalFrames;
@@ -104,6 +112,7 @@ export const TEXT_ANIMATIONS = [
         id: 'pulse',
         name: 'Pulse',
         icon: '/images/stickers/pulse.svg',
+        duration: 800, // CSS: animation: meme-pulse 0.8s
         // Scale pulsing effect (Match CSS: 0%->1, 50%->1.1, 100%->1)
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames);
@@ -123,6 +132,7 @@ export const TEXT_ANIMATIONS = [
         id: 'float',
         name: 'Float',
         icon: '/images/stickers/float.png',
+        duration: 2000, // CSS: animation: meme-float 2s
         // Gentle floating up and down (Match CSS: Only Y axis and rotation)
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;
@@ -139,6 +149,7 @@ export const TEXT_ANIMATIONS = [
         id: 'spin',
         name: 'Spin',
         icon: '/images/stickers/spin.png',
+        duration: 1000, // CSS: animation: meme-spin 1s
         // Full 360° rotation over the loop
         getTransform: (frameIndex, totalFrames) => {
             const progress = frameIndex / totalFrames;
@@ -155,6 +166,7 @@ export const TEXT_ANIMATIONS = [
         id: 'tada',
         name: 'Tada',
         icon: '/images/stickers/tada.png',
+        duration: 1000, // CSS: animation: meme-tada 1s
         // Scale up and wiggle
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2; // 0 to 2PI
@@ -175,6 +187,7 @@ export const TEXT_ANIMATIONS = [
         id: 'wobble',
         name: 'Wobble',
         icon: '/images/stickers/wobble.png',
+        duration: 2000, // CSS: animation: meme-wobble 2s
         // Swaying back and forth combined with rotation
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;
@@ -193,6 +206,7 @@ export const TEXT_ANIMATIONS = [
         id: 'heartbeat',
         name: 'Heartbeat',
         icon: '/images/stickers/heartbeat.png',
+        duration: 1300, // CSS: animation: meme-heartbeat 1.3s
         // Iconic double-pulse (Match CSS: 0%, 14%, 28%, 42%, 70%)
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames); // 0 to 1
@@ -228,6 +242,7 @@ export const TEXT_ANIMATIONS = [
         id: 'flip',
         name: 'Flip',
         icon: '/images/stickers/flip.png',
+        duration: 1000, // Default 1s (no CSS reference found, using reasonable default)
         // 3D Flip simulated with 2D scaleX
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;
@@ -246,6 +261,7 @@ export const TEXT_ANIMATIONS = [
         id: 'jelly',
         name: 'Jelly',
         icon: '/images/stickers/jelly.png',
+        duration: 900, // CSS: animation: meme-jelly 0.9s
         // Squash and stretch bounce
         getTransform: (frameIndex, totalFrames) => {
             const t = (frameIndex / totalFrames) * Math.PI * 2;
@@ -279,11 +295,49 @@ export function hasAnimatedText(texts) {
 }
 
 /**
+ * Get the longest animation duration from a list of texts and stickers
+ * Used to determine GIF loop duration for static backgrounds
+ */
+export function getMaxAnimationDuration(texts, stickers) {
+    let maxDuration = 0;
+    
+    for (const text of (texts || [])) {
+        if (text.animation && text.animation !== 'none') {
+            const anim = getAnimationById(text.animation);
+            if (anim && anim.duration > maxDuration) {
+                maxDuration = anim.duration;
+            }
+        }
+    }
+    
+    for (const sticker of (stickers || [])) {
+        if (sticker.animation && sticker.animation !== 'none') {
+            const anim = getAnimationById(sticker.animation);
+            if (anim && anim.duration > maxDuration) {
+                maxDuration = anim.duration;
+            }
+        }
+    }
+    
+    return maxDuration || 1000; // Default to 1s if no animations
+}
+
+/**
+ * Calculate LCM-based GIF loop duration to sync multiple animations
+ * For simplicity, we use the max duration which ensures all animations complete at least once
+ */
+export function calculateGifLoopDuration(texts, stickers) {
+    return getMaxAnimationDuration(texts, stickers);
+}
+
+/**
  * Default frame count for animated text on static images
+ * Higher values = smoother animation but larger file size
  */
 export const ANIMATED_TEXT_FRAMES = 30;
 
 /**
  * Default delay for animated text frames (in centiseconds for GIF)
+ * This is now dynamically calculated based on animation duration
  */
-export const ANIMATED_TEXT_DELAY = 3; // 30ms per frame = 0.9s loop at 30 frames (matches CSS animation ~1s average)
+export const ANIMATED_TEXT_DELAY = 3; // Legacy default, not used in new system

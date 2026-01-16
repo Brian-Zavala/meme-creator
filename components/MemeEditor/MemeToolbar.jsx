@@ -4,30 +4,18 @@ import {
   MoveHorizontal,
   ArrowLeftRight,
   Image as ImageIcon,
-  Sun,
-  Contrast,
-  CloudFog as Blur,
   Smile,
-  SunDim as Grayscale,
-  Timer as Sepia,
-  Aperture as HueRotate,
-  Droplet as Saturate,
-  FlipVertical as Invert,
-  RefreshCcw,
-  PanelTop,
-  PanelBottom,
   Pencil,
-  Eraser,
-  Trash2,
-  Flame,
   ChevronDown,
-  SlidersHorizontal,
 } from "lucide-react";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 import OptimizedSlider from "../ui/OptimizedSlider";
 import MemeInputs from "./MemeInputs";
 
+// Lazy-loaded panels for code splitting
 const ColorControls = lazy(() => import("./ColorControls"));
+const ImageFiltersPanel = lazy(() => import("./ImageFiltersPanel"));
+const DrawToolsPanel = lazy(() => import("./DrawToolsPanel"));
 
 const FONTS = [
   { name: "Impact", label: "Impact" },
@@ -636,222 +624,30 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
               </div>
             )}
 
-            {/* IMAGE CONTROLS */}
+            {/* IMAGE CONTROLS - Lazy loaded */}
             {activeTab === "image" && (
-              <div id="image-tools-panel" role="tabpanel" className="flex flex-col gap-6 w-full items-center">
-                {/* Global Filter Reset - Always Visible */}
-                <button
-                  onClick={() => {
-                    if (navigator.vibrate) navigator.vibrate(15);
-                    startTransition(() => onResetFilters());
-                  }}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all active:scale-95 text-xs font-bold uppercase tracking-wide mb-2 animate-in fade-in slide-in-from-top-2"
-                >
-                  <RefreshCcw className="w-3 h-3" /> Reset All Filters
-                </button>
-
-                {/* Desktop: Vertical stacked layout with more breathing room */}
-                {/* Mobile/Tablet: 2-column grid layout */}
-                <div className="grid grid-cols-2 lg:grid-cols-1 gap-x-4 gap-y-6 lg:gap-y-8 w-full">
-
-                  {/* Contrast */}
-                  <div className="flex items-center gap-3">
-                    <Contrast className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="200" name="contrast"
-                      value={meme.filters?.contrast ?? 100}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Contrast"
-                    />
-                  </div>
-
-                  {/* Brightness */}
-                  <div className="flex items-center gap-3">
-                    <Sun className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="200" name="brightness"
-                      value={meme.filters?.brightness ?? 100}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Brightness"
-                    />
-                  </div>
-
-                  {/* Blur */}
-                  <div className="flex items-center gap-3">
-                    <Blur className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="10" step="0.5" name="blur"
-                      value={meme.filters?.blur ?? 0}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Blur"
-                    />
-                  </div>
-
-                  {/* Grayscale */}
-                  <div className="flex items-center gap-3">
-                    <Grayscale className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="100" name="grayscale"
-                      value={meme.filters?.grayscale ?? 0}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Grayscale"
-                    />
-                  </div>
-
-                  {/* Sepia */}
-                  <div className="flex items-center gap-3">
-                    <Sepia className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="100" name="sepia"
-                      value={meme.filters?.sepia ?? 0}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Sepia"
-                    />
-                  </div>
-
-                  {/* Saturation */}
-                  <div className="flex items-center gap-3">
-                    <Saturate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="300" name="saturate"
-                      value={meme.filters?.saturate ?? 100}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Saturation"
-                    />
-                  </div>
-
-                  {/* Hue Rotate */}
-                  <div className="flex items-center gap-3">
-                    <HueRotate className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="360" name="hueRotate"
-                      value={meme.filters?.hueRotate ?? 0}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Hue Rotate"
-                    />
-                  </div>
-
-                  {/* Invert */}
-                  <div className="flex items-center gap-3">
-                    <Invert className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
-                    <OptimizedSlider
-                      min="0" max="100" name="invert"
-                      value={meme.filters?.invert ?? 0}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                      title="Invert"
-                    />
-                  </div>
-                </div>
-
-                <div className="w-full h-px bg-[#181818] shrink-0 my-2" aria-hidden="true" />
-
-                {/* Deep Fry Control */}
-                <div className="flex flex-col gap-4 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase text-red-500 tracking-wider flex items-center gap-2">
-                      Deep Fry
-                    </span>
-                    {meme.filters?.deepFry > 0 && (
-                      <span className="text-[10px] font-bold text-red-400">{meme.filters.deepFry}%</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 w-full">
-                    <Flame className={`w-5 h-5 transition-colors ${meme.filters?.deepFry > 0 ? 'text-red-500 animate-pulse' : 'text-slate-600'}`} />
-                    <OptimizedSlider
-                      min="0" max="100" name="deepFry"
-                      value={meme.filters?.deepFry ?? 0}
-                      onChange={handleFilterChange}
-                      onCommit={handleStyleCommit}
-                      filledColor="#ef4444"
-                      trackColor="rgba(255, 255, 255, 0.1)"
-                      className="range-slider w-full cursor-pointer h-2 rounded-full accent-red-500"
-                      title="Deep Fry Level"
-                    />
-                  </div>
-                </div>
-              </div>
+              <Suspense fallback={<div className="w-full h-40 bg-[#181818]/20 rounded animate-pulse" />}>
+                <ImageFiltersPanel
+                  filters={meme.filters}
+                  onFilterChange={handleFilterChange}
+                  onStyleCommit={handleStyleCommit}
+                  onResetFilters={onResetFilters}
+                />
+              </Suspense>
             )}
 
-            {/* DRAW CONTROLS */}
+            {/* DRAW CONTROLS - Lazy loaded */}
             {activeTab === "draw" && (
-              <div id="draw-tools-panel" role="tabpanel" className="flex flex-col gap-6 w-full items-center animate-in fade-in duration-300">
-                {/* Tools */}
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setActiveTool('pen')}
-                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'pen' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-[#181818] text-slate-400 border-[#2f3336] hover:border-[#3e4347]'}`}
-                    title="Pen Tool"
-                    aria-label="Use Pen Tool"
-                  >
-                    <img src="/images/canvas/marker-pen_32.png" className="w-5 h-5 object-contain" alt="Pen" />
-                  </button>
-                  <button
-                    onClick={() => setActiveTool('eraser')}
-                    className={`p-3 rounded-xl border transition-all flex items-center justify-center ${activeTool === 'eraser' ? 'bg-brand text-white border-brand shadow-lg shadow-orange-900/20' : 'bg-[#181818] text-slate-400 border-[#2f3336] hover:border-[#3e4347]'}`}
-                    title="Eraser Tool"
-                    aria-label="Use Eraser Tool"
-                  >
-                    <img src="/images/canvas/eraser_32.png" className="w-5 h-5 object-contain" alt="Eraser" />
-                  </button>
-                  <button
-                    onClick={() => startTransition(() => onClearDrawings())}
-                    className="p-3 rounded-xl border bg-[#181818] text-red-400 border-[#2f3336] hover:bg-red-900/20 hover:border-red-500/50 transition-all flex items-center justify-center"
-                    title="Clear All"
-                    aria-label="Clear All Drawings"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="w-full h-px bg-[#181818] shrink-0" aria-hidden="true" />
-
-                {/* Settings */}
-                <div className="flex items-center gap-8 w-full max-w-md px-4">
-                  {/* Color */}
-                  <div className="flex flex-col gap-2 items-center">
-                    <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Color</span>
-                    <div className="relative overflow-hidden w-10 h-10 rounded-full ring-2 ring-[#2f3336] hover:ring-[#3e4347] transition-all cursor-pointer shadow-sm">
-                      <input
-                        type="color"
-                        value={meme.drawColor || "#ff0000"}
-                        onChange={(e) => handleStyleChange(e)}
-                        name="drawColor"
-                        className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 border-0 cursor-pointer"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Width */}
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="flex justify-between">
-                      <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Stroke Width</span>
-                      <span className="text-[10px] font-bold text-slate-400 font-mono">{meme.drawWidth}px</span>
-                    </div>
-                    <OptimizedSlider
-                      min="1" max="50" name="drawWidth"
-                      value={meme.drawWidth || 5}
-                      onChange={handleStyleChange}
-                      className="range-slider w-full cursor-pointer h-2 rounded-full"
-                    />
-                  </div>
-                </div>
-              </div>
+              <Suspense fallback={<div className="w-full h-32 bg-[#181818]/20 rounded animate-pulse" />}>
+                <DrawToolsPanel
+                  activeTool={activeTool}
+                  setActiveTool={setActiveTool}
+                  drawColor={meme.drawColor}
+                  drawWidth={meme.drawWidth}
+                  onStyleChange={handleStyleChange}
+                  onClearDrawings={onClearDrawings}
+                />
+              </Suspense>
             )}
           </div>
         </div>

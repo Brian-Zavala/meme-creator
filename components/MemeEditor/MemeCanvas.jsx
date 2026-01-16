@@ -1,7 +1,52 @@
-import { forwardRef, useRef, useEffect, useState } from "react";
+import { forwardRef, useRef, useEffect, useState, memo } from "react";
 import { Loader2, Plus, Image as ImageIcon, Video, Upload, X, Trash2, Settings2 } from "lucide-react";
 import { getAnimationById } from "../../constants/textAnimations";
 import CountdownOverlay from "./CountdownOverlay";
+
+/**
+ * Optimized Wave Animation Text Component
+ * Memoized to prevent recalculating character splits on every parent render
+ * Only re-renders when content actually changes
+ */
+const WaveAnimationText = memo(function WaveAnimationText({ content }) {
+  // Pre-compute the animated characters structure
+  // This is expensive so we only do it when content changes
+  const lines = content.split('\n');
+  let globalCharIdx = 0;
+  
+  return lines.map((line, lineIdx) => {
+    const words = line.split(/(\s+)/);
+    
+    return (
+      <span key={lineIdx} style={{ display: 'block' }}>
+        {words.map((word, wordIdx) => {
+          if (/^\s+$/.test(word)) {
+            globalCharIdx += word.length;
+            return ' ';
+          }
+          
+          const startIdx = globalCharIdx;
+          globalCharIdx += word.length;
+          
+          return (
+            <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+              {word.split('').map((char, charInWordIdx) => (
+                <span
+                  key={charInWordIdx}
+                  className="animate-meme-wave-char"
+                  style={{ animationDelay: `${(startIdx + charInWordIdx) * 0.1}s` }}
+                >
+                  {char}
+                </span>
+              ))}
+            </span>
+          );
+        })}
+        {line.length === 0 && <span>&nbsp;</span>}
+      </span>
+    );
+  });
+});
 
 const MemeCanvas = forwardRef(({
   meme,
@@ -933,45 +978,7 @@ const MemeCanvas = forwardRef(({
               )}
               {/* Text Content Rendering - always visible, styled h2 displays the text */}
               {textItem.animation === 'wave' ? (
-                textItem.content.split('\n').map((line, lineIdx) => {
-                  // Split line into words (preserving spaces as separators)
-                  const words = line.split(/(\s+)/);
-                  let globalCharIdx = 0;
-
-                  return (
-                    <span key={lineIdx} style={{ display: 'block' }}>
-                      {words.map((word, wordIdx) => {
-                        // If it's whitespace, render a regular space (allows wrapping)
-                        if (/^\s+$/.test(word)) {
-                          globalCharIdx += word.length;
-                          return ' ';
-                        }
-
-                        // For actual words, wrap in inline-block to keep together
-                        const chars = word.split('').map((char, charInWordIdx) => {
-                          const charDelay = globalCharIdx + charInWordIdx;
-                          return (
-                            <span
-                              key={charInWordIdx}
-                              className="animate-meme-wave-char"
-                              style={{ animationDelay: `${charDelay * 0.1}s` }}
-                            >
-                              {char}
-                            </span>
-                          );
-                        });
-                        globalCharIdx += word.length;
-
-                        return (
-                          <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
-                            {chars}
-                          </span>
-                        );
-                      })}
-                      {line.length === 0 && <span>&nbsp;</span>}
-                    </span>
-                  );
-                })
+                <WaveAnimationText content={textItem.content} />
               ) : (
                 textItem.content
               )}

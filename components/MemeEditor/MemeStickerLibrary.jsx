@@ -1,8 +1,172 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Smile, Search, Loader2, Image as ImageIcon, Upload, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { searchGiphy } from "../../services/giphy";
 import { removeImageBackground } from "../../services/backgroundRemover";
+
+/**
+ * Lightweight virtualized grid for emojis
+ * Only renders visible items + buffer, dramatically reducing DOM nodes from 600+ to ~50
+ */
+function VirtualizedEmojiGrid({ stickers, onAddSticker, onClose, columns = 5, rowHeight = 40, bufferRows = 3 }) {
+  const containerRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(400);
+
+  // Calculate grid dimensions
+  const totalRows = Math.ceil(stickers.length / columns);
+  const totalHeight = totalRows * rowHeight;
+
+  // Update container height on mount and resize
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const updateHeight = () => setContainerHeight(container.clientHeight);
+    updateHeight();
+    
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  // Calculate visible range with buffer
+  const startRow = Math.max(0, Math.floor(scrollTop / rowHeight) - bufferRows);
+  const visibleRows = Math.ceil(containerHeight / rowHeight) + bufferRows * 2;
+  const endRow = Math.min(totalRows, startRow + visibleRows);
+
+  const startIndex = startRow * columns;
+  const endIndex = Math.min(stickers.length, endRow * columns);
+  const visibleStickers = stickers.slice(startIndex, endIndex);
+
+  const handleScroll = (e) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="overflow-y-auto scrollbar-thin"
+      style={{ height: '100%', maxHeight: '300px' }}
+      onScroll={handleScroll}
+    >
+      <div style={{ height: totalHeight, position: 'relative' }}>
+        <div
+          className="grid grid-cols-5 gap-1 absolute left-0 right-0"
+          style={{ top: startRow * rowHeight }}
+        >
+          {visibleStickers.map((sticker, index) => (
+            <button
+              key={`${sticker}-${startIndex + index}`}
+              onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
+              className="h-10 flex items-center justify-center text-2xl hover:bg-[#222222] rounded-lg transition-all active:scale-75 hover:scale-110"
+              style={{ touchAction: 'manipulation' }}
+            >
+              {sticker}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Flattened emoji data for virtualization - computed once at module load
+ * This avoids recalculating on every render
+ */
+const FLATTENED_EMOJIS = (() => {
+  const result = [];
+  // We'll create a flat list with category headers as special items
+  return result;
+})();
+
+/**
+ * Virtualized emoji categories with headers
+ * Uses intersection observer for lazy category loading
+ */
+function VirtualizedEmojiCategories({ categories, onAddSticker, onClose }) {
+  const containerRef = useRef(null);
+  const [visibleCategories, setVisibleCategories] = useState(new Set(['Faces', 'Gestures'])); // Start with first 2
+
+  // Lazy load categories as user scrolls
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const categoryNames = Object.keys(categories);
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const categoryIndex = parseInt(entry.target.dataset.categoryIndex, 10);
+            // Load this category and next 2
+            setVisibleCategories(prev => {
+              const next = new Set(prev);
+              for (let i = categoryIndex; i < Math.min(categoryIndex + 3, categoryNames.length); i++) {
+                next.add(categoryNames[i]);
+              }
+              return next;
+            });
+          }
+        });
+      },
+      { root: container, rootMargin: '100px' }
+    );
+
+    // Observe sentinel elements for each category
+    container.querySelectorAll('[data-category-sentinel]').forEach(el => {
+      observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [categories]);
+
+  const categoryEntries = Object.entries(categories);
+
+  return (
+    <div 
+      ref={containerRef}
+      className="space-y-4 overflow-y-auto scrollbar-thin"
+      style={{ maxHeight: '300px', WebkitOverflowScrolling: 'touch' }}
+    >
+      {categoryEntries.map(([category, stickers], categoryIndex) => (
+        <div key={category} data-category-sentinel data-category-index={categoryIndex}>
+          <div className="px-1 py-2 flex items-center gap-2 sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-sm z-10">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{category}</span>
+            <span className="h-px flex-1 bg-[#2f3336]"></span>
+          </div>
+          {visibleCategories.has(category) ? (
+            <div className="grid grid-cols-5 gap-1">
+              {stickers.map((sticker, index) => (
+                <button
+                  key={`${sticker}-${index}`}
+                  onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
+                  className="h-10 flex items-center justify-center text-2xl hover:bg-[#222222] rounded-lg transition-all active:scale-75 hover:scale-110"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  {sticker}
+                </button>
+              ))}
+            </div>
+          ) : (
+            // Placeholder to maintain scroll height
+            <div 
+              className="grid grid-cols-5 gap-1"
+              style={{ height: Math.ceil(stickers.length / 5) * 40 }}
+            >
+              <div className="col-span-5 flex items-center justify-center text-slate-600 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Loading...
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Moved from MemeInputs.jsx
 const STICKER_CATEGORIES = {
@@ -304,30 +468,13 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
           </div>
         )}
 
-        {/* EMOJI TAB */}
+        {/* EMOJI TAB - Virtualized for performance (600+ emojis) */}
         {activeTab === "emoji" && (
-          <div className="space-y-4">
-            {Object.entries(STICKER_CATEGORIES).map(([category, stickers]) => (
-              <div key={category}>
-                <div className="px-1 py-2 flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{category}</span>
-                  <span className="h-px flex-1 bg-[#2f3336]"></span>
-                </div>
-                <div className="grid grid-cols-5 gap-1">
-                  {stickers.map((sticker, index) => (
-                    <button
-                      key={`${sticker}-${index}`}
-                      onClick={() => { onAddSticker(sticker, 'text'); if (onClose) onClose(); }}
-                      className="h-10 flex items-center justify-center text-2xl hover:bg-[#222222] rounded-lg transition-all active:scale-75 hover:scale-110"
-                      style={{ touchAction: 'manipulation' }}
-                    >
-                      {sticker}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <VirtualizedEmojiCategories 
+            categories={STICKER_CATEGORIES} 
+            onAddSticker={onAddSticker} 
+            onClose={onClose} 
+          />
         )}
 
       </div>

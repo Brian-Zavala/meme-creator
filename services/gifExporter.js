@@ -619,6 +619,27 @@ export async function exportImageAsPng(meme, texts, stickers) {
     let dimensions = calculateDimensions(meme, assets);
     let { exportWidth, exportHeight } = dimensions;
 
+    // QUALITY FIX: Enforce MINIMUM resolution for crisp text rendering
+    // Small source images (e.g. 400x300) cause blurry text when exported at native size
+    // 1200px minimum ensures text is rendered at high quality regardless of source image size
+    const MIN_STATIC_DIMENSION = 1200;
+    if (exportWidth < MIN_STATIC_DIMENSION && exportHeight < MIN_STATIC_DIMENSION) {
+        const scale = MIN_STATIC_DIMENSION / Math.max(exportWidth, exportHeight);
+        exportWidth = Math.round(exportWidth * scale);
+        exportHeight = Math.round(exportHeight * scale);
+
+        // Update dimensions object for renderMemeFrame
+        dimensions = {
+            ...dimensions,
+            exportWidth,
+            exportHeight,
+            contentHeight: Math.round(dimensions.contentHeight * scale),
+            contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
+            contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
+        };
+        console.log(`Upscaled Static Export dimensions to ${exportWidth}x${exportHeight} for crisp text quality`);
+    }
+
     // MOBILE FIX: Clamp MAX dimension for static exports to prevent OOM on iOS/Android
     // 12MP photos (4000x3000) can crash mobile canvas. 2400px is safe & high quality (better than 1080p).
     const MAX_STATIC_DIMENSION = 2400;
@@ -714,6 +735,25 @@ export async function exportGif(meme, texts, stickers) {
             // Add to assets so renderMemeFrame can find them
             assets.friedImages = friedImages;
             // -------------------------------------------------------------
+
+            // QUALITY FIX: Enforce MINIMUM resolution for crisp text rendering in GIFs
+            // Small source GIFs cause blurry text when exported at native size
+            const MIN_GIF_DIMENSION = 480;
+            if (exportWidth < MIN_GIF_DIMENSION && exportHeight < MIN_GIF_DIMENSION) {
+                const scale = MIN_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
+                exportWidth = Math.round(exportWidth * scale);
+                exportHeight = Math.round(exportHeight * scale);
+
+                dimensions = {
+                    ...dimensions,
+                    exportWidth,
+                    exportHeight,
+                    contentHeight: Math.round(dimensions.contentHeight * scale),
+                    contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
+                    contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
+                };
+                console.log(`Upscaled GIF dimensions to ${exportWidth}x${exportHeight} for crisp text quality`);
+            }
 
             // Scale down large images for reasonable GIF file sizes
             // QUALITY FIX: Increased from 600 to 800 for sharper text/stickers
@@ -1051,12 +1091,16 @@ function drawText(ctx, texts, meme, width, height, offsetY, currentTimeMs = 0, t
             ctx.fill();
         }
 
+        // Match CSS drop-shadow(0px 2px 2px rgba(0,0,0,0.8)) from preview
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
         ctx.shadowBlur = 2 * scale;
+        ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 2 * scale;
-        // Match CSS -webkit-text-stroke visual weight (Canvas strokes appear thicker)
-        ctx.lineWidth = stroke * 1.5;
+        // Match CSS -webkit-text-stroke visual weight: preview uses stroke * 2
+        // Canvas strokeText renders slightly thinner than CSS text-stroke, so we match the 2x multiplier
+        ctx.lineWidth = stroke * 2;
         ctx.lineJoin = 'round';
+        ctx.miterLimit = 2;
         ctx.strokeStyle = meme.textShadow || '#000000';
         ctx.fillStyle = meme.textColor || '#ffffff';
 

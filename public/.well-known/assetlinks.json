@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.meme_creator.twa",
+        "sha256_cert_fingerprints": ["8E:4F:C7:5E:41:13:79:0C:A8:4F:75:13:22:06:ED:7C:C2:84:41:65:FD:0F:0F:CE:96:1A:BE:18:C5:66:42:66"]
+      }
+    }]

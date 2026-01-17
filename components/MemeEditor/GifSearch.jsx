@@ -64,6 +64,7 @@ export function GifSearch({
       className="card-bg border border-[#2f3336] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95"
       role="listbox"
       aria-label="Search Suggestions"
+      data-gif-dropdown-portal
     >
       {suggestions.length > 0 ? (
         <div className="p-2" role="group">

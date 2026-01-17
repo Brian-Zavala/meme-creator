@@ -390,11 +390,13 @@ export default function Main() {
   // Handle clicking outside to close the dropdown
   useEffect(() => {
     const handleClickOutside = (e) => {
-      // Existing logic for GIF search...
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+      // Check for GIF search portal (rendered via createPortal to document.body)
+      const gifPortalDropdown = document.querySelector('[data-gif-dropdown-portal]');
+      // Only close GIF suggestions if click is outside BOTH the container AND the portal
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target) && (!gifPortalDropdown || !gifPortalDropdown.contains(e.target))) {
         setShowSuggestions(false);
       }
-      // NEW: Logic for Imgflip search (need to also check if click was inside portal)
+      // Logic for Imgflip search (need to also check if click was inside portal)
       const portalDropdown = document.querySelector('[data-meme-dropdown-portal]');
       if (memeSearchRef.current && !memeSearchRef.current.contains(e.target) && (!portalDropdown || !portalDropdown.contains(e.target))) {
         setShowMemeSuggestions(false);

@@ -1782,7 +1782,7 @@ export default function Main() {
     triggerConfettiBurst();
 
     // Add 10-15 confetti-specific emoji particles with animations
-    const confettiEmojis = ['🎉', '🎊', '✨', '🎇', '🎆'];
+    const confettiEmojis = ['🎉', '🎊'];
     const confettiAnimations = ['bounce', 'float', 'spin', 'pulse', 'tada', 'wobble', 'heartbeat', 'jelly'];
     const count = 10 + Math.floor(Math.random() * 6); // 10-15 emojis
 

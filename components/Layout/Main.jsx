@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo } from "react";
+import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
@@ -337,6 +338,47 @@ export default function Main() {
   const [showMemeSuggestions, setShowMemeSuggestions] = useState(false);
   const [hoveredMeme, setHoveredMeme] = useState(null);
   const memeSearchRef = useRef(null);
+  const [memeDropdownStyle, setMemeDropdownStyle] = useState({});
+
+  // Calculate Image mode dropdown position based on input container
+  useLayoutEffect(() => {
+    if (showMemeSuggestions && memeSearchRef.current) {
+      const rect = memeSearchRef.current.getBoundingClientRect();
+      setMemeDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: rect.left + 12, // account for padding
+        width: rect.width - 24, // account for padding on both sides
+        zIndex: 9999
+      });
+    }
+  }, [showMemeSuggestions]);
+
+  // Update position on scroll/resize for Image mode dropdown
+  useEffect(() => {
+    if (!showMemeSuggestions) return;
+
+    const updatePosition = () => {
+      if (memeSearchRef.current) {
+        const rect = memeSearchRef.current.getBoundingClientRect();
+        setMemeDropdownStyle({
+          position: 'fixed',
+          top: rect.bottom + 8,
+          left: rect.left + 12,
+          width: rect.width - 24,
+          zIndex: 9999
+        });
+      }
+    };
+
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [showMemeSuggestions]);
 
   // Filter the ~100 memes locally. Instant.
   const filteredMemes = useMemo(() => {
@@ -352,8 +394,9 @@ export default function Main() {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
         setShowSuggestions(false);
       }
-      // NEW: Logic for Imgflip search
-      if (memeSearchRef.current && !memeSearchRef.current.contains(e.target)) {
+      // NEW: Logic for Imgflip search (need to also check if click was inside portal)
+      const portalDropdown = document.querySelector('[data-meme-dropdown-portal]');
+      if (memeSearchRef.current && !memeSearchRef.current.contains(e.target) && (!portalDropdown || !portalDropdown.contains(e.target))) {
         setShowMemeSuggestions(false);
       }
     };
@@ -3056,7 +3099,7 @@ export default function Main() {
 
                 {/* CASE 2: IMAGE MODE (New Imgflip Search) */}
                 {meme.mode === "image" && (
-                  <div className="relative z-50 p-3 border-b border-[#2f3336]" ref={memeSearchRef}>
+                  <div className="relative p-3 border-b border-[#2f3336]" ref={memeSearchRef}>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand transition-colors">
                         <Search className="w-5 h-5" />
@@ -3082,9 +3125,13 @@ export default function Main() {
                       )}
                     </div>
 
-                    {/* Dropdown Results */}
-                    {showMemeSuggestions && (
-                      <div className="absolute top-full left-0 right-0 mt-2 mx-3 card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-[60]">
+                    {/* Dropdown Results - Portaled to document.body */}
+                    {showMemeSuggestions && createPortal(
+                      <div
+                        data-meme-dropdown-portal
+                        style={memeDropdownStyle}
+                        className="card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2"
+                      >
                         {!memeSearchQuery && (
                           <div className="px-4 py-3 border-b border-[#2f3336] bg-[#181818]/30 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -3154,7 +3201,8 @@ export default function Main() {
                             )}
                           </div>
                         )}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </div>
                 )}

@@ -13,10 +13,10 @@ const WaveAnimationText = memo(function WaveAnimationText({ content }) {
   // This is expensive so we only do it when content changes
   const lines = content.split('\n');
   let globalCharIdx = 0;
-  
+
   return lines.map((line, lineIdx) => {
     const words = line.split(/(\s+)/);
-    
+
     return (
       <span key={lineIdx} style={{ display: 'block' }}>
         {words.map((word, wordIdx) => {
@@ -24,10 +24,10 @@ const WaveAnimationText = memo(function WaveAnimationText({ content }) {
             globalCharIdx += word.length;
             return ' ';
           }
-          
+
           const startIdx = globalCharIdx;
           globalCharIdx += word.length;
-          
+
           return (
             <span key={wordIdx} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
               {word.split('').map((char, charInWordIdx) => (
@@ -72,7 +72,9 @@ const MemeCanvas = forwardRef(({
   onDrop,
   onClearPanel,
   onPanelPosChange,
-  onHoverChange
+  onHoverChange,
+  isCropping,
+  onCropCancel
 }, ref) => {
   const description = `Meme editor with ${meme.panels?.length || 1} panels`;
   const drawCanvasRef = useRef(null);
@@ -684,17 +686,18 @@ const MemeCanvas = forwardRef(({
                   </div>
                 )}
 
-                {/* Remove Button - Shows when Active or Hovered */}
-                {showUrl && (
+                {/* Remove Button - Shows when Active or Hovered, BUT NOT when cropping */}
+                {showUrl && !isCropping && (
                   <button
                     data-html2canvas-ignore="true"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onClearPanel) onClearPanel(panel.id);
                     }}
-                    className={`absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md border border-white/10 shadow-lg transition-all duration-200 z-30 group/btn flex items-center justify-center
+                    className={`absolute top-2 right-2 p-1.5 rounded-full text-white backdrop-blur-md border shadow-lg transition-all duration-200 group/btn flex items-center justify-center
                                     ${isActive ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 -translate-y-2 scale-90 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100'}
-                                    hover:bg-red-500 hover:border-red-400 hover:rotate-90 active:scale-90
+                                    active:scale-90
+                                    bg-red-500/80 border-white/10 hover:bg-red-500 hover:border-red-400 hover:rotate-90 z-30
                                 `}
                     title="Clear Slot"
                   >

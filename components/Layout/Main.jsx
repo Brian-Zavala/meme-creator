@@ -3454,22 +3454,28 @@ export default function Main() {
                         </div>
                       )}
 
-                      {/* Cancel button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCropCancel();
-                        }}
-                        className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-full transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+
 
                       {/* Instructions */}
                       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs sm:text-sm px-4 py-2 rounded-full whitespace-nowrap">
                         Drag to select area
                       </div>
                     </div>
+                  )}
+
+                  {/* External Cancel Crop Button - Re-added and positioned absolutely in container */}
+                  {isCropping && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Explicitly call the cancel handler
+                        handleCropCancel();
+                      }}
+                      className="absolute top-4 right-4 z-[202] p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-all hover:scale-105 active:scale-95"
+                      title="Cancel Crop"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   )}
 
                   <MemeCanvas
@@ -3502,6 +3508,8 @@ export default function Main() {
                     onClearPanel={handleClearPanel}
                     onToggleFit={togglePanelFit}
                     onPanelPosChange={handlePanelPosChange}
+                    isCropping={isCropping}
+                    onCropCancel={handleCropCancel}
                   />
                 </div>
                 {selectedText && (

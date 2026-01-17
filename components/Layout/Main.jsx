@@ -1050,7 +1050,7 @@ export default function Main() {
         );
 
         // Random text with mixed fonts/styles (Chaos Text)
-        const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Permanent Marker", "Cinzel"];
+        const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Permanent Marker", "Cinzel", "Bebas Neue", "Luckiest Guy", "Bungee", "Russo One", "Righteous", "Fredoka", "Press Start 2P", "Black Ops One"];
         const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000", "#000000"];
 
         const newTexts = randomQuote.map((line, idx) => ({
@@ -1118,7 +1118,7 @@ export default function Main() {
       { name: "Warning", colors: ["#ffff00", "#ff6600", "#000000"], shadows: ["#000000", "#ffff00"] }
     ];
 
-    const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Pacifico", "Permanent Marker", "Cinzel", "Montserrat", "Roboto"];
+    const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Pacifico", "Permanent Marker", "Cinzel", "Montserrat", "Roboto", "Bebas Neue", "Luckiest Guy", "Bungee", "Lato", "Russo One", "Righteous", "Fredoka", "Rubik Mono One", "Press Start 2P", "Special Elite", "Black Ops One", "Carter One"];
 
     const styles = [];
     for (const font of fonts) {

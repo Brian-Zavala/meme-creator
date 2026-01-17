@@ -30,6 +30,18 @@ const FONTS = [
   { name: "Creepster", label: "Scary" },
   { name: "Cinzel", label: "Epic" },
   { name: "Pacifico", label: "Script" },
+  { name: "Bebas Neue", label: "Bebas" },
+  { name: "Luckiest Guy", label: "Lucky" },
+  { name: "Bungee", label: "Arcade" },
+  { name: "Lato", label: "Slim" },
+  { name: "Russo One", label: "Russo" },
+  { name: "Righteous", label: "Retro" },
+  { name: "Fredoka", label: "Bubbly" },
+  { name: "Rubik Mono One", label: "Chunky" },
+  { name: "Press Start 2P", label: "Pixel" },
+  { name: "Special Elite", label: "Typer" },
+  { name: "Black Ops One", label: "Army" },
+  { name: "Carter One", label: "Carter" },
 ];
 
 function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {

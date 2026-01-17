@@ -7,6 +7,8 @@ import {
   Smile,
   Pencil,
   ChevronDown,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 import OptimizedSlider from "../ui/OptimizedSlider";
@@ -99,6 +101,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
   const baseId = useId();
   const [showSliders, setShowSliders] = useState(false); // Collapsed by default on mobile
   const [showTextStyling, setShowTextStyling] = useState(false); // Collapsed by default
+  const [showTextContent, setShowTextContent] = useState(true); // Text content drawer visible by default
   // Track if drawer has been opened after text was added - stays true until all text removed
   const [drawerHasOpened, setDrawerHasOpened] = useState(false);
   const hasStickers = meme.stickers && meme.stickers.length > 0;
@@ -359,120 +362,150 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                 </div>
                 )}
 
-                {/* Group 0: Font Selector (Horizontal Scroll) */}
-                {hasText && (
-                  <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
-                    <div className="flex gap-2 overflow-x-auto pt-6 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
-                      {FONTS.map((font) => (
-                        <button
-                          key={font.name}
-                          onClick={() => {
-                            if (navigator.vibrate) navigator.vibrate(10);
-                            startTransition(() => {
-                                handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
-                            });
-                          }}
-                          className={`snap-center shrink-0 px-4 py-2 rounded-lg text-sm transition-all active:scale-95 ${(meme.fontFamily || "Roboto") === font.name
-                            ? "bg-slate-100 text-slate-900 border border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-                            : "bg-[#181818] text-slate-400 border border-[#2f3336] hover:border-[#3e4347] hover:text-white"
-                            }`}
-                          style={{ fontFamily: `${font.name}, sans-serif` }}
-                        >
-                          {font.label}
-                        </button>
-                      ))}
+                {/* Show/Hide Text Content Drawer Toggle */}
+                <button
+                  onClick={() => {
+                    if (navigator.vibrate) navigator.vibrate(10);
+                    startTransition(() => setShowTextContent(!showTextContent));
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-[#181818] border border-[#2f3336] text-slate-400 hover:text-white hover:border-[#3e4347] focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all active:scale-[0.98]"
+                >
+                  {showTextContent ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    {showTextContent ? 'Hide' : 'Show'} Text Editor
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showTextContent ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Collapsible Text Content Drawer */}
+                <div
+                  className={`w-full grid transition-[grid-template-rows] duration-300 ease-out ${showTextContent ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                >
+                  <div className="overflow-hidden">
+                    <div className={`w-full flex flex-col gap-6 transition-opacity duration-200 ${showTextContent ? 'opacity-100 pt-4' : 'opacity-0'}`}>
+
+                      {/* Font Selector (Horizontal Scroll) */}
+                      {hasText && (
+                        <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                              Font Family
+                            </span>
+                          </div>
+                          <div className="flex gap-2 overflow-x-auto pt-2 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                            {FONTS.map((font) => (
+                              <button
+                                key={font.name}
+                                onClick={() => {
+                                  if (navigator.vibrate) navigator.vibrate(10);
+                                  startTransition(() => {
+                                      handleStyleChange({ currentTarget: { name: 'fontFamily', value: font.name } }, true);
+                                  });
+                                }}
+                                className={`snap-center shrink-0 px-4 py-2 rounded-lg text-sm transition-all active:scale-95 ${(meme.fontFamily || "Roboto") === font.name
+                                  ? "bg-slate-100 text-slate-900 border border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                                  : "bg-[#181818] text-slate-400 border border-[#2f3336] hover:border-[#3e4347] hover:text-white"
+                                  }`}
+                                style={{ fontFamily: `${font.name}, sans-serif` }}
+                              >
+                                {font.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Text Animation Selector */}
+                      {hasText && (
+                        <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${hasAnimatedText ? 'text-brand' : 'text-slate-500'}`}>
+                              Text Animation {hasAnimatedText && <span className="text-amber-400">• GIF Export</span>}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 overflow-x-auto pt-2 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                            {TEXT_ANIMATIONS.map((anim) => {
+                              // Check if ANY text has this animation
+                              const isActive = meme.texts.some(t => t.animation === anim.id);
+                              return (
+                                <AnimationButton
+                                  key={anim.id}
+                                  anim={anim}
+                                  isActive={isActive}
+                                  onClick={() => {
+                                    if (navigator.vibrate) navigator.vibrate(10);
+                                    if (onAnimationChange) {
+                                      startTransition(() => {
+                                          onAnimationChange(anim.id);
+                                      });
+                                    }
+                                  }}
+                                  variant="text"
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Text Content Area (Inputs) */}
+                      <div className="w-full animate-in fade-in duration-300">
+                        <MemeInputs
+                          embedded={true}
+                          texts={meme.texts}
+                          handleTextChange={handleTextChange}
+                          onAddSticker={onAddSticker}
+                          onMagicCaption={onMagicCaption}
+                          isMagicGenerating={isMagicGenerating}
+                          onChaos={onChaos}
+                          hasStickers={hasStickers}
+                          onExportStickers={onExportStickers}
+                          selectedId={meme.selectedId}
+                          editingId={editingId}
+                          onEditingChange={onEditingChange}
+                          hasText={hasText}
+                        />
+                      </div>
+
+                      {/* Sticker Animation Selector */}
+                      {hasStickers && (
+                        <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300 slide-in-from-top-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${hasAnimatedSticker ? 'text-blue-400' : 'text-slate-500'}`}>
+                              Sticker Animation {hasAnimatedSticker && <span className="text-amber-400">• GIF Export</span>}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 overflow-x-auto pt-2 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
+                            {TEXT_ANIMATIONS.map((anim) => {
+                              // Check if ANY sticker has this animation
+                              const isActive = meme.stickers.some(s => s.animation === anim.id);
+                              return (
+                                <AnimationButton
+                                  key={anim.id}
+                                  anim={anim}
+                                  isActive={isActive}
+                                  onClick={() => {
+                                    if (navigator.vibrate) navigator.vibrate(10);
+                                    if (onStickerAnimationChange) {
+                                      startTransition(() => {
+                                          onStickerAnimationChange(anim.id);
+                                      });
+                                    }
+                                  }}
+                                  variant="sticker"
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                   </div>
-                )}
-
-                {/* Animation Selector */}
-                {hasText && (
-                  <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${hasAnimatedText ? 'text-brand' : 'text-slate-500'}`}>
-                        Text Animation {hasAnimatedText && <span className="text-amber-400">• GIF Export</span>}
-                      </span>
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto pt-6 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
-                      {TEXT_ANIMATIONS.map((anim) => {
-                        // Check if ANY text has this animation
-                        const isActive = meme.texts.some(t => t.animation === anim.id);
-                        return (
-                          <AnimationButton
-                            key={anim.id}
-                            anim={anim}
-                            isActive={isActive}
-                            onClick={() => {
-                              if (navigator.vibrate) navigator.vibrate(10);
-                              if (onAnimationChange) {
-                                startTransition(() => {
-                                    onAnimationChange(anim.id);
-                                });
-                              }
-                            }}
-                            variant="text"
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sticker Animation Selector */}
-                {hasStickers && (
-                  <div className="w-full flex flex-col gap-2 animate-in fade-in duration-300 slide-in-from-top-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${hasAnimatedSticker ? 'text-blue-400' : 'text-slate-500'}`}>
-                        Sticker Animation {hasAnimatedSticker && <span className="text-amber-400">• GIF Export</span>}
-                      </span>
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto pt-6 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
-                      {TEXT_ANIMATIONS.map((anim) => {
-                        // Check if ANY sticker has this animation
-                        const isActive = meme.stickers.some(s => s.animation === anim.id);
-                        return (
-                          <AnimationButton
-                            key={anim.id}
-                            anim={anim}
-                            isActive={isActive}
-                            onClick={() => {
-                              if (navigator.vibrate) navigator.vibrate(10);
-                              if (onStickerAnimationChange) {
-                                startTransition(() => {
-                                    onStickerAnimationChange(anim.id);
-                                });
-                              }
-                            }}
-                            variant="sticker"
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-
-
-
-
-
-                {/* Text Content Area (Inputs) - Moved Here */}
-                <div className="w-full animate-in fade-in duration-300">
-                  <MemeInputs
-                    embedded={true}
-                    texts={meme.texts}
-                    handleTextChange={handleTextChange}
-                    onAddSticker={onAddSticker}
-                    onMagicCaption={onMagicCaption}
-                    isMagicGenerating={isMagicGenerating}
-                    onChaos={onChaos}
-                    hasStickers={hasStickers}
-                    onExportStickers={onExportStickers}
-                    selectedId={meme.selectedId}
-                    editingId={editingId}
-                    onEditingChange={onEditingChange}
-                    hasText={hasText}
-                  />
                 </div>
 
                 {/* Collapsible Text Styling Section */}
@@ -486,6 +519,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                       }}
                       className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-[#181818] border border-[#2f3336] text-slate-400 hover:text-white hover:border-[#3e4347] focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all active:scale-[0.98]"
                     >
+                      {showTextStyling ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                       <span className="text-xs font-bold uppercase tracking-wider">
                         {showTextStyling ? 'Hide' : 'Show'} Text Styling
                       </span>

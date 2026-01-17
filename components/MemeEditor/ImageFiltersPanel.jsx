@@ -10,6 +10,7 @@ import {
   FlipVertical as Invert,
   RefreshCcw,
   Flame,
+  Scissors,
 } from "lucide-react";
 import OptimizedSlider from "../ui/OptimizedSlider";
 
@@ -18,6 +19,8 @@ export default function ImageFiltersPanel({
   onFilterChange,
   onStyleCommit,
   onResetFilters,
+  onStartCrop,
+  isCropping,
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -225,6 +228,41 @@ export default function ImageFiltersPanel({
             title="Deep Fry Level"
           />
         </div>
+      </div>
+
+      <div
+        className="w-full h-px bg-[#181818] shrink-0 my-2"
+        aria-hidden="true"
+      />
+
+      {/* Crop Canvas Tool */}
+      <div className="flex flex-col gap-4 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase text-blue-400 tracking-wider flex items-center gap-2">
+            Crop Canvas
+          </span>
+        </div>
+        <button
+          onClick={() => {
+            if (navigator.vibrate) navigator.vibrate(10);
+            if (onStartCrop) onStartCrop();
+          }}
+          disabled={isCropping}
+          className={`flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl transition-all active:scale-[0.98] font-bold uppercase tracking-wider ${
+            isCropping
+              ? "bg-blue-500/20 text-blue-400 border border-blue-500/50 cursor-not-allowed"
+              : "bg-[#181818] text-slate-300 border border-[#2f3336] hover:border-blue-500/50 hover:text-blue-400 hover:bg-blue-500/10"
+          }`}
+          style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
+        >
+          <Scissors className={`w-4 h-4 sm:w-5 sm:h-5 ${isCropping ? 'animate-pulse' : ''}`} />
+          <span className="text-xs sm:text-sm">
+            {isCropping ? "Select Area..." : "Crop Canvas"}
+          </span>
+        </button>
+        <p className="text-slate-500 text-[10px] sm:text-xs text-center">
+          Select an area to capture as a snippet
+        </p>
       </div>
     </div>
   );

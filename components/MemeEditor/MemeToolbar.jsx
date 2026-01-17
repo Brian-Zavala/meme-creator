@@ -90,6 +90,8 @@ function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
 export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange, editingId,
   // New props for MemeInputs
   handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, onExportStickers, onEditingChange,
+  // Crop props
+  onStartCrop, isCropping,
   className = ""
 }) {
   const [activeTab, setActiveTab] = useState("text");
@@ -644,6 +646,8 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   onFilterChange={handleFilterChange}
                   onStyleCommit={handleStyleCommit}
                   onResetFilters={onResetFilters}
+                  onStartCrop={onStartCrop}
+                  isCropping={isCropping}
                 />
               </Suspense>
             )}

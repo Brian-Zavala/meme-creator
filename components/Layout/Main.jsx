@@ -17,6 +17,7 @@ import MemeToolbar from "../MemeEditor/MemeToolbar";
 
 import { LayoutSelector } from "../MemeEditor/LayoutSelector";
 import { ExportConfirmModal } from "../Modals/ExportConfirmModal";
+import { SnippetSuccessModal } from "../Modals/SnippetSuccessModal";
 import { saveState, loadState } from "../../services/storage";
 const RemixCarousel = lazy(() => import("../MemeEditor/RemixCarousel"));
 
@@ -324,6 +325,13 @@ export default function Main() {
   const [videoDeck, setVideoDeck] = useState([]);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isStickerExport, setIsStickerExport] = useState(false);
+
+  // Cropper state
+  const [isCropping, setIsCropping] = useState(false);
+  const [croppedImageUrl, setCroppedImageUrl] = useState(null);
+  const [showSnippetModal, setShowSnippetModal] = useState(false);
+  const [cropSelection, setCropSelection] = useState(null); // {startX, startY, endX, endY}
+  const cropStartRef = useRef(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -2066,6 +2074,122 @@ export default function Main() {
     toast.success("Drawings cleared");
   }
 
+  // Crop handlers
+  function handleStartCrop() {
+    if (!memeRef.current) {
+      toast.error("Canvas not ready");
+      return;
+    }
+
+    setIsCropping(true);
+    toast("Draw a selection on the canvas", {
+      icon: "✂️",
+      duration: 3000,
+      id: "crop-start"
+    });
+  }
+
+  async function handleCropComplete(cropBounds) {
+    if (!memeRef.current || !cropBounds) {
+      setIsCropping(false);
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const { x, y, width, height } = cropBounds;
+
+      // Get the canvas container dimensions for scaling
+      const containerRect = canvasContainerRef.current?.getBoundingClientRect();
+      if (!containerRect) {
+        throw new Error("Container not found");
+      }
+
+      // First, export the full meme using the existing reliable method
+      const fullBlob = await exportImageAsPng(meme, meme.texts, meme.stickers);
+
+      // Load the full image
+      const fullImage = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(fullBlob);
+      });
+
+      // Calculate the scale factor between display size and export size
+      const scaleX = fullImage.width / containerRect.width;
+      const scaleY = fullImage.height / containerRect.height;
+
+      // Create a canvas for the cropped region
+      const cropCanvas = document.createElement("canvas");
+      const cropWidth = Math.round(width * scaleX);
+      const cropHeight = Math.round(height * scaleY);
+      cropCanvas.width = cropWidth;
+      cropCanvas.height = cropHeight;
+
+      const ctx = cropCanvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      // Draw the cropped portion
+      ctx.drawImage(
+        fullImage,
+        Math.round(x * scaleX), // source x
+        Math.round(y * scaleY), // source y
+        cropWidth, // source width
+        cropHeight, // source height
+        0, 0, // dest x, y
+        cropWidth, // dest width
+        cropHeight // dest height
+      );
+
+      // Convert to data URL
+      const dataUrl = cropCanvas.toDataURL("image/png");
+
+      // Cleanup
+      URL.revokeObjectURL(fullImage.src);
+
+      setCroppedImageUrl(dataUrl);
+      setShowSnippetModal(true);
+      setIsCropping(false);
+      setIsProcessing(false);
+    } catch (err) {
+      console.error("Crop error:", err);
+      toast.error("Crop failed - try again");
+      setIsCropping(false);
+      setIsProcessing(false);
+    }
+  }
+
+  function handleCropExport() {
+    if (!croppedImageUrl) return;
+
+    // Convert data URL to blob and download
+    fetch(croppedImageUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const filename = `${meme.name || "meme"}-snippet-${Date.now()}.png`;
+        triggerDownload(blob, filename);
+        toast.success("Snippet exported!", { icon: "✂️" });
+        setCroppedImageUrl(null);
+      })
+      .catch(() => {
+        toast.error("Export failed");
+      });
+  }
+
+  function handleCropRetry() {
+    setCroppedImageUrl(null);
+    setIsCropping(true);
+    toast("Draw a new selection", { icon: "✂️", duration: 2000 });
+  }
+
+  function handleCropCancel() {
+    setIsCropping(false);
+    setCroppedImageUrl(null);
+    setShowSnippetModal(false);
+  }
+
   async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
@@ -3004,6 +3128,15 @@ export default function Main() {
               isStickerOnly={isStickerExport}
             />
 
+            {/* Snippet Success Modal */}
+            <SnippetSuccessModal
+              isOpen={showSnippetModal}
+              onClose={handleCropCancel}
+              onRetry={handleCropRetry}
+              onExport={handleCropExport}
+              croppedImageUrl={croppedImageUrl}
+            />
+
             <div className="lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
               {/* Controls moved to Toolbar */}
 
@@ -3068,6 +3201,8 @@ export default function Main() {
                     onChaos={handleChaos}
                     onExportStickers={handleExportStickers}
                     onEditingChange={setEditingId}
+                    onStartCrop={handleStartCrop}
+                    isCropping={isCropping}
                   />
                 </div>
 
@@ -3247,6 +3382,96 @@ export default function Main() {
                       className="absolute inset-0 border-2 border-dashed border-white z-[101] pointer-events-none"
                     />
                   )}
+
+                  {/* Crop Selection Overlay */}
+                  {isCropping && (
+                    <div
+                      data-html2canvas-ignore="true"
+                      className="absolute inset-0 z-[200] cursor-crosshair bg-black/30"
+                      style={{ touchAction: 'none' }}
+                      onPointerDown={(e) => {
+                        if (!canvasContainerRef.current) return;
+                        const rect = canvasContainerRef.current.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        cropStartRef.current = { x, y };
+                        setCropSelection({ startX: x, startY: y, endX: x, endY: y });
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                      }}
+                      onPointerMove={(e) => {
+                        if (!cropStartRef.current || !canvasContainerRef.current) return;
+                        const rect = canvasContainerRef.current.getBoundingClientRect();
+                        const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+                        const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+                        setCropSelection(prev => prev ? { ...prev, endX: x, endY: y } : null);
+                      }}
+                      onPointerUp={(e) => {
+                        if (!cropStartRef.current || !cropSelection) {
+                          cropStartRef.current = null;
+                          setCropSelection(null);
+                          return;
+                        }
+
+                        const { startX, startY, endX, endY } = cropSelection;
+                        const width = Math.abs(endX - startX);
+                        const height = Math.abs(endY - startY);
+
+                        // Minimum selection size check (5px to avoid accidental taps)
+                        if (width < 5 || height < 5) {
+                          setCropSelection(null);
+                          cropStartRef.current = null;
+                          return;
+                        }
+
+                        // Calculate bounds
+                        const bounds = {
+                          x: Math.min(startX, endX),
+                          y: Math.min(startY, endY),
+                          width,
+                          height
+                        };
+
+                        cropStartRef.current = null;
+                        setCropSelection(null);
+                        handleCropComplete(bounds);
+                      }}
+                    >
+                      {/* Selection Rectangle */}
+                      {cropSelection && (
+                        <div
+                          className="absolute border-2 border-dashed border-white bg-white/10 animate-marching-ants"
+                          style={{
+                            left: Math.min(cropSelection.startX, cropSelection.endX),
+                            top: Math.min(cropSelection.startY, cropSelection.endY),
+                            width: Math.abs(cropSelection.endX - cropSelection.startX),
+                            height: Math.abs(cropSelection.endY - cropSelection.startY),
+                          }}
+                        >
+                          {/* Size indicator */}
+                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
+                            {Math.round(Math.abs(cropSelection.endX - cropSelection.startX))} × {Math.round(Math.abs(cropSelection.endY - cropSelection.startY))}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Cancel button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCropCancel();
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      {/* Instructions */}
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs sm:text-sm px-4 py-2 rounded-full whitespace-nowrap">
+                        Drag to select area
+                      </div>
+                    </div>
+                  )}
+
                   <MemeCanvas
                     ref={memeRef}
                     meme={meme}
@@ -3336,6 +3561,8 @@ export default function Main() {
                     onChaos={handleChaos}
                     onExportStickers={handleExportStickers}
                     onEditingChange={setEditingId}
+                    onStartCrop={handleStartCrop}
+                    isCropping={isCropping}
                   />
                 </div>
               </div>

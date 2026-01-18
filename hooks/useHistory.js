@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useDebugValue } from "react";
  * Maximum number of history states to keep
  * Prevents unbounded memory growth during long editing sessions
  */
-const MAX_HISTORY_SIZE = 50;
+const MAX_HISTORY_SIZE = 15;
 
 /**
  * Minimum time between history saves (ms)

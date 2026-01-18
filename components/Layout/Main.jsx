@@ -479,9 +479,9 @@ export default function Main() {
 
 
 
-  const panelMap = useMemo(() => new Map(meme.panels.map(p => [p.id, p])), [meme.panels]);
-  const textMap = useMemo(() => new Map(meme.texts.map(t => [t.id, t])), [meme.texts]);
-  const stickerMap = useMemo(() => new Map(meme.stickers.map(s => [s.id, s])), [meme.stickers]);
+  const panelMap = useMemo(() => new Map((meme.panels || []).map(p => [p.id, p])), [meme.panels]);
+  const textMap = useMemo(() => new Map((meme.texts || []).map(t => [t.id, t])), [meme.texts]);
+  const stickerMap = useMemo(() => new Map((meme.stickers || []).map(s => [s.id, s])), [meme.stickers]);
 
   const activePanel = panelMap.get(meme.activePanelId) || meme.panels[0];
   const deferredDeepFry = useDeferredValue(activePanel?.filters?.deepFry);

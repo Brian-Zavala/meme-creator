@@ -287,6 +287,29 @@ export default function Main() {
     history: memeHistory
   } = useHistory(() => defaultState);
 
+  // Keyboard Shortcuts for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Check for Ctrl (PC) or Meta (Mac)
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault(); // Prevent browser default undo
+          if (e.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
+        } else if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault(); // Prevent browser default redo
+          redo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
   const [allMemes, setAllMemes] = useState([]);
   const [allGifs, setAllGifs] = useState([]);
   const [loading, setLoading] = useState(true);

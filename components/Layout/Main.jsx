@@ -3100,7 +3100,7 @@ export default function Main() {
                 <Redo2 className="w-4 h-4" /> Redo
               </button>
               <button
-                onClick={() => toast("Tip: Ctrl+Z (Undo) and Ctrl+Y or Ctrl+Shift+Z (Redo)", {
+                onClick={() => toast("Tip: Ctrl+Z (Undo) and Ctrl+Shift+Z (Redo)", {
                   icon: (
                     <picture>
                       <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/512.webp" type="image/webp" />

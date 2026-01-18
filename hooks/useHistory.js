@@ -12,55 +12,6 @@ const MAX_HISTORY_SIZE = 50;
  */
 const HISTORY_THROTTLE_MS = 300;
 
-/**
- * Creates a structural diff between two states
- * Only stores changed properties to reduce memory usage
- * @param {Object} oldState - Previous state
- * @param {Object} newState - New state  
- * @returns {Object} Patch object with only changed values
- */
-function createPatch(oldState, newState) {
-  const patch = { __baseRef: oldState };
-  const changes = {};
-  let hasChanges = false;
-
-  for (const key of Object.keys(newState)) {
-    if (oldState[key] !== newState[key]) {
-      changes[key] = newState[key];
-      hasChanges = true;
-    }
-  }
-
-  // Also check for removed keys
-  for (const key of Object.keys(oldState)) {
-    if (!(key in newState)) {
-      changes[key] = undefined;
-      hasChanges = true;
-    }
-  }
-
-  return hasChanges ? { ...patch, changes } : null;
-}
-
-/**
- * Applies a patch to reconstruct the full state
- * @param {Object} patch - Patch object with __baseRef and changes
- * @returns {Object} Reconstructed full state
- */
-function applyPatch(patch) {
-  if (!patch.__baseRef) return patch; // Not a patch, return as-is
-  
-  const result = { ...patch.__baseRef };
-  for (const [key, value] of Object.entries(patch.changes)) {
-    if (value === undefined) {
-      delete result[key];
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
-}
-
 export default function useHistory(initialState) {
   const [state, setState] = useState(initialState);
   const [past, setPast] = useState([]);
@@ -87,11 +38,8 @@ export default function useHistory(initialState) {
       
       // Throttle history saves to prevent memory bloat from rapid changes
       if (now - lastSaveTimeRef.current >= HISTORY_THROTTLE_MS) {
-        // Create a patch instead of storing full state copy
-        const patch = createPatch({}, current); // Store full state for first entry
-        
         setPast((prev) => {
-          const newPast = [...prev, patch || current];
+          const newPast = [...prev, current];
           // Limit history size to prevent memory leaks
           if (newPast.length > MAX_HISTORY_SIZE) {
             return newPast.slice(-MAX_HISTORY_SIZE);
@@ -145,8 +93,7 @@ export default function useHistory(initialState) {
     setPast((currentPast) => {
       if (currentPast.length === 0) return currentPast;
 
-      const previousPatch = currentPast[currentPast.length - 1];
-      const previous = previousPatch.__baseRef ? applyPatch(previousPatch) : previousPatch;
+      const previous = currentPast[currentPast.length - 1];
       const newPast = currentPast.slice(0, currentPast.length - 1);
 
       setState((currentState) => {

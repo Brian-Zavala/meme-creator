@@ -1875,7 +1875,7 @@ export default function Main() {
   }
 
   // Calculate current deep fry level for the active panel to pass down
-  const currentDeepFryLevel = meme.panels.find(p => p.id === meme.activePanelId)?.filters?.deepFry || 0;
+  const currentDeepFryLevel = (meme.panels || []).find(p => p.id === meme.activePanelId)?.filters?.deepFry || 0;
 
   function handleLayoutChange(layoutId) {
     if (layoutId === meme.layout) return;

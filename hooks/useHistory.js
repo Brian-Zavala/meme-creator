@@ -13,148 +13,189 @@ const MAX_HISTORY_SIZE = 50;
 const HISTORY_THROTTLE_MS = 300;
 
 export default function useHistory(initialState) {
-  const [state, setState] = useState(initialState);
-  const [past, setPast] = useState([]);
-  const [future, setFuture] = useState([]);
+  // Store all history state in a single object to ensure atomicity
+  // and prevent synchronization issues (like the "double click" bug)
+  const [history, setHistory] = useState({
+    past: [],
+    present: initialState,
+    future: []
+  });
 
-  // Use a ref to always have access to the latest state for history pushes
-  // This prevents race conditions where the closure-captured 'state' is stale
-  const stateRef = useRef(state);
-  stateRef.current = state;
-
-  // Throttle ref to prevent rapid history saves
+  // Refs for throttling logic
   const lastSaveTimeRef = useRef(0);
-  const pendingStateRef = useRef(null);
-  const throttleTimerRef = useRef(null);
+  const timerRef = useRef(null);
+  const pendingSnapshotRef = useRef(null); // Stores state to be saved during throttling
 
   // Show hook state in React DevTools
-  useDebugValue({ past: past.length, future: future.length });
+  useDebugValue({ past: history.past.length, future: history.future.length });
 
-  // Standard update: Clears future, pushes current to past
-  const updateState = useCallback((newState) => {
-    setState((current) => {
-      const resolvedState = typeof newState === "function" ? newState(current) : newState;
-      const now = Date.now();
+  // Standard update with throttling
+  const updateState = useCallback((newStateOrFn) => {
+    setHistory((curr) => {
+      const newPresent = typeof newStateOrFn === "function" 
+        ? newStateOrFn(curr.present) 
+        : newStateOrFn;
       
-      // Throttle history saves to prevent memory bloat from rapid changes
+      const now = Date.now();
+
+      // Immediate Save (Not Throttled)
       if (now - lastSaveTimeRef.current >= HISTORY_THROTTLE_MS) {
-        setPast((prev) => {
-          const newPast = [...prev, current];
-          // Limit history size to prevent memory leaks
-          if (newPast.length > MAX_HISTORY_SIZE) {
-            return newPast.slice(-MAX_HISTORY_SIZE);
-          }
-          return newPast;
-        });
-        setFuture([]);
         lastSaveTimeRef.current = now;
-        pendingStateRef.current = null;
         
-        // Clear any pending throttled save
-        if (throttleTimerRef.current) {
-          clearTimeout(throttleTimerRef.current);
-          throttleTimerRef.current = null;
+        // Clear any pending throttled save since we are saving now
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
         }
-      } else {
-        // Store pending state and schedule a save
-        pendingStateRef.current = current;
-        
-        if (!throttleTimerRef.current) {
-          throttleTimerRef.current = setTimeout(() => {
-            if (pendingStateRef.current) {
-              setPast((prev) => {
-                const newPast = [...prev, pendingStateRef.current];
-                if (newPast.length > MAX_HISTORY_SIZE) {
-                  return newPast.slice(-MAX_HISTORY_SIZE);
-                }
-                return newPast;
-              });
-              setFuture([]);
-              lastSaveTimeRef.current = Date.now();
-              pendingStateRef.current = null;
+
+        const newPast = [...curr.past, curr.present];
+        if (newPast.length > MAX_HISTORY_SIZE) {
+          newPast.shift(); // Remove oldest
+        }
+
+        return {
+          past: newPast,
+          present: newPresent,
+          future: []
+        };
+      } 
+      
+      // Throttled Save
+      // We update 'present' immediately for responsiveness, but delay pushing to 'past'
+      
+      // Capture the state *before* this update as a candidate for history
+      pendingSnapshotRef.current = curr.present;
+
+      if (!timerRef.current) {
+        timerRef.current = setTimeout(() => {
+          setHistory((latest) => {
+            const snapshot = pendingSnapshotRef.current;
+            if (!snapshot) return latest;
+
+            lastSaveTimeRef.current = Date.now();
+            timerRef.current = null;
+            pendingSnapshotRef.current = null;
+
+            const newPast = [...latest.past, snapshot];
+            if (newPast.length > MAX_HISTORY_SIZE) {
+              newPast.shift();
             }
-            throttleTimerRef.current = null;
-          }, HISTORY_THROTTLE_MS);
-        }
+
+            return {
+              ...latest,
+              past: newPast,
+              // We don't change present here, just archiving the snapshot
+              future: [] 
+            };
+          });
+        }, HISTORY_THROTTLE_MS);
       }
 
-      return resolvedState;
+      return {
+        ...curr,
+        present: newPresent,
+        future: [] // Any change clears future
+      };
     });
   }, []);
 
-  // Transient update: Updates state WITHOUT saving to history
-  const updateTransient = useCallback((newState) => {
-    setState((current) => {
-      return typeof newState === "function" ? newState(current) : newState;
+  // Transient update: Updates present WITHOUT touching history logic
+  const updateTransient = useCallback((newStateOrFn) => {
+    setHistory((curr) => {
+      const newPresent = typeof newStateOrFn === "function" 
+        ? newStateOrFn(curr.present) 
+        : newStateOrFn;
+      
+      return {
+        ...curr,
+        present: newPresent
+      };
     });
   }, []);
 
   const undo = useCallback(() => {
-    setPast((currentPast) => {
-      if (currentPast.length === 0) return currentPast;
+    // Clear pending throttle timers to prevent delayed saves overwriting undo
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      pendingSnapshotRef.current = null;
+    }
 
-      const previous = currentPast[currentPast.length - 1];
-      const newPast = currentPast.slice(0, currentPast.length - 1);
+    setHistory((curr) => {
+      if (curr.past.length === 0) return curr;
 
-      setState((currentState) => {
-        setFuture((prevFuture) => {
-          const newFuture = [currentState, ...prevFuture];
-          // Also limit future size
-          if (newFuture.length > MAX_HISTORY_SIZE) {
-            return newFuture.slice(0, MAX_HISTORY_SIZE);
-          }
-          return newFuture;
-        });
-        return previous;
-      });
+      const previous = curr.past[curr.past.length - 1];
+      const newPast = curr.past.slice(0, -1);
 
-      return newPast;
+      return {
+        past: newPast,
+        present: previous,
+        future: [curr.present, ...curr.future]
+      };
     });
   }, []);
 
   const redo = useCallback(() => {
-    setFuture((currentFuture) => {
-      if (currentFuture.length === 0) return currentFuture;
+    // Clear pending throttle timers
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      pendingSnapshotRef.current = null;
+    }
 
-      const next = currentFuture[0];
-      const newFuture = currentFuture.slice(1);
+    setHistory((curr) => {
+      if (curr.future.length === 0) return curr;
 
-      setState((currentState) => {
-        setPast((prevPast) => {
-          const newPast = [...prevPast, currentState];
-          if (newPast.length > MAX_HISTORY_SIZE) {
-            return newPast.slice(-MAX_HISTORY_SIZE);
-          }
-          return newPast;
-        });
-        return next;
-      });
+      const next = curr.future[0];
+      const newFuture = curr.future.slice(1);
 
-      return newFuture;
+      return {
+        past: [...curr.past, curr.present],
+        present: next,
+        future: newFuture
+      };
     });
   }, []);
 
   // Replace state entirely (useful for hydration) without adding to history
-  const replaceState = useCallback((newState) => {
-    setState(typeof newState === "function" ? newState(stateRef.current) : newState);
+  const replaceState = useCallback((newStateOrFn) => {
+    // Clear pending throttle timers
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    setHistory((curr) => {
+      const newPresent = typeof newStateOrFn === "function" 
+        ? newStateOrFn(curr.present) 
+        : newStateOrFn;
+      
+      return {
+        ...curr,
+        present: newPresent
+      };
+    });
   }, []);
 
-  // Clear all history (useful after save operations)
+  // Clear all history
   const clearHistory = useCallback(() => {
-    setPast([]);
-    setFuture([]);
+    setHistory(curr => ({
+      ...curr,
+      past: [],
+      future: []
+    }));
   }, []);
 
   return {
-    state,
+    state: history.present,
     updateState,
     updateTransient,
     undo,
     redo,
-    canUndo: past.length > 0,
-    canRedo: future.length > 0,
+    canUndo: history.past.length > 0,
+    canRedo: history.future.length > 0,
     replaceState,
     clearHistory,
-    historySize: past.length + future.length,
+    historySize: history.past.length + history.future.length,
   };
 }

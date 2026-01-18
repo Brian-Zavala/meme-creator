@@ -909,6 +909,9 @@ export async function exportGif(meme, texts, stickers) {
 
             // 5. Render Loop
             for (let i = 0; i < maxFrames; i++) {
+                // Yield to main thread to keep UI responsive (spinner moving)
+                await new Promise(r => setTimeout(r, 0));
+
                 // Use Refactored Render Function with time-based animation
                 await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
                     stickersOnly: meme.stickersOnly,

@@ -1217,9 +1217,7 @@ export default function Main() {
 
   function handleStyleShuffle() {
     // Get unique style combo from deck
-    console.log("Shuffle Clicked!", { deckSize: styleDeck.length, totalStyles: allStyles.length });
     const nextStyle = getNextItem(allStyles, styleDeck, setStyleDeck);
-    console.log("Next Style Drawn:", nextStyle);
 
     if (!nextStyle) {
       console.error("Shuffle Error: No style returned from getNextItem");
@@ -1468,14 +1466,6 @@ export default function Main() {
         saturate: 50
       }),
       // 22. "Void Stare" (Inverted, high contrast B&W)
-      () => ({
-        name: "Void Stare",
-        grayscale: 100,
-        invert: 100,
-        contrast: 300,
-        brightness: 80
-      }),
-      // 24. "Void Stare" (Inverted, high contrast B&W)
       () => ({
         name: "Void Stare",
         grayscale: 100,

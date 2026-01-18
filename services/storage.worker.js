@@ -29,55 +29,78 @@ function openDB() {
 }
 
 // Logic: Save State
-async function saveState(state) {
+async function saveState(fullHistory) {
     try {
-        // OPTIMIZATION: Convert Data URLs to Blobs for efficient storage & faster main-thread load
-        // We clone to avoid mutating the payload passed in (though usually safe in worker)
-        const optimizedState = { ...state };
-
-        const processItem = async (item) => {
-            // ZERO-BLOCK PATH: Main thread passed us a Blob directly
-            if (item.sourceBlob && (item.sourceBlob instanceof Blob || (item.sourceBlob.type && item.sourceBlob.size))) {
-               const newItem = { ...item, url: item.sourceBlob };
-               delete newItem.sourceBlob; // Cleanup temporary transport property
-               return newItem;
-            }
-
-            // LEGACY PATH: Client passed a Data URL string
-            if (item.url && typeof item.url === 'string' && item.url.startsWith('data:')) {
-                try {
-                    const res = await fetch(item.url);
-                    const blob = await res.blob();
-                    return { ...item, url: blob };
-                } catch (e) {
-                    console.warn("Worker: Failed to convert Data URL to Blob", e);
-                    return item;
+        // Support both legacy (single state) and new (full history) formats transparently
+        const isFullHistory = fullHistory && 'present' in fullHistory && Array.isArray(fullHistory.past);
+        
+        // Helper to process a single state object
+        const processSingleState = async (state) => {
+            const optimizedState = { ...state };
+            
+            const processItem = async (item) => {
+                // ZERO-BLOCK PATH: Main thread passed us a Blob directly
+                if (item.sourceBlob && (item.sourceBlob instanceof Blob || (item.sourceBlob.type && item.sourceBlob.size))) {
+                   const newItem = { ...item, url: item.sourceBlob };
+                   delete newItem.sourceBlob; // Cleanup temporary transport property
+                   return newItem;
                 }
+    
+                // LEGACY PATH: Client passed a Data URL string
+                if (item.url && typeof item.url === 'string' && item.url.startsWith('data:')) {
+                    try {
+                        const res = await fetch(item.url);
+                        const blob = await res.blob();
+                        return { ...item, url: blob };
+                    } catch (e) {
+                        console.warn("Worker: Failed to convert Data URL to Blob", e);
+                        return item;
+                    }
+                }
+                return item;
+            };
+    
+            if (optimizedState.panels) {
+                optimizedState.panels = await Promise.all(optimizedState.panels.map(processItem));
             }
-            return item;
+            if (optimizedState.stickers) {
+                optimizedState.stickers = await Promise.all(optimizedState.stickers.map(processItem));
+            }
+            return optimizedState;
         };
 
-        if (optimizedState.panels) {
-            optimizedState.panels = await Promise.all(optimizedState.panels.map(processItem));
-        }
-        if (optimizedState.stickers) {
-            optimizedState.stickers = await Promise.all(optimizedState.stickers.map(processItem));
+        let dataToStore;
+        if (isFullHistory) {
+            // Process all parts of history
+            const [processedPresent, processedPast, processedFuture] = await Promise.all([
+                processSingleState(fullHistory.present),
+                Promise.all(fullHistory.past.map(processSingleState)),
+                Promise.all(fullHistory.future.map(processSingleState))
+            ]);
+
+            dataToStore = {
+                version: 2, // Mark as version 2 (History support)
+                present: processedPresent,
+                past: processedPast,
+                future: processedFuture
+            };
+        } else {
+            // Legacy single state mode
+            dataToStore = await processSingleState(fullHistory);
         }
 
         const db = await openDB();
         return new Promise((resolve, reject) => {
             const transaction = db.transaction(STORE_NAME, 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
-            const request = store.put(optimizedState, KEY);
+            const request = store.put(dataToStore, KEY);
 
             request.onsuccess = () => resolve();
             request.onerror = () => reject(request.error);
         });
     } catch (err) {
-        if (err.name === 'QuotaExceededError' || err.code === 22) { // 22 is QUOTA_EXCEEDED_ERR
+        if (err.name === 'QuotaExceededError' || err.code === 22) { 
              console.warn('Worker: Storage Quota Exceeded. Failed to save state.', err);
-             // Optional: Trigger a cleanup event or just fail gracefully
-             // prevent throwing to keep app alive
         } else {
             console.error('Worker: Failed to save state:', err);
             throw err;

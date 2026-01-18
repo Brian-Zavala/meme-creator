@@ -58,14 +58,26 @@ export async function loadState() {
             return item;
         };
 
-        if (state.panels) {
-            state.panels = state.panels.map(processItem);
-        }
-        if (state.stickers) {
-            state.stickers = state.stickers.map(processItem);
+        const processSingleState = (s) => {
+            if (s.panels) {
+                s.panels = s.panels.map(processItem);
+            }
+            if (s.stickers) {
+                s.stickers = s.stickers.map(processItem);
+            }
+            return s;
+        };
+
+        // Check if version 2 history
+        if (state.version === 2) {
+            state.present = processSingleState(state.present);
+            state.past = state.past.map(processSingleState);
+            state.future = state.future.map(processSingleState);
+            return state;
         }
 
-        return state;
+        // Legacy V1 (single state)
+        return processSingleState(state);
     } catch (err) {
         console.error('Failed to load state via worker:', err);
         return null;

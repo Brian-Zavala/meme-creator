@@ -12,10 +12,36 @@ const MAX_HISTORY_SIZE = 50;
  */
 const HISTORY_THROTTLE_MS = 300;
 
-export default function useHistory(initialState) {
+// Helper to check deep equality to prevent duplicate history entries
+function areStatesEqual(a, b) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return a === b;
+  
+  try {
+    // Fast path: JSON stringify
+    // We exclude sourceBlob/File objects from comparison as they serialize to {}
+    // and we rely on URL strings or other props for uniqueness
+    return JSON.stringify(a, (key, value) => {
+      if (key === 'sourceBlob' || value instanceof Blob || value instanceof File) {
+        return undefined;
+      }
+      return value;
+    }) === JSON.stringify(b, (key, value) => {
+      if (key === 'sourceBlob' || value instanceof Blob || value instanceof File) {
+        return undefined;
+      }
+      return value;
+    });
+  } catch (e) {
+    console.warn("History equality check failed", e);
+    return false;
+  }
+}
+
+export default function useHistory(initialState, initialHistory = null) {
   // Store all history state in a single object to ensure atomicity
   // and prevent synchronization issues (like the "double click" bug)
-  const [history, setHistory] = useState({
+  const [history, setHistory] = useState(initialHistory || {
     past: [],
     present: initialState,
     future: []
@@ -36,6 +62,11 @@ export default function useHistory(initialState) {
         ? newStateOrFn(curr.present) 
         : newStateOrFn;
       
+      // 1. Identity Check: If strict equality, assume no change and return
+      if (newPresent === curr.present) {
+        return curr;
+      }
+
       const now = Date.now();
 
       // Immediate Save (Not Throttled)
@@ -46,6 +77,16 @@ export default function useHistory(initialState) {
         if (timerRef.current) {
           clearTimeout(timerRef.current);
           timerRef.current = null;
+        }
+
+        // Dedup Check: Don't push to past if same as last entry
+        const lastPast = curr.past[curr.past.length - 1];
+        if (lastPast && areStatesEqual(curr.present, lastPast)) {
+           return {
+             ...curr,
+             present: newPresent,
+             future: []
+           };
         }
 
         const newPast = [...curr.past, curr.present];
@@ -75,6 +116,12 @@ export default function useHistory(initialState) {
             lastSaveTimeRef.current = Date.now();
             timerRef.current = null;
             pendingSnapshotRef.current = null;
+
+            // Dedup Check inside timer
+            const lastPast = latest.past[latest.past.length - 1];
+            if (lastPast && areStatesEqual(snapshot, lastPast)) {
+               return latest; // Don't add duplicate
+            }
 
             const newPast = [...latest.past, snapshot];
             if (newPast.length > MAX_HISTORY_SIZE) {
@@ -177,6 +224,15 @@ export default function useHistory(initialState) {
     });
   }, []);
 
+  // Hydrate entire history stack (for persistent storage restoration)
+  const hydrateHistory = useCallback((fullHistory) => {
+      if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+      }
+      setHistory(fullHistory);
+  }, []);
+
   // Clear all history
   const clearHistory = useCallback(() => {
     setHistory(curr => ({
@@ -195,7 +251,9 @@ export default function useHistory(initialState) {
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
     replaceState,
+    hydrateHistory,
     clearHistory,
     historySize: history.past.length + history.future.length,
+    history // Expose full history for persistence
   };
 }

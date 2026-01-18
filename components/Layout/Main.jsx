@@ -154,6 +154,14 @@ export default function Main() {
       if (saved) {
         // Apply migration logic similar to before, but now async
         try {
+          // If we have a full history stack (v2), hydrate it directly
+          if (saved.version === 2 && saved.present) {
+             hydrateHistory(saved);
+             setIsHydrated(true);
+             return;
+          }
+
+          // Legacy (v1) logic
           // We can assume saved is the object proper if we stored it that way
           // But if we need migration logic, we should apply it here.
           // Since we just swapped storage backend, the logic is likely the same.
@@ -274,7 +282,9 @@ export default function Main() {
     redo,
     canUndo,
     canRedo,
-    replaceState // We might need to expose this from useHistory if not already, or just use updateState with absolute value
+    replaceState, // We might need to expose this from useHistory if not already, or just use updateState with absolute value
+    hydrateHistory,
+    history: memeHistory
   } = useHistory(() => defaultState);
 
   const [allMemes, setAllMemes] = useState([]);
@@ -776,8 +786,8 @@ export default function Main() {
 
   useEffect(() => {
     if (!isHydrated) return;
-    saveState(meme);
-  }, [meme, isHydrated]);
+    saveState(memeHistory);
+  }, [memeHistory, isHydrated]);
 
   const handleSearchInput = (e) => {
     const val = e.target.value;

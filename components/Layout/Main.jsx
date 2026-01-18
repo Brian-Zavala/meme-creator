@@ -301,6 +301,7 @@ export default function Main() {
           }
         } else if (e.key === 'y' || e.key === 'Y') {
           e.preventDefault(); // Prevent browser default redo
+          e.stopPropagation(); // Stop event bubbling which might cause scroll
           redo();
         }
       }

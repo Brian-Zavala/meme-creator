@@ -326,6 +326,7 @@ export default function Main() {
   const lastTapRef = useRef({ id: null, time: 0 });
   const globalLastTapRef = useRef(0);
   const longPressTimerRef = useRef(null);
+  const longPressTriggeredRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const [statusMessage, setStatusMessage] = useState("");
@@ -723,6 +724,9 @@ export default function Main() {
   useEffect(() => {
     if (draggedId) {
       const handleGlobalMove = (e) => {
+        // Stop movement immediately if long-press has triggered
+        if (longPressTriggeredRef.current) return;
+
         if (longPressTimerRef.current) {
           const moveX = e.clientX - startPosRef.current.x;
           const moveY = e.clientY - startPosRef.current.y;
@@ -2576,6 +2580,7 @@ export default function Main() {
       e.stopPropagation();
 
       startPosRef.current = { x: e.clientX, y: e.clientY };
+      longPressTriggeredRef.current = false;
 
       // Calculate relative pointer position to meme container for drag offset
       if (memeRef.current) {
@@ -2613,6 +2618,7 @@ export default function Main() {
 
         // Sticker Long-Press Logic
         longPressTimerRef.current = setTimeout(() => {
+          longPressTriggeredRef.current = true;
           startTransition(() => {
             updateState((prev) => ({ ...prev, selectedId: id }));
           });
@@ -2632,6 +2638,7 @@ export default function Main() {
 
       } else if (isText) {
         longPressTimerRef.current = setTimeout(() => {
+          longPressTriggeredRef.current = true;
           startTransition(() => {
             updateState((prev) => ({ ...prev, selectedId: id }));
           });

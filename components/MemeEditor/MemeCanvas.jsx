@@ -101,12 +101,19 @@ const MemeCanvas = forwardRef(({
     if (editingId) {
       // Use requestAnimationFrame to ensure DOM is ready after React render
       requestAnimationFrame(() => {
-        const textarea = document.getElementById(`canvas-input-${editingId}`);
-        if (textarea) {
-          textarea.focus({ preventScroll: true });
-          // Set caret to the end of the text content
-          const len = textarea.value.length;
-          textarea.setSelectionRange(len, len);
+        // Check if we're currently editing in the sidebar inputs
+        const currentActive = document.activeElement;
+        const isSidebarInput = currentActive && currentActive.id && currentActive.id.startsWith('text-input-');
+
+        // Only force focus to canvas if we're NOT already in the sidebar
+        if (!isSidebarInput) {
+          const textarea = document.getElementById(`canvas-input-${editingId}`);
+          if (textarea) {
+            textarea.focus({ preventScroll: true });
+            // Set caret to the end of the text content
+            const len = textarea.value.length;
+            textarea.setSelectionRange(len, len);
+          }
         }
       });
     }
@@ -1008,8 +1015,8 @@ const MemeCanvas = forwardRef(({
                     WebkitTextStroke: '0',
                     caretColor: 'var(--color-brand)', // Visible native cursor
                     opacity: 1, // Visible element (text is transparent)
-                    fontFamily: `${meme.fontFamily || 'Impact'}, sans-serif`,
-                    fontSize: `${meme.fontSize * scaleFactor}px`,
+                    fontFamily: `${meme.fontFamily || 'Roboto'}, sans-serif`,
+                    fontSize: `${meme.fontSize * (textItem.scale ?? 1) * scaleFactor}px`,
                     letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
                     lineHeight: 1.2,
                     padding: hasBg ? '0.25em 0.5em' : '0',

@@ -99,20 +99,23 @@ const MemeCanvas = forwardRef(({
   // Robustly set caret position when editing starts
   useEffect(() => {
     if (editingId) {
-      // Check if we're currently editing in the sidebar inputs
-      const currentActive = document.activeElement;
-      const isSidebarInput = currentActive && currentActive.id && currentActive.id.startsWith('text-input-');
+      // Use requestAnimationFrame to ensure DOM is ready after React render
+      requestAnimationFrame(() => {
+        // Check if we're currently editing in the sidebar inputs
+        const currentActive = document.activeElement;
+        const isSidebarInput = currentActive && currentActive.id && currentActive.id.startsWith('text-input-');
 
-      // Only force focus to canvas if we're NOT already in the sidebar
-      if (!isSidebarInput) {
-        const textarea = document.getElementById(`canvas-input-${editingId}`);
-        if (textarea) {
-          textarea.focus({ preventScroll: true });
-          // Set caret to the end of the text content
-          const len = textarea.value.length;
-          textarea.setSelectionRange(len, len);
+        // Only force focus to canvas if we're NOT already in the sidebar
+        if (!isSidebarInput) {
+          const textarea = document.getElementById(`canvas-input-${editingId}`);
+          if (textarea) {
+            textarea.focus({ preventScroll: true });
+            // Set caret to the end of the text content
+            const len = textarea.value.length;
+            textarea.setSelectionRange(len, len);
+          }
         }
-      }
+      });
     }
   }, [editingId]);
 
@@ -994,6 +997,7 @@ const MemeCanvas = forwardRef(({
               {isEditing && (
                 <textarea
                   id={`canvas-input-${textItem.id}`}
+                  autoFocus
                   data-html2canvas-ignore="true"
                   value={textItem.content}
                   onChange={(e) => onTextChange(textItem.id, e.target.value)}

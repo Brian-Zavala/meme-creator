@@ -99,23 +99,20 @@ const MemeCanvas = forwardRef(({
   // Robustly set caret position when editing starts
   useEffect(() => {
     if (editingId) {
-      // Use requestAnimationFrame to ensure DOM is ready after React render
-      requestAnimationFrame(() => {
-        // Check if we're currently editing in the sidebar inputs
-        const currentActive = document.activeElement;
-        const isSidebarInput = currentActive && currentActive.id && currentActive.id.startsWith('text-input-');
+      // Check if we're currently editing in the sidebar inputs
+      const currentActive = document.activeElement;
+      const isSidebarInput = currentActive && currentActive.id && currentActive.id.startsWith('text-input-');
 
-        // Only force focus to canvas if we're NOT already in the sidebar
-        if (!isSidebarInput) {
-          const textarea = document.getElementById(`canvas-input-${editingId}`);
-          if (textarea) {
-            textarea.focus({ preventScroll: true });
-            // Set caret to the end of the text content
-            const len = textarea.value.length;
-            textarea.setSelectionRange(len, len);
-          }
+      // Only force focus to canvas if we're NOT already in the sidebar
+      if (!isSidebarInput) {
+        const textarea = document.getElementById(`canvas-input-${editingId}`);
+        if (textarea) {
+          textarea.focus({ preventScroll: true });
+          // Set caret to the end of the text content
+          const len = textarea.value.length;
+          textarea.setSelectionRange(len, len);
         }
-      });
+      }
     }
   }, [editingId]);
 
@@ -954,7 +951,18 @@ const MemeCanvas = forwardRef(({
 
                         // 2. Trigger React state update to render the real input
                         if (onStartEditing) onStartEditing(textItem.id);
+
+                        // 3. Queue the handover execution to the real input (Safety net for iOS)
+                        setTimeout(() => {
+                          const targetInput = document.getElementById(`canvas-input-${textItem.id}`);
+                          if (targetInput) {
+                            targetInput.focus({ preventScroll: true });
+                            const len = targetInput.value.length;
+                            targetInput.setSelectionRange(len, len);
+                          }
+                        }, 50);
                       }}
+                      onPointerDown={(e) => e.stopPropagation()}
                       onPointerUp={(e) => {
                         e.stopPropagation();
                         e.preventDefault();

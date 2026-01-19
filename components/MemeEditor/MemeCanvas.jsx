@@ -976,6 +976,16 @@ const MemeCanvas = forwardRef(({
                           dummyInputRef.current.focus({ preventScroll: true });
                         }
                         if (onStartEditing) onStartEditing(textItem.id);
+
+                        // 3. Queue the handover execution to the real input (Safety net for iOS)
+                        setTimeout(() => {
+                          const targetInput = document.getElementById(`canvas-input-${textItem.id}`);
+                          if (targetInput) {
+                            targetInput.focus({ preventScroll: true });
+                            const len = targetInput.value.length;
+                            targetInput.setSelectionRange(len, len);
+                          }
+                        }, 50);
                       }}
                       className="flex items-center justify-center p-2 sm:p-2.5 md:p-3 rounded-xl bg-brand/80 backdrop-blur-md text-slate-900 border border-brand/50 shadow-lg transition-all duration-200 hover:bg-brand hover:scale-110 active:scale-90"
                       style={{ touchAction: 'manipulation', minWidth: '40px', minHeight: '40px' }}

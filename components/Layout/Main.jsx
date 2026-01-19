@@ -2643,7 +2643,7 @@ export default function Main() {
             ),
             duration: 1000
           });
-        }, 350);
+        }, 700);
       }
 
       setDraggedId(id);

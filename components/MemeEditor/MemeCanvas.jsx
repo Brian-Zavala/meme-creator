@@ -870,7 +870,11 @@ const MemeCanvas = forwardRef(({
                 lineHeight: 1.2,
                 fontSize: `${meme.fontSize * (textItem.scale ?? 1) * scaleFactor}px`,
                 letterSpacing: `${(meme.letterSpacing || 0) * scaleFactor}px`,
-                whiteSpace: 'nowrap',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'normal',
+                overflowWrap: 'break-word',
+                width: 'max-content',
+                maxWidth: `${meme.maxWidth || 100}%`,
                 fontFamily: `${meme.fontFamily || 'Roboto'}, sans-serif`,
                 WebkitTextStroke: hasContent ? `${stroke * 2}px ${meme.textShadow}` : 'none',
                 paintOrder: "stroke fill",
@@ -1010,7 +1014,9 @@ const MemeCanvas = forwardRef(({
                     lineHeight: 1.2,
                     padding: hasBg ? '0.25em 0.5em' : '0',
                     textAlign: "center",
-                    whiteSpace: 'nowrap',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'normal',
+                    overflowWrap: 'break-word',
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                 />

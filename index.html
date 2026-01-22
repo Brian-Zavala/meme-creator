@@ -55,6 +55,53 @@
         }
       }
     </script>
+
+    <!-- Critical inline styles for pre-React loading state -->
+    <style>
+      /* Pre-React loading state - shows while JS is loading/parsing */
+      #root:empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #000;
+        color: #94a3b8;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      
+      #root:empty::before {
+        content: '';
+        width: 48px;
+        height: 48px;
+        border: 3px solid #1e293b;
+        border-top-color: #ef4444;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      #root:empty::after {
+        content: 'Loading...';
+        margin-top: 16px;
+        font-size: 14px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      @keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+      }
+      
+      /* Hide loading state once React hydrates */
+      #root:not(:empty)::before,
+      #root:not(:empty)::after {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

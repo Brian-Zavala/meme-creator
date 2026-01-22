@@ -1,54 +1,179 @@
-// Initialize Worker
-const worker = new Worker(new URL('./storage.worker.js', import.meta.url), { type: 'module' });
+// Storage service with robust error handling and worker fallback
+// Handles IndexedDB operations off the main thread when possible
+
+// Timeout for worker operations (5 seconds)
+const WORKER_TIMEOUT_MS = 5000;
+
+// Track if we're using the worker or fallback mode
+let useWorker = true;
+let worker = null;
 
 // Request Tracker
 let nextRequestId = 0;
 const pendingRequests = new Map();
 
-// Listen for responses
-worker.onmessage = (e) => {
-    const { id, type, payload, success, error } = e.data;
-    const request = pendingRequests.get(id);
+/**
+ * Initialize worker with error handling
+ * Falls back to main-thread implementation if workers fail
+ */
+function initWorker() {
+    try {
+        worker = new Worker(new URL('./storage.worker.js', import.meta.url), { type: 'module' });
+        
+        worker.onmessage = (e) => {
+            const { id, type, payload, success, error } = e.data;
+            const request = pendingRequests.get(id);
 
-    if (request) {
-        if (success) {
-            request.resolve(payload);
-        } else {
-            console.error(`Storage Worker Error (${type}):`, error);
-            request.reject(new Error(error));
-        }
-        pendingRequests.delete(id);
+            if (request) {
+                clearTimeout(request.timeoutId);
+                if (success) {
+                    request.resolve(payload);
+                } else {
+                    console.error(`Storage Worker Error (${type}):`, error);
+                    request.reject(new Error(error));
+                }
+                pendingRequests.delete(id);
+            }
+        };
+
+        worker.onerror = (e) => {
+            console.error('Storage worker error:', e);
+            useWorker = false;
+            // Reject all pending requests
+            pendingRequests.forEach((request, id) => {
+                clearTimeout(request.timeoutId);
+                request.reject(new Error('Worker crashed'));
+                pendingRequests.delete(id);
+            });
+        };
+    } catch (err) {
+        console.warn('Failed to initialize storage worker, using fallback:', err);
+        useWorker = false;
     }
-};
+}
 
+// Initialize worker on load
+initWorker();
+
+/**
+ * Send request to worker with timeout
+ */
 function sendRequest(type, payload = null) {
     return new Promise((resolve, reject) => {
+        if (!useWorker || !worker) {
+            reject(new Error('Worker not available'));
+            return;
+        }
+
         const id = nextRequestId++;
-        pendingRequests.set(id, { resolve, reject });
+        
+        // Set timeout to prevent hanging forever
+        const timeoutId = setTimeout(() => {
+            if (pendingRequests.has(id)) {
+                pendingRequests.delete(id);
+                console.warn(`Storage worker request timed out after ${WORKER_TIMEOUT_MS}ms`);
+                reject(new Error('Worker request timeout'));
+            }
+        }, WORKER_TIMEOUT_MS);
+
+        pendingRequests.set(id, { resolve, reject, timeoutId });
         worker.postMessage({ type, payload, id });
     });
 }
 
-// Exported Facade
+// ============================================
+// FALLBACK: Main-thread IndexedDB implementation
+// Used when workers are unavailable
+// ============================================
+
+const DB_NAME = 'MemeCreatorDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'appState';
+const KEY = 'meme-generator-state';
+
+function openDBFallback() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+
+        request.onsuccess = (event) => {
+            resolve(event.target.result);
+        };
+
+        request.onerror = (event) => {
+            reject(event.target.error);
+        };
+    });
+}
+
+async function saveStateFallback(state) {
+    const db = await openDBFallback();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.put(state, KEY);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function loadStateFallback() {
+    const db = await openDBFallback();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.get(KEY);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// ============================================
+// EXPORTED API
+// ============================================
+
 export async function saveState(state) {
     try {
-        await sendRequest('SAVE_STATE', state);
+        if (useWorker && worker) {
+            await sendRequest('SAVE_STATE', state);
+        } else {
+            await saveStateFallback(state);
+        }
     } catch (err) {
-        console.error('Failed to save state via worker:', err);
+        console.error('Failed to save state:', err);
+        // Try fallback if worker failed
+        if (useWorker) {
+            useWorker = false;
+            try {
+                await saveStateFallback(state);
+            } catch (fallbackErr) {
+                console.error('Fallback save also failed:', fallbackErr);
+            }
+        }
     }
 }
 
 export async function loadState() {
     try {
-        const state = await sendRequest('LOAD_STATE');
+        let state;
+        
+        if (useWorker && worker) {
+            state = await sendRequest('LOAD_STATE');
+        } else {
+            state = await loadStateFallback();
+        }
+        
         if (!state) return null;
 
         // OPTIMIZATION: Inflate Blobs to Object URLs
-        // This is instant and prevents Main Thread freezing compared to Base64 parsing
         const processItem = (item) => {
             if (item.url && item.url instanceof Blob) {
-                // HYDRATION FIX: Keep reference to original Blob as 'sourceBlob'
-                // This ensures subsequent saves (which read sourceBlob) work correctly.
                 return {
                     ...item,
                     url: URL.createObjectURL(item.url),
@@ -78,8 +203,22 @@ export async function loadState() {
 
         // Legacy V1 (single state)
         return processSingleState(state);
+        
     } catch (err) {
-        console.error('Failed to load state via worker:', err);
+        console.error('Failed to load state:', err);
+        
+        // Try fallback if worker failed
+        if (useWorker) {
+            useWorker = false;
+            try {
+                const state = await loadStateFallback();
+                return state;
+            } catch (fallbackErr) {
+                console.error('Fallback load also failed:', fallbackErr);
+            }
+        }
+        
+        // Return null on complete failure - app will use defaults
         return null;
     }
 }

@@ -18,7 +18,20 @@ async function createGifProcessor(url) {
 
         const width = reader.width;
         const height = reader.height;
-        const numFrames = reader.numFrames();
+            const numFrames = reader.numFrames();
+
+        // Pre-calculate frame timing for accurate playback
+        const frameDelays = [];
+        let totalDuration = 0;
+        const cumulativeDelays = [0]; // Start at 0
+
+        for(let i=0; i<numFrames; i++) {
+            const info = reader.frameInfo(i);
+            const delay = (info.delay || 10) * 10; // Convert to ms (default 100ms if 0)
+            frameDelays.push(delay);
+            totalDuration += delay;
+            cumulativeDelays.push(totalDuration); // cumulativeDelays[i+1] is end time of frame i
+        }
 
         // Canvas to hold the CURRENT state of the GIF (accumulated frames)
         const canvas = document.createElement('canvas');
@@ -41,6 +54,25 @@ async function createGifProcessor(url) {
             width,
             height,
             numFrames,
+            // Returns total duration of the GIF in ms
+            getDuration: () => totalDuration,
+
+            // Returns the correct frame index for a specific time (ms) in the loop
+            getFrameAtTime: (timeMs) => {
+                if (numFrames <= 1) return 0;
+                // Handle looping
+                const t = timeMs % totalDuration;
+
+                // Find frame where accum[i] <= t < accum[i+1]
+                // accum array has numFrames + 1 entries
+                // We want to find the first index where cumulativeDelays[index] > t
+                // Then the frame index is index - 1
+                const idx = cumulativeDelays.findIndex(d => d > t);
+
+                // If not found (shouldn't happen if logic is correct, but safe fallback), return last frame
+                return idx === -1 ? numFrames - 1 : Math.max(0, idx - 1);
+            },
+
             // getDelay returns delay in centiseconds (1/100s) - GIF format standard
             getDelay: (frameIndex = 0) => reader.frameInfo(Math.min(frameIndex, numFrames - 1)).delay,
             // Get all frame delays for accurate timing export
@@ -479,10 +511,21 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
                 // TIME-BASED FRAME SYNC: Calculate which source frame to show based on export timing
                 // This ensures native GIF stickers play at their original speed regardless of export frame rate
                 const exportTimeMs = effectiveTimeMs;  // Current time in the export loop
-                const sourceGifDelayMs = (proc.getDelay(0) || 10) * 10;  // Source GIF's frame delay in ms
-                const sourceGifLoopMs = proc.numFrames * sourceGifDelayMs;  // Total source GIF loop duration
-                const timeInSourceLoop = exportTimeMs % sourceGifLoopMs;  // Time position within source GIF loop
-                const frameIdx = Math.floor(timeInSourceLoop / sourceGifDelayMs) % proc.numFrames;
+
+                // Use robust time-based lookup if available (for GIFs)
+                let frameIdx = 0;
+
+                if (proc.getFrameAtTime) {
+                   frameIdx = proc.getFrameAtTime(exportTimeMs);
+                } else {
+                   // Fallback for simple processors (like video if not updated yet)
+                   // Note: Video processor uses renderFrame(time) directly usually, but here we treat it as frames
+                   const sourceGifDelayMs = (proc.getDelay(0) || 10) * 10;
+                   const sourceGifLoopMs = proc.numFrames * sourceGifDelayMs;
+                   const timeInSourceLoop = exportTimeMs % sourceGifLoopMs;
+                   frameIdx = Math.floor(timeInSourceLoop / sourceGifDelayMs) % proc.numFrames;
+                }
+
                 const result = await proc.renderFrame(frameIdx);
                 drawCanvas = result.canvas;
                 sw = proc.width;

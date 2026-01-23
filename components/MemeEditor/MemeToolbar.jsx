@@ -13,6 +13,7 @@ import {
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 import OptimizedSlider from "../ui/OptimizedSlider";
 import MemeInputs from "./MemeInputs";
+import LottieAnimation from "../Animations/LottieAnimation";
 
 // Lazy-loaded panels for code splitting
 const ColorControls = lazy(() => import("./ColorControls"));
@@ -173,7 +174,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
 
   return (
     <div
-      className={`flex flex-col z-20 relative overflow-hidden ${className}`}
+      className={`flex flex-col z-20 relative ${className}`}
       role="region"
       aria-label="Editing Tools"
     >
@@ -236,7 +237,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
       <div
         className={`grid transition-[grid-template-rows] duration-500 ease-out ${isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}
       >
-        <div className="overflow-hidden">
+        <div className={isCollapsed ? "overflow-hidden" : "overflow-visible"}>
           <div className={`flex flex-col justify-center transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100 px-6 py-6 min-h-[80px]'}`}>
 
             {/* TEXT CONTROLS */}
@@ -706,6 +707,37 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
           </div>
         </div>
       </div>
+
+      {/* Walking Pencil Animation - Outside all collapsible containers for glow effect */}
+      {activeTab === "text" && (
+        <div
+          className={`hidden lg:block transition-all duration-500 ease-out overflow-visible ${
+            hasText ? 'h-0 opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        >
+          <div
+            className={`group/pencil flex flex-col items-center justify-center pt-16 pb-12 cursor-pointer transition-all duration-300`}
+          >
+            {/* Animation container with hover effects */}
+            <div
+              className="relative transition-all duration-500 ease-out group-hover/pencil:scale-110 group-hover/pencil:-translate-y-2"
+            >
+              <LottieAnimation
+                src="/animations/walking-pencil.json"
+                className="relative z-10 pencil-glow"
+                width="448px"
+                height="auto"
+                loop={true}
+                autoplay={true}
+              />
+            </div>
+            {/* Text with hover color transition */}
+            <p className="text-xs text-slate-500 mt-6 text-center uppercase tracking-wider font-medium transition-all duration-300 group-hover/pencil:text-brand group-hover/pencil:tracking-widest">
+              Start typing to create your meme
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

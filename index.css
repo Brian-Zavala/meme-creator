@@ -266,6 +266,19 @@ body {
   will-change: transform, opacity;
 }
 
+/* Pencil Animation Glow - large soft yellow glow on hover */
+.pencil-glow {
+  filter: drop-shadow(0 4px 12px rgba(255, 199, 0, 0.15));
+  transition: filter 0.5s ease-out;
+}
+.group\/pencil:hover .pencil-glow {
+  filter:
+    drop-shadow(0 0 30px rgba(255, 199, 0, 0.5))
+    drop-shadow(0 0 60px rgba(255, 199, 0, 0.4))
+    drop-shadow(0 0 100px rgba(255, 199, 0, 0.3))
+    drop-shadow(0 0 150px rgba(255, 199, 0, 0.2));
+}
+
 /* Glass Panel Utility - X/Twitter Dark Mode */
 .glass-panel {
   background-color: var(--color-card);

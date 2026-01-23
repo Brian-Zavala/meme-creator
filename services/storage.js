@@ -19,7 +19,7 @@ const pendingRequests = new Map();
 function initWorker() {
     try {
         worker = new Worker(new URL('./storage.worker.js', import.meta.url), { type: 'module' });
-        
+
         worker.onmessage = (e) => {
             const { id, type, payload, success, error } = e.data;
             const request = pendingRequests.get(id);
@@ -66,7 +66,7 @@ function sendRequest(type, payload = null) {
         }
 
         const id = nextRequestId++;
-        
+
         // Set timeout to prevent hanging forever
         const timeoutId = setTimeout(() => {
             if (pendingRequests.has(id)) {
@@ -138,12 +138,62 @@ async function loadStateFallback() {
 // EXPORTED API
 // ============================================
 
+/**
+ * Sanitizes state object to ensure it is structured cloneable (serializable)
+ * Removes functions, DOM elements, and circular references
+ */
+function sanitizeState(data) {
+    if (data === null || data === undefined) return data;
+
+    // Pass through primitives
+    if (typeof data !== 'object') {
+        // Filter out functions and symbols
+        if (typeof data === 'function' || typeof data === 'symbol') return undefined;
+        return data;
+    }
+
+    // Pass through valid binary types
+    if (data instanceof Blob || data instanceof File || data instanceof ArrayBuffer) {
+        return data;
+    }
+
+    // Handle Arrays
+    if (Array.isArray(data)) {
+        return data.map(sanitizeState);
+    }
+
+    // Handle Objects
+    const sanitized = {};
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+             // Skip internal React keys or hidden properties often starting with _ or $
+             if (key.startsWith('_') || key.startsWith('$')) continue;
+
+             const value = data[key];
+
+             // Detect and skip DOM nodes (common cause of clone errors)
+             if (value instanceof Element || value instanceof Node) continue;
+
+             // Recursively sanitize
+             const cleanValue = sanitizeState(value);
+
+             // Only keep defined values
+             if (cleanValue !== undefined) {
+                 sanitized[key] = cleanValue;
+             }
+        }
+    }
+    return sanitized;
+}
+
 export async function saveState(state) {
     try {
+        const cleanState = sanitizeState(state);
+
         if (useWorker && worker) {
-            await sendRequest('SAVE_STATE', state);
+            await sendRequest('SAVE_STATE', cleanState);
         } else {
-            await saveStateFallback(state);
+            await saveStateFallback(cleanState);
         }
     } catch (err) {
         console.error('Failed to save state:', err);
@@ -162,13 +212,13 @@ export async function saveState(state) {
 export async function loadState() {
     try {
         let state;
-        
+
         if (useWorker && worker) {
             state = await sendRequest('LOAD_STATE');
         } else {
             state = await loadStateFallback();
         }
-        
+
         if (!state) return null;
 
         // OPTIMIZATION: Inflate Blobs to Object URLs
@@ -203,10 +253,10 @@ export async function loadState() {
 
         // Legacy V1 (single state)
         return processSingleState(state);
-        
+
     } catch (err) {
         console.error('Failed to load state:', err);
-        
+
         // Try fallback if worker failed
         if (useWorker) {
             useWorker = false;
@@ -217,7 +267,7 @@ export async function loadState() {
                 console.error('Fallback load also failed:', fallbackErr);
             }
         }
-        
+
         // Return null on complete failure - app will use defaults
         return null;
     }

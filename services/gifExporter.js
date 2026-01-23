@@ -41,7 +41,16 @@ async function createGifProcessor(url) {
             width,
             height,
             numFrames,
-            getDelay: (index = 0) => reader.frameInfo(index).delay,
+            // getDelay returns delay in centiseconds (1/100s) - GIF format standard
+            getDelay: (frameIndex = 0) => reader.frameInfo(Math.min(frameIndex, numFrames - 1)).delay,
+            // Get all frame delays for accurate timing export
+            getAllDelays: () => {
+                const delays = [];
+                for (let i = 0; i < numFrames; i++) {
+                    delays.push(reader.frameInfo(i).delay);
+                }
+                return delays;
+            },
             // Renders the specific frame index to the internal canvas and returns it
             renderFrame: (frameIndex) => {
                 // If we are asking for the next frame sequentially, great.
@@ -263,7 +272,9 @@ async function loadMemeAssets(meme, stickers) {
 async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
     const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
     const { exportWidth, exportHeight, contentHeight, contentOffsetY, baseWidth = 800 } = dimensions;
-    const { stickersOnly = false, totalFrames = 1, exportDelayMs = 100, gifLoopDurationMs = 1000 } = options;
+    const { stickersOnly = false, totalFrames = 1, exportDelayMs = 100, gifLoopDurationMs = 1000, currentTimeMs = null } = options;
+    // Use passed currentTimeMs for accurate timing, or calculate from frame index as fallback
+    const effectiveTimeMs = currentTimeMs !== null ? currentTimeMs : frameIndex * exportDelayMs;
 
 
     // MOBILE FIX: Ensure canvas context is valid before proceeding
@@ -432,9 +443,9 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
             if (anim && anim.getTransform) {
                 // TIME-BASED ANIMATION: Calculate progress based on current time in GIF loop
                 // and the animation's own duration (from CSS)
-                const currentTimeMs = frameIndex * exportDelayMs;
+                const currentTimeMs = effectiveTimeMs;
                 const animDurationMs = anim.duration || 1000;
-                
+
                 // Progress within this animation's cycle (0 to 1, repeating)
                 const animProgress = (currentTimeMs % animDurationMs) / animDurationMs;
                 // Convert to virtual frame index for getTransform (which expects 0 to totalFrames)
@@ -467,7 +478,7 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
                 const proc = stickerProcessors[sticker.id];
                 // TIME-BASED FRAME SYNC: Calculate which source frame to show based on export timing
                 // This ensures native GIF stickers play at their original speed regardless of export frame rate
-                const exportTimeMs = frameIndex * exportDelayMs;  // Current time in the export loop
+                const exportTimeMs = effectiveTimeMs;  // Current time in the export loop
                 const sourceGifDelayMs = (proc.getDelay(0) || 10) * 10;  // Source GIF's frame delay in ms
                 const sourceGifLoopMs = proc.numFrames * sourceGifDelayMs;  // Total source GIF loop duration
                 const timeInSourceLoop = exportTimeMs % sourceGifLoopMs;  // Time position within source GIF loop
@@ -486,17 +497,17 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
                 const aspect = sh / sw;
                 const drawWidth = size;
                 const drawHeight = size * aspect;
-                
+
                 // Match CSS drop-shadow-md from preview: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))
                 // Canvas shadow is simpler, so we approximate with a single shadow
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
                 ctx.shadowBlur = 3 * scaleFactor;
                 ctx.shadowOffsetX = 0;
                 ctx.shadowOffsetY = 3 * scaleFactor;
-                
+
                 // Draw centered at (0,0) because we translated to center
                 ctx.drawImage(drawCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                
+
                 // Reset shadow after drawing sticker
                 ctx.shadowColor = 'transparent';
                 ctx.shadowBlur = 0;
@@ -509,12 +520,12 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
             ctx.shadowBlur = 3 * scaleFactor;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 3 * scaleFactor;
-            
+
             ctx.font = `${size}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(sticker.url, 0, 0);
-            
+
             // Reset shadow
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
@@ -527,7 +538,7 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
 
     if (!stickersOnly) {
         // TIME-BASED: Pass current time in ms for proper animation timing
-        const currentTimeMs = frameIndex * exportDelayMs;
+        const currentTimeMs = effectiveTimeMs;
         drawText(ctx, texts, meme, exportWidth, exportHeight, 0, currentTimeMs, totalFrames);
     }
 }
@@ -608,7 +619,7 @@ export async function exportStickersAsPng(meme, stickers) {
     canvas.width = exportWidth;
     canvas.height = exportHeight;
     const ctx = canvas.getContext('2d');
-    
+
     // QUALITY FIX: Enable high-quality image rendering
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -689,7 +700,7 @@ export async function exportImageAsPng(meme, texts, stickers) {
     canvas.width = exportWidth;
     canvas.height = exportHeight;
     const ctx = canvas.getContext('2d');
-    
+
     // QUALITY FIX: Enable high-quality image rendering
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -818,25 +829,28 @@ export async function exportGif(meme, texts, stickers) {
                 workerBlobUrl = workerPath;
             }
 
-            // QUALITY FIX: Reduced quality value from 20 to 10 for better color accuracy
+            // QUALITY FIX: Reduced quality value to 5 for best color accuracy
             // gif.js quality: 1 = best (slowest), 20 = default, higher = faster but worse
-            // Value of 10 gives noticeably sharper colors especially for text
+            // Value of 5 provides excellent color reproduction with acceptable encoding time
             const gif = new GIF({
                 workers: 4,
-                quality: 10,
+                quality: 5,
                 width: exportWidth,
                 height: exportHeight,
                 workerScript: workerBlobUrl,
                 repeat: 0,
                 // For stickersOnly GIF export, we try our best with transparency
                 transparent: meme.stickersOnly ? 0x00000000 : null,
-                background: meme.stickersOnly ? null : '#000000'
+                background: meme.stickersOnly ? null : '#000000',
+                // Enable dithering for smoother gradients and fewer artifacts
+                dither: 'FloydSteinberg'
             });
 
             // 4. Determine Loop Length and Frame Timing
             let maxFrames = 1;
             let masterDelay = 10; // centiseconds (10 = 100ms)
             let gifLoopDurationMs = 1000;
+            let perFrameDelays = null; // Array of delays per frame (in centiseconds)
             const activeProcessors = [...Object.values(gifProcessors), ...Object.values(stickerProcessors)];
 
             const hasCSSAnimation = hasAnimatedText(texts) || (stickers && stickers.some(s => s.animation && s.animation !== 'none'));
@@ -845,30 +859,42 @@ export async function exportGif(meme, texts, stickers) {
                 maxFrames = 1;
                 gifLoopDurationMs = 100;
             } else if (activeProcessors.length > 0) {
-                // GIF/Video background - use source timing
+                // GIF/Video background - use source timing with per-frame delays
+                const primaryProcessor = activeProcessors[0];
                 maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
-                masterDelay = activeProcessors[0].getDelay(0) || 10;
-                gifLoopDurationMs = maxFrames * masterDelay * 10;
-                
-                console.log(`GIF/Video background: ${maxFrames} frames, ${masterDelay * 10}ms delay, ${gifLoopDurationMs}ms loop`);
+
+                // Get per-frame delays if available (for accurate playback speed)
+                if (primaryProcessor.getAllDelays) {
+                    perFrameDelays = primaryProcessor.getAllDelays();
+                    // Calculate total loop duration from actual frame delays
+                    gifLoopDurationMs = perFrameDelays.reduce((sum, d) => sum + (d || 10) * 10, 0);
+                    // Use median delay as masterDelay for logging (not actually used for export)
+                    const sortedDelays = [...perFrameDelays].sort((a, b) => a - b);
+                    masterDelay = sortedDelays[Math.floor(sortedDelays.length / 2)] || 10;
+                } else {
+                    masterDelay = primaryProcessor.getDelay(0) || 10;
+                    gifLoopDurationMs = maxFrames * masterDelay * 10;
+                }
+
+                console.log(`GIF/Video background: ${maxFrames} frames, per-frame delays: ${perFrameDelays ? 'yes' : 'no'}, ~${masterDelay * 10}ms median delay, ${gifLoopDurationMs}ms loop`);
             } else if (hasCSSAnimation) {
                 // Static background with CSS animations (text/sticker)
                 // Calculate GIF loop duration based on the longest animation
                 // This ensures all animations complete at least one full cycle
                 gifLoopDurationMs = calculateGifLoopDuration(texts, stickers);
-                
+
                 // Target ~30fps for smooth animation, but cap at 50 frames for file size
                 // Use 20ms minimum delay (browser-safe) = 50fps max
                 const targetFps = 30;
                 const frameDelayMs = Math.max(20, Math.round(1000 / targetFps)); // 33ms at 30fps
                 masterDelay = frameDelayMs / 10; // Convert to centiseconds
-                
+
                 // Calculate frames needed for the loop duration
                 maxFrames = Math.round(gifLoopDurationMs / frameDelayMs);
-                
+
                 // Ensure we have enough frames for smooth animation (min 15 for short anims)
                 maxFrames = Math.max(15, maxFrames);
-                
+
                 // Recalculate actual loop duration based on frame count
                 gifLoopDurationMs = maxFrames * frameDelayMs;
 
@@ -885,8 +911,9 @@ export async function exportGif(meme, texts, stickers) {
             }
 
             // Cap frames for file size (but allow more for longer animations)
-            const maxAllowedFrames = Math.min(100, Math.max(60, Math.ceil(gifLoopDurationMs / 20)));
-            if (maxFrames > maxAllowedFrames) {
+            const maxAllowedFrames = Math.min(120, Math.max(60, Math.ceil(gifLoopDurationMs / 16)));
+            if (maxFrames > maxAllowedFrames && !perFrameDelays) {
+                // Only adjust if we don't have per-frame delays (preserve original GIF timing)
                 console.warn(`Clamping GIF frames from ${maxFrames} to ${maxAllowedFrames} for file size`);
                 const oldDelay = masterDelay;
                 maxFrames = maxAllowedFrames;
@@ -894,37 +921,50 @@ export async function exportGif(meme, texts, stickers) {
                 masterDelay = Math.round(gifLoopDurationMs / maxFrames / 10);
                 console.log(`Adjusted delay from ${oldDelay * 10}ms to ${masterDelay * 10}ms to maintain timing`);
             }
-            
+
             const actualDelayMs = masterDelay * 10;
-            console.log(`Exporting ${maxFrames} frames at ${actualDelayMs}ms delay (${gifLoopDurationMs}ms total loop)`);
+            console.log(`Exporting ${maxFrames} frames at ~${actualDelayMs}ms delay (${gifLoopDurationMs}ms total loop), per-frame: ${perFrameDelays ? 'enabled' : 'disabled'}`);
 
             const canvas = document.createElement('canvas');
             canvas.width = exportWidth;
             canvas.height = exportHeight;
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            
+
             // QUALITY FIX: Enable high-quality image rendering for sharper text/stickers
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
 
-            // 5. Render Loop
+            // 5. Render Loop - Calculate cumulative time for accurate animation sync
+            let cumulativeTimeMs = 0;
             for (let i = 0; i < maxFrames; i++) {
                 // Yield to main thread to keep UI responsive (spinner moving)
                 await new Promise(r => setTimeout(r, 0));
 
+                // Get the actual delay for this frame (supports variable frame rates)
+                // perFrameDelays is in centiseconds, convert to ms
+                const frameDelayCentiseconds = perFrameDelays ? (perFrameDelays[i % perFrameDelays.length] || 10) : masterDelay;
+                // GIF spec: 0 or very small delays are often interpreted as ~100ms by browsers
+                // Use minimum 20ms (50fps max) for consistent playback
+                const frameDelayMs = Math.max(20, frameDelayCentiseconds * 10);
+
                 // Use Refactored Render Function with time-based animation
+                // Pass cumulativeTimeMs for accurate CSS animation sync
                 await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
                     stickersOnly: meme.stickersOnly,
                     totalFrames: maxFrames,
-                    exportDelayMs: actualDelayMs,
-                    gifLoopDurationMs: gifLoopDurationMs
+                    exportDelayMs: frameDelayMs,
+                    gifLoopDurationMs: gifLoopDurationMs,
+                    currentTimeMs: cumulativeTimeMs // Pass actual time position for animation sync
                 });
 
                 gif.addFrame(canvas, {
-                    delay: actualDelayMs,
+                    delay: frameDelayMs,
                     copy: true,
                     disposal: 2 // Restore to background (transparent) to prevent ghosting
                 });
+
+                // Accumulate time for next frame
+                cumulativeTimeMs += frameDelayMs;
             }
 
             // 6. Finish

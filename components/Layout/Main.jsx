@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser } from "lucide-react";
+import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser, Sparkles } from "lucide-react";
+import { removeImageBackground } from "../../services/backgroundRemover";
 import toast from "react-hot-toast";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
@@ -2220,23 +2221,24 @@ export default function Main() {
 
   async function handleFileUpload(event) {
     const file = event.target.files[0];
-    if (file) {
-      // Instant Render with ObjectURL
-      // No Worker needed for display. We just pass the File (Blob) to storage later.
-      const isGif = file.type === "image/gif";
-      const isVideo = file.type.startsWith("video/");
-      const objectUrl = URL.createObjectURL(file);
+    if (!file) return;
 
+    event.target.value = ''; // Reset input
+    const isGif = file.type === "image/gif";
+    const isVideo = file.type.startsWith("video/");
+
+    // Helper to apply image to canvas
+    const applyImageToCanvas = (imageSource, isProcessed = false) => {
+      const objectUrl = typeof imageSource === 'string' ? imageSource : URL.createObjectURL(imageSource);
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
           p.id === prev.activePanelId
             ? {
                 ...p,
                 url: objectUrl,
-                // CRITICAL: Attach raw Blob for efficient storage
-                sourceBlob: file,
+                sourceBlob: isProcessed ? null : file,
                 isVideo: isVideo || isGif,
-                isGif: isGif, // Track GIF separately for proper rendering
+                isGif: isGif,
                 objectFit: "cover",
                 filters: { ...DEFAULT_FILTERS },
                 processedImage: null,
@@ -2251,41 +2253,146 @@ export default function Main() {
           mode: isGif || isVideo ? "video" : "image",
         };
       });
+    };
+
+    // Show background removal prompt for images (not GIFs or videos)
+    if (!isGif && !isVideo) {
+      toast((t) => (
+        <div className="flex flex-col gap-3 min-w-[200px]">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-brand" />
+            <span className="font-bold text-sm">Remove background?</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                const toastId = toast.loading("Removing background...", { style: { minWidth: '250px' } });
+                try {
+                  const blob = await removeImageBackground(file);
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    applyImageToCanvas(reader.result, true);
+                    toast.success("Background removed!", { id: toastId });
+                  };
+                  reader.onerror = () => {
+                    toast.error("Failed to process image", { id: toastId });
+                    applyImageToCanvas(file);
+                  };
+                  reader.readAsDataURL(blob);
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Failed. Using original.", { id: toastId });
+                  applyImageToCanvas(file);
+                }
+              }}
+              className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
+            >
+              Yes, Magic
+            </button>
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                applyImageToCanvas(file);
+              }}
+              className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
+            >
+              No, Original
+            </button>
+          </div>
+        </div>
+      ), { duration: 8000, position: 'top-center', style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' } });
+    } else {
+      // For GIFs and videos, apply directly without background removal prompt
+      applyImageToCanvas(file);
     }
   }
 
   const handleCanvasDrop = useCallback(async (file, panelId) => {
-    // OPTIMIZATION: Instant Drop
     const isGif = file.type === "image/gif";
     const isVideo = file.type.startsWith("video/");
-    const objectUrl = URL.createObjectURL(file);
 
-    startTransition(() => {
-      updateState((prev) => {
-        const newPanels = prev.panels.map(p =>
-          p.id === panelId
-            ? {
-                ...p,
-                url: objectUrl,
-                // CRITICAL: Attach raw Blob for efficient storage
-                sourceBlob: file,
-                isVideo: isVideo || isGif,
-                isGif: isGif, // Track GIF separately for proper rendering
-                objectFit: "cover",
-                filters: { ...DEFAULT_FILTERS },
-                processedImage: null,
-                processedDeepFryLevel: 0
-              }
-            : p
-        );
-        return {
-          ...prev,
-          panels: newPanels,
-          activePanelId: panelId,
-          mode: newPanels.some(p => p.isVideo) ? "video" : "image"
-        };
+    // Helper to apply image to canvas panel
+    const applyImageToPanel = (imageSource, isProcessed = false) => {
+      const objectUrl = typeof imageSource === 'string' ? imageSource : URL.createObjectURL(imageSource);
+      startTransition(() => {
+        updateState((prev) => {
+          const newPanels = prev.panels.map(p =>
+            p.id === panelId
+              ? {
+                  ...p,
+                  url: objectUrl,
+                  sourceBlob: isProcessed ? null : file,
+                  isVideo: isVideo || isGif,
+                  isGif: isGif,
+                  objectFit: "cover",
+                  filters: { ...DEFAULT_FILTERS },
+                  processedImage: null,
+                  processedDeepFryLevel: 0
+                }
+              : p
+          );
+          return {
+            ...prev,
+            panels: newPanels,
+            activePanelId: panelId,
+            mode: newPanels.some(p => p.isVideo) ? "video" : "image"
+          };
+        });
       });
-    });
+    };
+
+    // Show background removal prompt for images (not GIFs or videos)
+    if (!isGif && !isVideo) {
+      toast((t) => (
+        <div className="flex flex-col gap-3 min-w-[200px]">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-brand" />
+            <span className="font-bold text-sm">Remove background?</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                const toastId = toast.loading("Removing background...", { style: { minWidth: '250px' } });
+                try {
+                  const blob = await removeImageBackground(file);
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    applyImageToPanel(reader.result, true);
+                    toast.success("Background removed!", { id: toastId });
+                  };
+                  reader.onerror = () => {
+                    toast.error("Failed to process image", { id: toastId });
+                    applyImageToPanel(file);
+                  };
+                  reader.readAsDataURL(blob);
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Failed. Using original.", { id: toastId });
+                  applyImageToPanel(file);
+                }
+              }}
+              className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
+            >
+              Yes, Magic
+            </button>
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                applyImageToPanel(file);
+              }}
+              className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
+            >
+              No, Original
+            </button>
+          </div>
+        </div>
+      ), { duration: 8000, position: 'top-center', style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' } });
+    } else {
+      // For GIFs and videos, apply directly without background removal prompt
+      applyImageToPanel(file);
+    }
   }, [updateState]);
 
   const handleClearPanel = useCallback((panelId) => {

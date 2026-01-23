@@ -48,7 +48,7 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
   }, [editingId]);
 
   return (
-    <div className={`flex flex-col relative transition-all duration-300 z-40 ${embedded ? '' : 'card-bg rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm'}`}>
+    <div className={`flex flex-col relative transition-all duration-300 z-40 overflow-visible ${embedded ? '' : 'card-bg rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm'}`}>
       {/* Header with Magic AI */}
       <div className="flex items-center justify-between p-6 pb-2">
         <div className="flex items-center gap-2 text-slate-400 uppercase text-xs font-bold tracking-wider" aria-hidden="true">
@@ -162,13 +162,13 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
 
         {/* Walking Pencil Animation - Only show when no text on canvas */}
         <div
-          className={`grid transition-[grid-template-rows,opacity] duration-500 ease-out ${
+          className={`grid transition-[grid-template-rows,opacity] duration-500 ease-out overflow-visible ${
             hasText ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
           }`}
         >
-          <div className={hasText ? "overflow-hidden" : ""}>
+          <div className={hasText ? "overflow-y-hidden overflow-x-visible" : "overflow-visible"}>
             <div
-              className={`group/pencil flex flex-col items-center justify-center pt-32 pb-12 cursor-pointer transition-all duration-300 ${hasText ? 'opacity-0' : 'opacity-100'}`}
+              className={`group/pencil flex flex-col items-center justify-center pt-32 pb-12 cursor-pointer transition-all duration-300 overflow-visible ${hasText ? 'opacity-0' : 'opacity-100'}`}
             >
               {/* Animation container with hover effects */}
               <div className="relative transition-transform duration-500 ease-out group-hover/pencil:scale-110 group-hover/pencil:-translate-y-2">

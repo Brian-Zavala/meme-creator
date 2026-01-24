@@ -44,9 +44,16 @@ export default function useHistory(initialState, initialHistory = null) {
   const [history, setHistory] = useState(() => {
     // Robust initialization: Ensure generic arrays exist even if initialHistory is malformed
     const base = initialHistory || {};
+    
+    // Resolve initialState if it's a lazy initializer function
+    let resolvedState = initialState;
+    if (typeof initialState === 'function') {
+      resolvedState = initialState();
+    }
+
     return {
       past: Array.isArray(base.past) ? base.past : [],
-      present: base.present !== undefined ? base.present : initialState,
+      present: base.present !== undefined ? base.present : resolvedState,
       future: Array.isArray(base.future) ? base.future : []
     };
   });

@@ -221,6 +221,8 @@ export async function loadState() {
 
         if (!state) return null;
 
+        return processState(state);
+
     } catch (err) {
         console.error('Failed to load state:', err);
 

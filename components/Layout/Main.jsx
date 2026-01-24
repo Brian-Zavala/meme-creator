@@ -157,7 +157,14 @@ export default function Main() {
         try {
           // If we have a full history stack (v2), hydrate it directly
           if (saved.version === 2 && saved.present) {
-             hydrateHistory(saved);
+             // Validate arrays before passing to hook
+             const validHistory = {
+               past: Array.isArray(saved.past) ? saved.past : [],
+               // STRICT MERGE: Ensure present has all default fields (Arrays!)
+               present: { ...defaultState, ...saved.present, stickers: saved.present.stickers || [], drawings: saved.present.drawings || [], texts: saved.present.texts || [] },
+               future: Array.isArray(saved.future) ? saved.future : []
+             };
+             hydrateHistory(validHistory);
              setIsHydrated(true);
              return;
           }
@@ -255,7 +262,7 @@ export default function Main() {
         id: "p1",
         // Dimensions for single layout (100% width/height)
         x: 0, y: 0, w: 100, h: 100,
-        url: "http://i.imgflip.com/1bij.jpg",
+        url: "https://i.imgflip.com/1bij.jpg",
         sourceUrl: null,
         isVideo: false,
         objectFit: "contain",
@@ -3674,7 +3681,7 @@ export default function Main() {
                 <div className="card-bg rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
                   <MemeStickerSection
                     onAddSticker={addSticker}
-                    hasStickers={meme.stickers.length > 0}
+                    hasStickers={meme.stickers?.length > 0}
                     onExportStickers={handleExportStickers}
                   />
                 </div>

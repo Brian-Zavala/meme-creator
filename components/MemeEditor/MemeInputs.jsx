@@ -80,8 +80,11 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
           let lastFilledIndex = -1;
           let activeIndex = -1;
 
-          for (let i = texts.length - 1; i >= 0; i--) {
-            if ((texts[i].content || "").trim().length > 0) {
+          // Safety check for corruption
+          const safeTexts = Array.isArray(texts) ? texts : [];
+
+          for (let i = safeTexts.length - 1; i >= 0; i--) {
+            if ((safeTexts[i].content || "").trim().length > 0) {
               lastFilledIndex = i;
               break;
             }
@@ -90,16 +93,16 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
           // Find the index of the selected or editing text (for newly created empty texts)
           const activeId = editingId || selectedId;
           if (activeId) {
-            activeIndex = texts.findIndex(t => t.id === activeId);
+            activeIndex = safeTexts.findIndex(t => t.id === activeId);
           }
 
           // Show at least 2 inputs, or up to lastFilledIndex + 2, or up to the active one
           const visibleCount = Math.min(
             Math.max(lastFilledIndex + 2, activeIndex + 1, 2),
-            texts.length
+            safeTexts.length
           );
 
-          return texts.slice(0, visibleCount).map((textItem, index) => {
+          return safeTexts.slice(0, visibleCount).map((textItem, index) => {
             const isSelected = textItem.id === selectedId;
             const isEditing = textItem.id === editingId;
             const isActive = isSelected || isEditing;

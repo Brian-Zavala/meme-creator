@@ -584,7 +584,7 @@ const MemeCanvas = forwardRef(({
             bottom: `${paddingBottomPct}%`
           }}
         >
-          {meme.panels?.map((panel) => {
+          {(meme.panels || []).map((panel) => {
             const isActive = panel.id === activePanelId;
             const showUrl = panel.processedImage || panel.url;
             const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser'].includes(activeTool) && showUrl;
@@ -729,7 +729,7 @@ const MemeCanvas = forwardRef(({
         />
 
 
-        {meme.stickers?.map((sticker) => {
+        {(meme.stickers || []).map((sticker) => {
           // Map animation IDs to CSS class names
           const animationClass = sticker.animation ? `animate-meme-${sticker.animation}` : '';
 
@@ -807,7 +807,7 @@ const MemeCanvas = forwardRef(({
         </svg>
 
 
-        {meme.texts.map((textItem) => {
+        {(meme.texts || []).map((textItem) => {
           const isSelected = selectedId === textItem.id;
           const isEditing = editingId === textItem.id;
           const hasContent = (textItem.content || "").trim();

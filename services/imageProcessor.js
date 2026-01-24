@@ -41,6 +41,10 @@ export async function deepFryImage(imageSrc, level, signal = null) {
       let finalSrc = imageSrc;
       const isLocal = imageSrc.startsWith('data:') || imageSrc.startsWith('blob:');
       if (!isLocal) {
+        // PERF: Enforce HTTPS to prevent Mixed Content errors on production
+        if (finalSrc.startsWith('http:')) {
+            finalSrc = finalSrc.replace('http:', 'https:');
+        }
         finalSrc += (imageSrc.includes('?') ? '&' : '?') + `t=${Date.now()}`;
       }
 

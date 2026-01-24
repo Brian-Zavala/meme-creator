@@ -221,39 +221,6 @@ export async function loadState() {
 
         if (!state) return null;
 
-        // OPTIMIZATION: Inflate Blobs to Object URLs
-        const processItem = (item) => {
-            if (item.url && item.url instanceof Blob) {
-                return {
-                    ...item,
-                    url: URL.createObjectURL(item.url),
-                    sourceBlob: item.url
-                };
-            }
-            return item;
-        };
-
-        const processSingleState = (s) => {
-            if (s.panels) {
-                s.panels = s.panels.map(processItem);
-            }
-            if (s.stickers) {
-                s.stickers = s.stickers.map(processItem);
-            }
-            return s;
-        };
-
-        // Check if version 2 history
-        if (state.version === 2) {
-            state.present = processSingleState(state.present);
-            state.past = state.past.map(processSingleState);
-            state.future = state.future.map(processSingleState);
-            return state;
-        }
-
-        // Legacy V1 (single state)
-        return processSingleState(state);
-
     } catch (err) {
         console.error('Failed to load state:', err);
 
@@ -262,7 +229,7 @@ export async function loadState() {
             useWorker = false;
             try {
                 const state = await loadStateFallback();
-                return state;
+                return processState(state);
             } catch (fallbackErr) {
                 console.error('Fallback load also failed:', fallbackErr);
             }
@@ -271,4 +238,51 @@ export async function loadState() {
         // Return null on complete failure - app will use defaults
         return null;
     }
+}
+
+// Helper to inflate Blobs to Object URLs (shared logic)
+function processState(state) {
+    if (!state) return null;
+
+    const processItem = (item) => {
+        if (item.url && item.url instanceof Blob) {
+            return {
+                ...item,
+                url: URL.createObjectURL(item.url),
+                sourceBlob: item.url
+            };
+        }
+        return item;
+    };
+
+    const processSingleState = (s) => {
+        if (!s) return s; // Safety check
+        const next = { ...s }; // Shallow copy to avoid mutation if possible, mainly for safer iteration
+
+        if (next.panels) {
+            next.panels = next.panels.map(processItem);
+        }
+        if (next.stickers) {
+            next.stickers = next.stickers.map(processItem);
+        }
+        return next;
+    };
+
+    // Check if version 2 history
+    if (state.version === 2) {
+        // Handle history arrays safely
+        const past = Array.isArray(state.past) ? state.past.map(processSingleState) : [];
+        const future = Array.isArray(state.future) ? state.future.map(processSingleState) : [];
+        const present = processSingleState(state.present);
+
+        return {
+            ...state,
+            past,
+            present,
+            future
+        };
+    }
+
+    // Legacy V1 (single state)
+    return processSingleState(state);
 }

@@ -16,7 +16,7 @@ const HISTORY_THROTTLE_MS = 300;
 function areStatesEqual(a, b) {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return a === b;
-  
+
   try {
     // Fast path: JSON stringify
     // We exclude sourceBlob/File objects from comparison as they serialize to {}
@@ -41,10 +41,14 @@ function areStatesEqual(a, b) {
 export default function useHistory(initialState, initialHistory = null) {
   // Store all history state in a single object to ensure atomicity
   // and prevent synchronization issues (like the "double click" bug)
-  const [history, setHistory] = useState(initialHistory || {
-    past: [],
-    present: initialState,
-    future: []
+  const [history, setHistory] = useState(() => {
+    // Robust initialization: Ensure generic arrays exist even if initialHistory is malformed
+    const base = initialHistory || {};
+    return {
+      past: Array.isArray(base.past) ? base.past : [],
+      present: base.present !== undefined ? base.present : initialState,
+      future: Array.isArray(base.future) ? base.future : []
+    };
   });
 
   // Refs for throttling logic
@@ -53,15 +57,18 @@ export default function useHistory(initialState, initialHistory = null) {
   const pendingSnapshotRef = useRef(null); // Stores state to be saved during throttling
 
   // Show hook state in React DevTools
-  useDebugValue({ past: history.past.length, future: history.future.length });
+  useDebugValue({
+    past: history.past ? history.past.length : 0,
+    future: history.future ? history.future.length : 0
+  });
 
   // Standard update with throttling
   const updateState = useCallback((newStateOrFn) => {
     setHistory((curr) => {
-      const newPresent = typeof newStateOrFn === "function" 
-        ? newStateOrFn(curr.present) 
+      const newPresent = typeof newStateOrFn === "function"
+        ? newStateOrFn(curr.present)
         : newStateOrFn;
-      
+
       // 1. Identity Check: If strict equality, assume no change and return
       if (newPresent === curr.present) {
         return curr;
@@ -72,7 +79,7 @@ export default function useHistory(initialState, initialHistory = null) {
       // Immediate Save (Not Throttled)
       if (now - lastSaveTimeRef.current >= HISTORY_THROTTLE_MS) {
         lastSaveTimeRef.current = now;
-        
+
         // Clear any pending throttled save since we are saving now
         if (timerRef.current) {
           clearTimeout(timerRef.current);
@@ -99,11 +106,11 @@ export default function useHistory(initialState, initialHistory = null) {
           present: newPresent,
           future: []
         };
-      } 
-      
+      }
+
       // Throttled Save
       // We update 'present' immediately for responsiveness, but delay pushing to 'past'
-      
+
       // Capture the state *before* this update as a candidate for history
       pendingSnapshotRef.current = curr.present;
 
@@ -132,7 +139,7 @@ export default function useHistory(initialState, initialHistory = null) {
               ...latest,
               past: newPast,
               // We don't change present here, just archiving the snapshot
-              future: [] 
+              future: []
             };
           });
         }, HISTORY_THROTTLE_MS);
@@ -149,10 +156,10 @@ export default function useHistory(initialState, initialHistory = null) {
   // Transient update: Updates present WITHOUT touching history logic
   const updateTransient = useCallback((newStateOrFn) => {
     setHistory((curr) => {
-      const newPresent = typeof newStateOrFn === "function" 
-        ? newStateOrFn(curr.present) 
+      const newPresent = typeof newStateOrFn === "function"
+        ? newStateOrFn(curr.present)
         : newStateOrFn;
-      
+
       return {
         ...curr,
         present: newPresent
@@ -211,12 +218,12 @@ export default function useHistory(initialState, initialHistory = null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    
+
     setHistory((curr) => {
-      const newPresent = typeof newStateOrFn === "function" 
-        ? newStateOrFn(curr.present) 
+      const newPresent = typeof newStateOrFn === "function"
+        ? newStateOrFn(curr.present)
         : newStateOrFn;
-      
+
       return {
         ...curr,
         present: newPresent

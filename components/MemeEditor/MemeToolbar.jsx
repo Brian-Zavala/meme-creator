@@ -106,9 +106,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
   // Track if drawer has been opened after text was added - stays true until all text removed
   const [drawerHasOpened, setDrawerHasOpened] = useState(false);
   const hasStickers = meme.stickers && meme.stickers.length > 0;
-  const hasText = meme.texts.some(t => (t.content || "").trim().length > 0);
-  const hasAnimatedText = meme.texts.some(t => t.animation && t.animation !== 'none');
-  const hasAnimatedSticker = meme.stickers.some(s => s.animation && s.animation !== 'none');
+  const hasText = (meme.texts || []).some(t => (t.content || "").trim().length > 0);
+  const hasAnimatedText = (meme.texts || []).some(t => t.animation && t.animation !== 'none');
+  const hasAnimatedSticker = (meme.stickers || []).some(s => s.animation && s.animation !== 'none');
 
   // Auto-expand on desktop
 
@@ -431,7 +431,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                           <div className="flex gap-2 overflow-x-auto pt-2 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
                             {TEXT_ANIMATIONS.map((anim) => {
                               // Check if ANY text has this animation
-                              const isActive = meme.texts.some(t => t.animation === anim.id);
+                              const isActive = (meme.texts || []).some(t => t.animation === anim.id);
                               return (
                                 <AnimationButton
                                   key={anim.id}
@@ -483,7 +483,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                           <div className="flex gap-2 overflow-x-auto pt-2 pb-4 -mx-6 px-6 scrollbar-thin snap-x mask-fade-sides cursor-pointer">
                             {TEXT_ANIMATIONS.map((anim) => {
                               // Check if ANY sticker has this animation
-                              const isActive = meme.stickers.some(s => s.animation === anim.id);
+                              const isActive = (meme.stickers || []).some(s => s.animation === anim.id);
                               return (
                                 <AnimationButton
                                   key={anim.id}

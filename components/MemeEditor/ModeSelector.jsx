@@ -16,6 +16,8 @@ export function ModeSelector({ mode, onModeChange }) {
   }, []);
 
   const handleSelect = (value) => {
+    // Haptic feedback on mode change
+    if (navigator.vibrate) navigator.vibrate(30);
     onModeChange({ target: { value } });
     setIsOpen(false);
   };

@@ -32,8 +32,11 @@ export default function RemixCarousel({
     onConfettiBlast,
     onTimeWarp,
     deepFryLevel = 0,
-    isProcessing = false
+    isProcessing = false,
+    activeEffect = null
 }) {
+    // Map effect IDs to their toggle state
+    const toggleableEffects = ['nuked', 'glitch', 'cursed', 'timewarp'];
     // Buttons that can trigger deep fry processing and should be locked during processing
     const deepFryTriggerButtons = ['chaos', 'filter', 'vibe', 'deepfry', 'nuked', 'glitch', 'cursed', 'timewarp'];
 
@@ -133,22 +136,27 @@ export default function RemixCarousel({
             {remixModes.map(({ id, label, handler, Background, ariaLabel }) => {
                 // Lock buttons that can trigger deep fry while processing is active
                 const isLocked = isProcessing && deepFryTriggerButtons.includes(id);
+                // Check if this toggleable effect is currently active
+                const isEffectActive = toggleableEffects.includes(id) && activeEffect === id;
 
                 return (
                     <button
                         key={id}
                         onClick={() => {
                             if (isLocked) return; // Prevent action if locked
-                            if (navigator.vibrate) navigator.vibrate(30);
+                            if (navigator.vibrate) navigator.vibrate(isEffectActive ? [20, 30, 20] : 30);
                             handler();
                         }}
                         disabled={isLocked}
                         className={`remix-btn relative overflow-hidden group border-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${isLocked
                             ? 'border-white/5 opacity-50 cursor-not-allowed'
-                            : 'border-white/10 hover:border-white/30 active:scale-[0.97]'
+                            : isEffectActive
+                                ? 'border-yellow-400 ring-2 ring-yellow-400/50 shadow-[0_0_20px_rgba(250,204,21,0.4)]'
+                                : 'border-white/10 hover:border-white/30 active:scale-[0.97]'
                             }`}
-                        aria-label={isLocked ? `${ariaLabel} (processing...)` : ariaLabel}
+                        aria-label={isLocked ? `${ariaLabel} (processing...)` : isEffectActive ? `${ariaLabel} (active - click to remove)` : ariaLabel}
                         aria-disabled={isLocked}
+                        aria-pressed={isEffectActive}
                     >
                         {/* Animated background */}
                         {id === 'deepfry' ? (
@@ -163,10 +171,10 @@ export default function RemixCarousel({
                         {/* Label */}
                         <div className="relative z-20 flex items-center justify-center py-3 px-2">
                             <span
-                                className="font-black uppercase tracking-wider text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)] text-center leading-tight"
+                                className={`font-black uppercase tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,1)] text-center leading-tight ${isEffectActive ? 'text-yellow-300' : 'text-white'}`}
                                 style={{ fontSize: 'clamp(0.5rem, 2vw + 0.25rem, 0.8rem)' }}
                             >
-                                {label}
+                                {isEffectActive ? `✓ ${label}` : label}
                             </span>
                         </div>
                     </button>

@@ -31,7 +31,6 @@ const ColorControls = lazy(() => import("../MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
 import { ToastIcon } from "../ui/ToastIcon";
 import { MemeStickerSection } from "../MemeEditor/MemeStickerSection";
-import { ProductHuntBadge } from "../ui/ProductHuntBadge";
 
 
 
@@ -341,6 +340,7 @@ export default function Main() {
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
   const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
+  const [activeEffects, setActiveEffects] = useState({}); // Track active toggle effects per panel { panelId: 'nuked' | 'cursed' | 'glitch' | 'timewarp' | null }
   const vibeThrottleRef = useRef(0); // Spam protection for vibe-check button
   const chaosThrottleRef = useRef(0); // Spam protection for chaos button
   const filterThrottleRef = useRef(0); // Spam protection for filter button
@@ -492,6 +492,8 @@ export default function Main() {
             isVideo: false,
             sourceBlob: null,
             objectFit: "cover",
+            posX: 50,
+            posY: 50,
             filters: { ...DEFAULT_FILTERS },
             processedImage: null,
             processedDeepFryLevel: 0,
@@ -893,9 +895,11 @@ export default function Main() {
                 ...p,
                 url: first.url,
                 sourceUrl: first.shareUrl,
-                isVideo: !!isVideo, // Set correct flag
+                isVideo: !!isVideo,
                 sourceBlob: null,
                 objectFit: "cover",
+                posX: 50,
+                posY: 50,
                 filters: { ...DEFAULT_FILTERS }
               }
             : p
@@ -922,7 +926,10 @@ export default function Main() {
   async function getMemeImage(forcedMode) {
     const requestId = ++requestCounterRef.current;
     const activeMode = typeof forcedMode === "string" ? forcedMode : meme.mode;
+    const panelId = meme.activePanelId;
     setGenerating(true);
+    // Clear any active toggle effects when loading new image
+    setActiveEffects(prev => ({ ...prev, [panelId]: null }));
     try {
       if (activeMode === "video") {
         let currentGifs = allGifs;
@@ -947,7 +954,7 @@ export default function Main() {
         updateState((prev) => {
           const newPanels = prev.panels.map(p =>
             p.id === prev.activePanelId
-              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: isVideo, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: isVideo, sourceBlob: null, objectFit: "cover", posX: 50, posY: 50, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
               : p
           );
           return {
@@ -966,7 +973,7 @@ export default function Main() {
           updateState((prev) => {
             const newPanels = prev.panels.map(p =>
               p.id === prev.activePanelId
-                ? { ...p, url, isVideo: false, sourceBlob: null, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+                ? { ...p, url, isVideo: false, sourceBlob: null, objectFit: "cover", posX: 50, posY: 50, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
                 : p
             );
             return {
@@ -1708,6 +1715,28 @@ export default function Main() {
   }
 
   function handleNuked() {
+    const panelId = meme.activePanelId;
+    const isActive = activeEffects[panelId] === 'nuked';
+
+    if (isActive) {
+      // Toggle off - reset to default filters
+      startTransition(() => {
+        updateState((prev) => ({
+          ...prev,
+          panels: prev.panels.map(p =>
+            p.id === panelId
+              ? { ...p, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          )
+        }));
+      });
+      setActiveEffects(prev => ({ ...prev, [panelId]: null }));
+      toast("Nuked removed", {
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      });
+      return;
+    }
+
     const nukedFilters = {
       ...DEFAULT_FILTERS,
       deepFry: 75, // Beyond normal max
@@ -1721,13 +1750,14 @@ export default function Main() {
       updateState((prev) => ({
         ...prev,
         panels: prev.panels.map(p =>
-          p.id === prev.activePanelId
+          p.id === panelId
             ? { ...p, filters: nukedFilters, processedImage: null, processedDeepFryLevel: 0 }
             : p
         )
       }));
     });
 
+    setActiveEffects(prev => ({ ...prev, [panelId]: 'nuked' }));
     remixClickCountRef.current.nuked = (remixClickCountRef.current.nuked || 0) + 1;
     toast("Nuked applied", {
       icon: <ToastIcon src="/animations/filter-frenzy.json" />
@@ -1735,6 +1765,8 @@ export default function Main() {
   }
 
   function handleGlitch() {
+    const panelId = meme.activePanelId;
+
     // Curated glitch presets - cycles through distinct digital corruption effects
     const glitchPresets = [
       // 1. Cyberpunk Red/Cyan shift
@@ -1751,7 +1783,28 @@ export default function Main() {
       { name: "CRT Burn", hueRotate: -30, saturate: 160, contrast: 130, brightness: 115, invert: 0, sepia: 30, grayscale: 0 }
     ];
 
-    const currentIndex = (remixClickCountRef.current.glitch || 0) % glitchPresets.length;
+    const currentIndex = remixClickCountRef.current.glitch || 0;
+
+    // After cycling through all presets, reset to defaults
+    if (currentIndex >= glitchPresets.length) {
+      startTransition(() => {
+        updateState((prev) => ({
+          ...prev,
+          panels: prev.panels.map(p =>
+            p.id === panelId
+              ? { ...p, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          )
+        }));
+      });
+      setActiveEffects(prev => ({ ...prev, [panelId]: null }));
+      remixClickCountRef.current.glitch = 0;
+      toast("Glitch removed", {
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      });
+      return;
+    }
+
     const preset = glitchPresets[currentIndex];
 
     const glitchFilters = {
@@ -1771,20 +1824,43 @@ export default function Main() {
           y: t.y + (Math.random() - 0.5) * 6
         })),
         panels: prev.panels.map(p =>
-          p.id === prev.activePanelId
+          p.id === panelId
             ? { ...p, filters: glitchFilters, processedImage: null, processedDeepFryLevel: 0 }
             : p
         )
       }));
     });
 
-    remixClickCountRef.current.glitch = (remixClickCountRef.current.glitch || 0) + 1;
-    toast(`${preset.name} glitch applied`, {
+    setActiveEffects(prev => ({ ...prev, [panelId]: 'glitch' }));
+    remixClickCountRef.current.glitch = currentIndex + 1;
+    toast(`${preset.name} glitch applied (${currentIndex + 1}/${glitchPresets.length})`, {
       icon: <ToastIcon src="/animations/filter-frenzy.json" />
     });
   }
 
   function handleCursed() {
+    const panelId = meme.activePanelId;
+    const isActive = activeEffects[panelId] === 'cursed';
+
+    if (isActive) {
+      // Toggle off - reset to default filters
+      startTransition(() => {
+        updateState((prev) => ({
+          ...prev,
+          panels: prev.panels.map(p =>
+            p.id === panelId
+              ? { ...p, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          )
+        }));
+      });
+      setActiveEffects(prev => ({ ...prev, [panelId]: null }));
+      toast("Cursed removed", {
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      });
+      return;
+    }
+
     const cursedFilters = {
       ...DEFAULT_FILTERS,
       invert: 100,
@@ -1808,13 +1884,14 @@ export default function Main() {
           ...(positions[i % positions.length] || { x: 50, y: 50 })
         })),
         panels: prev.panels.map(p =>
-          p.id === prev.activePanelId
+          p.id === panelId
             ? { ...p, filters: cursedFilters, processedImage: null, processedDeepFryLevel: 0 }
             : p
         )
       }));
     });
 
+    setActiveEffects(prev => ({ ...prev, [panelId]: 'cursed' }));
     remixClickCountRef.current.cursed = (remixClickCountRef.current.cursed || 0) + 1;
     toast("Cursed applied", {
       icon: <ToastIcon src="/animations/filter-frenzy.json" />
@@ -1868,6 +1945,8 @@ export default function Main() {
   }
 
   function handleTimeWarp() {
+    const panelId = meme.activePanelId;
+
     // Curated time warp presets - cycles through temporal/dreamy effects
     const timePresets = [
       // 1. Motion Blur - fast movement feel
@@ -1884,7 +1963,28 @@ export default function Main() {
       { name: "Frozen Moment", blur: 5, brightness: 130, contrast: 70, saturate: 110, hueRotate: 0, sepia: 10, grayscale: 0, invert: 0 }
     ];
 
-    const currentIndex = (remixClickCountRef.current.timewarp || 0) % timePresets.length;
+    const currentIndex = remixClickCountRef.current.timewarp || 0;
+
+    // After cycling through all presets, reset to defaults
+    if (currentIndex >= timePresets.length) {
+      startTransition(() => {
+        updateState((prev) => ({
+          ...prev,
+          panels: prev.panels.map(p =>
+            p.id === panelId
+              ? { ...p, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              : p
+          )
+        }));
+      });
+      setActiveEffects(prev => ({ ...prev, [panelId]: null }));
+      remixClickCountRef.current.timewarp = 0;
+      toast("Time Warp removed", {
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      });
+      return;
+    }
+
     const preset = timePresets[currentIndex];
 
     const warpFilters = {
@@ -1897,15 +1997,16 @@ export default function Main() {
       updateState((prev) => ({
         ...prev,
         panels: prev.panels.map(p =>
-          p.id === prev.activePanelId
+          p.id === panelId
             ? { ...p, filters: warpFilters, processedImage: null, processedDeepFryLevel: 0 }
             : p
         )
       }));
     });
 
-    remixClickCountRef.current.timewarp = (remixClickCountRef.current.timewarp || 0) + 1;
-    toast(`${preset.name} applied`, {
+    setActiveEffects(prev => ({ ...prev, [panelId]: 'timewarp' }));
+    remixClickCountRef.current.timewarp = currentIndex + 1;
+    toast(`${preset.name} applied (${currentIndex + 1}/${timePresets.length})`, {
       icon: <ToastIcon src="/animations/filter-frenzy.json" />
     });
   }
@@ -2048,6 +2149,7 @@ export default function Main() {
   }
 
   function resetFilters() {
+    const panelId = meme.activePanelId;
     startTransition(() => {
       updateState((prev) => {
         return {
@@ -2058,6 +2160,8 @@ export default function Main() {
         };
       });
     });
+    // Clear any active toggle effects for this panel
+    setActiveEffects(prev => ({ ...prev, [panelId]: null }));
     toast("Filters reset", {
       icon: (
         <ToastIcon src="/animations/performing-arts.json" />
@@ -2078,6 +2182,11 @@ export default function Main() {
 
   function handleFilterChange(event) {
     const { value, name } = event.currentTarget;
+    const panelId = meme.activePanelId;
+    // Clear active toggle effect when user manually adjusts filters
+    if (activeEffects[panelId]) {
+      setActiveEffects(prev => ({ ...prev, [panelId]: null }));
+    }
     startTransition(() => {
       updateTransient((prev) => ({
         ...prev,
@@ -2247,6 +2356,8 @@ export default function Main() {
                 isVideo: isVideo || isGif,
                 isGif: isGif,
                 objectFit: "cover",
+                posX: 50,
+                posY: 50,
                 filters: { ...DEFAULT_FILTERS },
                 processedImage: null,
                 processedDeepFryLevel: 0
@@ -2333,6 +2444,8 @@ export default function Main() {
                   isVideo: isVideo || isGif,
                   isGif: isGif,
                   objectFit: "cover",
+                  posX: 50,
+                  posY: 50,
                   filters: { ...DEFAULT_FILTERS },
                   processedImage: null,
                   processedDeepFryLevel: 0
@@ -2407,7 +2520,7 @@ export default function Main() {
       updateState((prev) => {
         const newPanels = prev.panels.map(p =>
           p.id === panelId
-            ? { ...p, url: null, sourceUrl: null, isVideo: false, isGif: false, objectFit: "cover", filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+            ? { ...p, url: null, sourceUrl: null, isVideo: false, isGif: false, objectFit: "cover", posX: 50, posY: 50, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
             : p
         );
         return {
@@ -3188,6 +3301,7 @@ export default function Main() {
               onTimeWarp={handleTimeWarp}
               deepFryLevel={deferredDeepFry}
               isProcessing={isProcessing}
+              activeEffect={activeEffects[meme.activePanelId] || null}
             />
           </Suspense>
         );
@@ -3298,9 +3412,6 @@ export default function Main() {
                   onShare={handleShare}
                 />
               </Suspense>
-
-              {/* Product Hunt Launch Badge */}
-              <ProductHuntBadge />
             </div>
 
             <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible">

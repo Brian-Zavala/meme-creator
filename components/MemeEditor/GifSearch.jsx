@@ -71,9 +71,12 @@ export function GifSearch({
           {suggestions.map((t, i) => (
             <button
               key={i}
-              onClick={() => onSelectSuggestion(t)}
+              onClick={() => {
+                if (navigator.vibrate) navigator.vibrate(20);
+                onSelectSuggestion(t);
+              }}
               role="option"
-              className="w-full text-left px-3 py-2 hover:bg-[#222222] rounded-lg text-slate-300 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 hover:bg-[#222222] rounded-lg text-slate-300 flex items-center gap-2 transition-colors"
             >
               <TrendingUp className="w-3 h-3" /> {t}
             </button>
@@ -84,7 +87,10 @@ export function GifSearch({
           {categories.map((c, i) => (
             <button
               key={i}
-              onClick={() => onSelectSuggestion(c.searchterm)}
+              onClick={() => {
+                if (navigator.vibrate) navigator.vibrate(20);
+                onSelectSuggestion(c.searchterm);
+              }}
               role="option"
               className="relative h-16 rounded-lg overflow-hidden group"
             >

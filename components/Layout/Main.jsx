@@ -339,6 +339,7 @@ export default function Main() {
   const longPressTriggeredRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const snapGuidesRef = useRef({ x: null, y: null });
   const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
@@ -758,23 +759,48 @@ export default function Main() {
 
         if (memeRef.current) {
           const rect = memeRef.current.getBoundingClientRect();
-          let x = ((e.clientX - rect.left) / rect.width) * 100 - dragOffsetRef.current.x;
-          let y = ((e.clientY - rect.top) / rect.height) * 100 - dragOffsetRef.current.y;
+          let rawX = ((e.clientX - rect.left) / rect.width) * 100 - dragOffsetRef.current.x;
+          let rawY = ((e.clientY - rect.top) / rect.height) * 100 - dragOffsetRef.current.y;
           // Boundary clamping: creates invisible walls at edges
-          // Horizontal bounds more aggressive (10-90%) since text extends wider
-          // Vertical bounds adjust based on caption bars - allow text in caption areas
           const hasTopCaption = (meme.paddingTop || 0) > 0;
           const hasBottomCaption = (meme.paddingBottom || 0) > 0;
-
-          // When caption bars exist, extend boundaries to allow text in caption areas
-          // Default: 5-95%, With caption: 2-98% (allowing text to reach caption edges)
           const minY = hasTopCaption ? 2 : 5;
           const maxY = hasBottomCaption ? 98 : 95;
 
-          x = Math.max(10, Math.min(90, x));
-          y = Math.max(minY, Math.min(maxY, y));
+          rawX = Math.max(10, Math.min(90, rawX));
+          rawY = Math.max(minY, Math.min(maxY, rawY));
+          const shiftHeld = e.shiftKey;
 
           updateTransient((prev) => {
+            let x = rawX;
+            let y = rawY;
+
+            // Snap-to-guide calculation (hold Shift to disable)
+            if (!shiftHeld) {
+              const SNAP_THRESHOLD = 2;
+              const STATIC_LINES = [33.33, 50, 66.67];
+              const siblings = [...prev.texts, ...prev.stickers].filter(item => item.id !== draggedId);
+              const snapXPoints = [...STATIC_LINES, ...siblings.map(s => s.x)];
+              const snapYPoints = [...STATIC_LINES, ...siblings.map(s => s.y)];
+
+              let closestX = null, minDistX = SNAP_THRESHOLD;
+              for (const pt of snapXPoints) {
+                const d = Math.abs(x - pt);
+                if (d < minDistX) { minDistX = d; closestX = pt; }
+              }
+              let closestY = null, minDistY = SNAP_THRESHOLD;
+              for (const pt of snapYPoints) {
+                const d = Math.abs(y - pt);
+                if (d < minDistY) { minDistY = d; closestY = pt; }
+              }
+
+              if (closestX !== null) x = closestX;
+              if (closestY !== null) y = closestY;
+              snapGuidesRef.current = { x: closestX, y: closestY };
+            } else {
+              snapGuidesRef.current = { x: null, y: null };
+            }
+
             const isText = prev.texts.some((t) => t.id === draggedId);
             if (isText) {
               return {
@@ -792,6 +818,7 @@ export default function Main() {
 
       const handleGlobalUp = () => {
         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+        snapGuidesRef.current = { x: null, y: null };
         setDraggedId(null);
       };
 
@@ -3881,6 +3908,7 @@ export default function Main() {
                     onPanelPosChange={handlePanelPosChange}
                     isCropping={isCropping}
                     onCropCancel={handleCropCancel}
+                    snapGuides={draggedId ? snapGuidesRef.current : null}
                   />
                 </div>
                 {selectedText && (

@@ -74,7 +74,8 @@ const MemeCanvas = forwardRef(({
   onPanelPosChange,
   onHoverChange,
   isCropping,
-  onCropCancel
+  onCropCancel,
+  snapGuides
 }, ref) => {
   const description = `Meme editor with ${meme.panels?.length || 1} panels`;
   const drawCanvasRef = useRef(null);
@@ -1196,6 +1197,26 @@ const MemeCanvas = forwardRef(({
             </h2>
           )
         })}
+
+        {/* Snap alignment guides - shown during drag when element hits a grid/sibling line */}
+        {snapGuides && (snapGuides.x !== null || snapGuides.y !== null) && (
+          <>
+            {snapGuides.x !== null && (
+              <div
+                data-html2canvas-ignore="true"
+                className="snap-guide snap-guide-v pointer-events-none"
+                style={{ left: `${snapGuides.x}%`, top: 0, bottom: 0 }}
+              />
+            )}
+            {snapGuides.y !== null && (
+              <div
+                data-html2canvas-ignore="true"
+                className="snap-guide snap-guide-h pointer-events-none"
+                style={{ top: `${snapGuides.y}%`, left: 0, right: 0 }}
+              />
+            )}
+          </>
+        )}
 
         {/* Long-press cursor indicator - enhanced with smooth animations */}
         {longPressCursor && (

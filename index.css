@@ -407,6 +407,28 @@ body {
   border: none !important;
 }
 
+/* Snap alignment guides */
+.snap-guide {
+  position: absolute;
+  z-index: 45;
+  pointer-events: none;
+  animation: snap-guide-in 80ms ease-out both;
+}
+.snap-guide-v {
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, #00d4ff 15%, #00d4ff 85%, transparent);
+  box-shadow: 0 0 4px #00d4ff80;
+}
+.snap-guide-h {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #00d4ff 15%, #00d4ff 85%, transparent);
+  box-shadow: 0 0 4px #00d4ff80;
+}
+@keyframes snap-guide-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* Vertical Slider Utility for Mobile */
 @layer utilities {
   .range-vertical {
@@ -1212,7 +1234,8 @@ body {
   .animate-text-entry,
   .animate-march,
   .animate-marching-ants,
-  .animate-caret-blink {
+  .animate-caret-blink,
+  .snap-guide {
     animation: none !important;
   }
 

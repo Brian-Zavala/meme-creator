@@ -186,27 +186,40 @@ function sanitizeState(data) {
     return sanitized;
 }
 
-export async function saveState(state) {
-    try {
-        const cleanState = sanitizeState(state);
+// Coalesce rapid saves - only the latest one runs
+let pendingSaveTimer = null;
+let pendingSaveState = null;
 
-        if (useWorker && worker) {
-            await sendRequest('SAVE_STATE', cleanState);
-        } else {
-            await saveStateFallback(cleanState);
-        }
-    } catch (err) {
-        console.error('Failed to save state:', err);
-        // Try fallback if worker failed
-        if (useWorker) {
-            useWorker = false;
-            try {
-                await saveStateFallback(state);
-            } catch (fallbackErr) {
-                console.error('Fallback save also failed:', fallbackErr);
+export async function saveState(state) {
+    // Coalesce: if a save is already pending, just update the state to save
+    pendingSaveState = state;
+    if (pendingSaveTimer) return;
+
+    pendingSaveTimer = setTimeout(async () => {
+        pendingSaveTimer = null;
+        const stateToSave = pendingSaveState;
+        pendingSaveState = null;
+
+        try {
+            const cleanState = sanitizeState(stateToSave);
+
+            if (useWorker && worker) {
+                await sendRequest('SAVE_STATE', cleanState);
+            } else {
+                await saveStateFallback(cleanState);
+            }
+        } catch (err) {
+            console.error('Failed to save state:', err);
+            if (useWorker) {
+                useWorker = false;
+                try {
+                    await saveStateFallback(stateToSave);
+                } catch (fallbackErr) {
+                    console.error('Fallback save also failed:', fallbackErr);
+                }
             }
         }
-    }
+    }, 100);
 }
 
 export async function loadState() {

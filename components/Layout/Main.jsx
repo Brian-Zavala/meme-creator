@@ -408,21 +408,26 @@ export default function Main() {
     }
   }, [showMemeSuggestions]);
 
-  // Update position on scroll/resize for Image mode dropdown
+  // Update position on scroll/resize for Image mode dropdown (throttled)
   useEffect(() => {
     if (!showMemeSuggestions) return;
 
+    let rafId = null;
     const updatePosition = () => {
-      if (memeSearchRef.current) {
-        const rect = memeSearchRef.current.getBoundingClientRect();
-        setMemeDropdownStyle({
-          position: 'fixed',
-          top: rect.bottom + 8,
-          left: rect.left + 12,
-          width: rect.width - 24,
-          zIndex: 9999
-        });
-      }
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (memeSearchRef.current) {
+          const rect = memeSearchRef.current.getBoundingClientRect();
+          setMemeDropdownStyle({
+            position: 'fixed',
+            top: rect.bottom + 8,
+            left: rect.left + 12,
+            width: rect.width - 24,
+            zIndex: 9999
+          });
+        }
+      });
     };
 
     window.addEventListener('scroll', updatePosition, true);
@@ -431,6 +436,7 @@ export default function Main() {
     return () => {
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [showMemeSuggestions]);
 
@@ -825,9 +831,17 @@ export default function Main() {
       });
   }, []);
 
+  // Debounced save - prevents flooding IndexedDB on every keystroke/drag
+  const saveTimerRef = useRef(null);
   useEffect(() => {
     if (!isHydrated) return;
-    saveState(memeHistory);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveState(memeHistory);
+    }, 800);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [memeHistory, isHydrated]);
 
   const handleSearchInput = (e) => {
@@ -989,7 +1003,7 @@ export default function Main() {
         };
 
         try {
-          const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(newMeme.url)}`);
+          const response = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(newMeme.url)}`);
           if (!response.ok) throw new Error();
           const blob = await response.blob();
           const dataUrl = await new Promise((r) => {
@@ -2096,17 +2110,19 @@ export default function Main() {
       const visibleCount = Math.max(lastFilledIndex + 2, 2);
 
       // If we need more inputs than exist, add new empty text items
-      while (newTexts.length < visibleCount) {
-        const newY = 50; // Default to center
-        newTexts = [...newTexts, {
-          id: crypto.randomUUID(),
-          content: "",
-          x: 50,
-          y: newY,
-          rotation: 0,
-          scale: 1,
-          animation: null
-        }];
+      if (newTexts.length < visibleCount) {
+        newTexts = [...newTexts];
+        while (newTexts.length < visibleCount) {
+          newTexts.push({
+            id: crypto.randomUUID(),
+            content: "",
+            x: 50,
+            y: 50,
+            rotation: 0,
+            scale: 1,
+            animation: null
+          });
+        }
       }
 
       return {

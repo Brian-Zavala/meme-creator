@@ -71,18 +71,14 @@ async function saveState(fullHistory) {
 
         let dataToStore;
         if (isFullHistory) {
-            // Process all parts of history
-            const [processedPresent, processedPast, processedFuture] = await Promise.all([
-                processSingleState(fullHistory.present),
-                Promise.all(fullHistory.past.map(processSingleState)),
-                Promise.all(fullHistory.future.map(processSingleState))
-            ]);
+            // Only deep-process present state (past/future were already processed when current)
+            const processedPresent = await processSingleState(fullHistory.present);
 
             dataToStore = {
-                version: 2, // Mark as version 2 (History support)
+                version: 2,
                 present: processedPresent,
-                past: processedPast,
-                future: processedFuture
+                past: fullHistory.past,
+                future: fullHistory.future
             };
         } else {
             // Legacy single state mode

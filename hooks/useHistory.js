@@ -12,30 +12,36 @@ const MAX_HISTORY_SIZE = 15;
  */
 const HISTORY_THROTTLE_MS = 300;
 
-// Helper to check deep equality to prevent duplicate history entries
+// Lightweight structural equality check - compares key fields instead of full JSON.stringify
 function areStatesEqual(a, b) {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return a === b;
 
-  try {
-    // Fast path: JSON stringify
-    // We exclude sourceBlob/File objects from comparison as they serialize to {}
-    // and we rely on URL strings or other props for uniqueness
-    return JSON.stringify(a, (key, value) => {
-      if (key === 'sourceBlob' || value instanceof Blob || value instanceof File) {
-        return undefined;
-      }
-      return value;
-    }) === JSON.stringify(b, (key, value) => {
-      if (key === 'sourceBlob' || value instanceof Blob || value instanceof File) {
-        return undefined;
-      }
-      return value;
-    });
-  } catch (e) {
-    console.warn("History equality check failed", e);
-    return false;
+  // Compare by key structural fields that actually change between history entries
+  // This avoids expensive JSON.stringify on the entire state tree
+  const keysToCompare = ['activePanelId', 'name', 'fontSize', 'fontFamily', 'fontColor',
+    'strokeColor', 'strokeWidth', 'textAlign', 'bold', 'italic', 'allCaps', 'shadowColor',
+    'shadowBlur', 'layout', 'canvasBg', 'selectedId', 'editingId'];
+
+  for (const key of keysToCompare) {
+    if (a[key] !== b[key]) return false;
   }
+
+  // Compare arrays by length + first item identity (cheap proxy for deep changes)
+  const arrayKeys = ['panels', 'texts', 'stickers', 'drawings'];
+  for (const key of arrayKeys) {
+    const aArr = a[key], bArr = b[key];
+    if (!aArr && !bArr) continue;
+    if (!aArr || !bArr) return false;
+    if (aArr.length !== bArr.length) return false;
+    if (aArr === bArr) continue;
+    // Check if any items changed by reference
+    for (let i = 0; i < aArr.length; i++) {
+      if (aArr[i] !== bArr[i]) return false;
+    }
+  }
+
+  return true;
 }
 
 export default function useHistory(initialState, initialHistory = null) {

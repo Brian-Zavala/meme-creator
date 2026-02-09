@@ -96,6 +96,13 @@ const MemeCanvas = forwardRef(({
   const longPressStartPosRef = useRef(null);
   const focusOnNextReleaseRef = useRef(false); // New flag for hybrid approach
 
+  // Pinch-to-zoom state
+  const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 });
+  const zoomRef = useRef({ scale: 1, x: 0, y: 0 });
+  const pinchStartRef = useRef(null);
+  const panStartRef = useRef(null);
+  const lastDoubleTapRef = useRef(0);
+
   // Robustly set caret position when editing starts
   useEffect(() => {
     if (editingId) {
@@ -118,6 +125,103 @@ const MemeCanvas = forwardRef(({
       });
     }
   }, [editingId]);
+
+  // Pinch-to-zoom: non-passive touch & wheel listeners
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const dist = (t0, t1) => Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        // Cancel any active long-press
+        if (canvasLongPressTimerRef.current) {
+          clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
+          clearTimeout(canvasLongPressTimerRef.current.timerId);
+          clearInterval(canvasLongPressTimerRef.current.progressInterval);
+          canvasLongPressTimerRef.current = null;
+        }
+        setLongPressCursor(null);
+        pinchStartRef.current = {
+          distance: dist(e.touches[0], e.touches[1]),
+          scale: zoomRef.current.scale,
+        };
+      } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastDoubleTapRef.current < 300 && zoomRef.current.scale > 1) {
+          e.preventDefault();
+          zoomRef.current = { scale: 1, x: 0, y: 0 };
+          setZoom({ scale: 1, x: 0, y: 0 });
+          lastDoubleTapRef.current = 0;
+          return;
+        }
+        lastDoubleTapRef.current = now;
+        if (zoomRef.current.scale > 1) {
+          e.preventDefault();
+          panStartRef.current = {
+            touchX: e.touches[0].clientX,
+            touchY: e.touches[0].clientY,
+            zoomX: zoomRef.current.x,
+            zoomY: zoomRef.current.y,
+          };
+        }
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2 && pinchStartRef.current) {
+        e.preventDefault();
+        const ratio = dist(e.touches[0], e.touches[1]) / pinchStartRef.current.distance;
+        let s = Math.min(5, Math.max(1, pinchStartRef.current.scale * ratio));
+        const next = s < 1.05 ? { scale: 1, x: 0, y: 0 } : { ...zoomRef.current, scale: s };
+        zoomRef.current = next;
+        setZoom(next);
+      } else if (e.touches.length === 1 && panStartRef.current && zoomRef.current.scale > 1) {
+        e.preventDefault();
+        const next = {
+          ...zoomRef.current,
+          x: panStartRef.current.zoomX + (e.touches[0].clientX - panStartRef.current.touchX),
+          y: panStartRef.current.zoomY + (e.touches[0].clientY - panStartRef.current.touchY),
+        };
+        zoomRef.current = next;
+        setZoom(next);
+      }
+    };
+
+    const onTouchEnd = (e) => {
+      if (e.touches.length < 2) pinchStartRef.current = null;
+      if (e.touches.length === 0) {
+        panStartRef.current = null;
+        if (zoomRef.current.scale > 1 && zoomRef.current.scale < 1.1) {
+          zoomRef.current = { scale: 1, x: 0, y: 0 };
+          setZoom({ scale: 1, x: 0, y: 0 });
+        }
+      }
+    };
+
+    const onWheel = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        let s = Math.min(5, Math.max(1, zoomRef.current.scale * (e.deltaY > 0 ? 0.92 : 1.08)));
+        const next = s < 1.05 ? { scale: 1, x: 0, y: 0 } : { ...zoomRef.current, scale: s };
+        zoomRef.current = next;
+        setZoom(next);
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   // If we have an override (Deep Fry preview), it only applies to the ACTIVE panel for now visually
 
@@ -351,8 +455,9 @@ const MemeCanvas = forwardRef(({
 
   // Long-press to add text handlers
   const handleCanvasLongPressStart = (e) => {
-    // Don't trigger if drawing, if there's already a selected element, or if in editing mode
+    // Don't trigger if drawing, if there's already a selected element, if in editing mode, or if zoomed
     if (activeTool === 'pen' || activeTool === 'eraser' || selectedId || editingId) return;
+    if (zoomRef.current.scale > 1) return;
 
     // Check if we're on the canvas area using closest() to handle clicks on panels
     const canvasElement = e.target.closest('[data-meme-canvas]');
@@ -510,7 +615,7 @@ const MemeCanvas = forwardRef(({
       ref={containerRef}
       onPointerDown={onCanvasPointerDown}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none rounded-none"
+      className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none rounded-none overflow-hidden"
       role="img"
       aria-label={description}
     >
@@ -552,7 +657,9 @@ const MemeCanvas = forwardRef(({
           width: '100%',
           height: 'auto',
           aspectRatio: containerAspect,
-          maxWidth: '100%'
+          maxWidth: '100%',
+          transform: zoom.scale > 1 ? `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})` : undefined,
+          transformOrigin: 'center center',
         }}
       >
         {/* Top Caption Bar */}
@@ -611,6 +718,7 @@ const MemeCanvas = forwardRef(({
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   setDragOverPanel(null);
                   const file = e.dataTransfer.files[0];
                   if (file && onDrop) {
@@ -690,6 +798,11 @@ const MemeCanvas = forwardRef(({
                     <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-brand' : 'text-slate-500 group-hover/ghost:text-slate-300'}`}>
                       {isActive ? "Tap to Upload" : "Tap to Select"}
                     </span>
+                    {isActive && (
+                      <span className="text-[10px] text-slate-500 mt-1.5 tracking-wide">
+                        or drag & drop · paste <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-mono border border-slate-700">Ctrl+V</kbd>
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -1049,6 +1162,16 @@ const MemeCanvas = forwardRef(({
         )}
       </div>
 
+
+      {/* Zoom indicator */}
+      {zoom.scale > 1 && (
+        <div
+          data-html2canvas-ignore="true"
+          className="absolute bottom-3 right-3 bg-black/70 text-white text-xs font-mono px-2.5 py-1 rounded-full z-50 backdrop-blur-sm pointer-events-none border border-white/10"
+        >
+          {zoom.scale.toFixed(1)}x
+        </div>
+      )}
 
       {loading && (
         <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center z-50 backdrop-blur-sm gap-4">

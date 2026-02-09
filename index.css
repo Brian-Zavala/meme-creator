@@ -1162,3 +1162,81 @@ body {
   100% { transform: scaleX(1); }
 }
 .animate-icon-flip { animation: icon-flip 2s ease-in-out infinite; }
+
+/* ============================================
+   REDUCED MOTION: Accessibility
+   Respects OS-level prefers-reduced-motion.
+   Disables all decorative animations while
+   keeping functional transitions minimal.
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* Meme text animations */
+  .animate-meme-wave,
+  .animate-meme-bounce,
+  .animate-meme-shake,
+  .animate-meme-glitch,
+  .animate-meme-pulse,
+  .animate-meme-float,
+  .animate-meme-spin,
+  .animate-meme-tada,
+  .animate-meme-wobble,
+  .animate-meme-heartbeat,
+  .animate-meme-jelly,
+  .animate-meme-flip,
+  .animate-meme-wave-char {
+    animation: none !important;
+  }
+
+  /* Icon animations (remix carousel buttons) */
+  .animate-icon-wave,
+  .animate-icon-bounce,
+  .animate-icon-shake,
+  .animate-icon-glitch,
+  .animate-icon-pulse,
+  .animate-icon-float,
+  .animate-icon-spin,
+  .animate-icon-tada,
+  .animate-icon-wobble,
+  .animate-icon-heartbeat,
+  .animate-icon-jelly,
+  .animate-icon-flip {
+    animation: none !important;
+  }
+
+  /* UI animations */
+  .animate-pop-in,
+  .animate-roll-down,
+  .animate-pulse-ring,
+  .animate-radar,
+  .animate-text-shimmer,
+  .animate-text-entry,
+  .animate-march,
+  .animate-marching-ants,
+  .animate-caret-blink {
+    animation: none !important;
+  }
+
+  /* Gradient border animations */
+  .gradient-border-card::before,
+  .gradient-border-card::after,
+  .toast-gradient-border::before {
+    animation: none !important;
+  }
+
+  /* Tailwind built-in animations */
+  .animate-spin,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+
+  /* Reduce all transitions to near-instant */
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

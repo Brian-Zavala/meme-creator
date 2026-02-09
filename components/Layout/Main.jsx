@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser, Sparkles } from "lucide-react";
+import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, TrendingUp, Eraser, Sparkles, ImagePlus } from "lucide-react";
 import { removeImageBackground } from "../../services/backgroundRemover";
 import toast from "react-hot-toast";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
@@ -317,6 +317,9 @@ export default function Main() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
+
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
 
   const [allMemes, setAllMemes] = useState([]);
   const [allGifs, setAllGifs] = useState([]);
@@ -2515,6 +2518,84 @@ export default function Main() {
     }
   }, [updateState]);
 
+  // Clipboard paste: Ctrl+V to paste images onto active panel
+  useEffect(() => {
+    const onPaste = (e) => {
+      const el = document.activeElement;
+      const tag = el?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;
+
+      const clipboard = e.clipboardData;
+      if (!clipboard) return;
+
+      // Check items (Chrome, Edge, modern browsers)
+      if (clipboard.items && clipboard.items.length > 0) {
+        for (let i = 0; i < clipboard.items.length; i++) {
+          if (clipboard.items[i].type.startsWith('image/')) {
+            e.preventDefault();
+            const file = clipboard.items[i].getAsFile();
+            if (file) handleCanvasDrop(file, meme.activePanelId);
+            return;
+          }
+        }
+      }
+
+      // Fallback: check files (Firefox, Safari)
+      if (clipboard.files && clipboard.files.length > 0) {
+        const file = clipboard.files[0];
+        if (file.type.startsWith('image/')) {
+          e.preventDefault();
+          handleCanvasDrop(file, meme.activePanelId);
+        }
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [handleCanvasDrop, meme.activePanelId]);
+
+  // Full-page drag-and-drop: show overlay when dragging files over the window
+  useEffect(() => {
+    const onDragEnter = (e) => {
+      e.preventDefault();
+      dragCounterRef.current++;
+      if (e.dataTransfer?.types?.includes('Files')) setIsDragOver(true);
+    };
+    const onDragLeave = (e) => {
+      e.preventDefault();
+      dragCounterRef.current--;
+      if (dragCounterRef.current <= 0) {
+        dragCounterRef.current = 0;
+        setIsDragOver(false);
+      }
+    };
+    const onDragOver = (e) => e.preventDefault();
+    // Capture-phase: always reset overlay (even if panel stopPropagation'd the bubble)
+    const onDropReset = () => {
+      dragCounterRef.current = 0;
+      setIsDragOver(false);
+    };
+    // Bubble-phase: handle files dropped outside canvas panels
+    const onDrop = (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('image/')) {
+        handleCanvasDrop(file, meme.activePanelId);
+      }
+    };
+    document.addEventListener('dragenter', onDragEnter);
+    document.addEventListener('dragleave', onDragLeave);
+    document.addEventListener('dragover', onDragOver);
+    document.addEventListener('drop', onDropReset, true);
+    document.addEventListener('drop', onDrop);
+    return () => {
+      document.removeEventListener('dragenter', onDragEnter);
+      document.removeEventListener('dragleave', onDragLeave);
+      document.removeEventListener('dragover', onDragOver);
+      document.removeEventListener('drop', onDropReset, true);
+      document.removeEventListener('drop', onDrop);
+    };
+  }, [handleCanvasDrop, meme.activePanelId]);
+
   const handleClearPanel = useCallback((panelId) => {
     startTransition(() => {
       updateState((prev) => {
@@ -3281,6 +3362,17 @@ export default function Main() {
         className={`fixed inset-0 z-[100] pointer-events-none transition-opacity duration-200 ${flashColor ? "opacity-100" : "opacity-0"}`}
         style={{ backgroundColor: flashColor === "red" ? "rgba(239, 68, 68, 0.15)" : flashColor === "teal" ? "rgba(20, 184, 166, 0.15)" : "rgba(34, 197, 94, 0.08)" }}
       />
+
+      {/* Full-page drag-and-drop overlay */}
+      {isDragOver && (
+        <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-4 p-10 rounded-2xl border-2 border-dashed border-brand animate-pulse">
+            <ImagePlus className="w-16 h-16 text-brand" />
+            <p className="text-white text-lg font-bold">Drop image here</p>
+            <p className="text-slate-400 text-sm">Image will be added to the active panel</p>
+          </div>
+        </div>
+      )}
 
       {/* Reusable Remix Controls Group */}
       {(() => {

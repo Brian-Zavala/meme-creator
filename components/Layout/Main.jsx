@@ -2768,10 +2768,17 @@ export default function Main() {
   }
 
   function handleCanvasPointerDown() {
-    startTransition(() => {
-      updateState((prev) => ({ ...prev, selectedId: null }));
-    });
-    setEditingId(null); // Exit editing mode when clicking on canvas
+    // Guard: only update state if something would actually change
+    // Avoids creating unnecessary history entries + re-renders on every canvas touch
+    if (meme.selectedId || editingId) {
+      startTransition(() => {
+        updateState((prev) => {
+          if (prev.selectedId === null) return prev; // Identity check - no new object
+          return { ...prev, selectedId: null };
+        });
+      });
+      setEditingId(null);
+    }
     globalLastTapRef.current = 0;
   }
 

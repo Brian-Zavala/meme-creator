@@ -1,4 +1,4 @@
-import { forwardRef, useRef, useEffect, useState, memo } from "react";
+import { forwardRef, useRef, useEffect, useLayoutEffect, useState, memo } from "react";
 import { Loader2, Plus, Image as ImageIcon, Video, Upload, X, Trash2, Settings2 } from "lucide-react";
 import { getAnimationById } from "../../constants/textAnimations";
 import CountdownOverlay from "./CountdownOverlay";
@@ -97,8 +97,13 @@ const MemeCanvas = forwardRef(({
   const focusOnNextReleaseRef = useRef(false); // New flag for hybrid approach
 
   // Pinch-to-zoom state
+  // zoom state is only synced on gesture END (touchend / wheel debounce)
+  // During active gestures, zoomRef + direct DOM manipulation is used to avoid re-renders
   const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 });
   const zoomRef = useRef({ scale: 1, x: 0, y: 0 });
+  const canvasInnerRef = useRef(null);
+  const zoomRafRef = useRef(null);
+  const wheelEndTimerRef = useRef(null);
   const pinchStartRef = useRef(null);
   const panStartRef = useRef(null);
   const lastDoubleTapRef = useRef(0);
@@ -125,6 +130,31 @@ const MemeCanvas = forwardRef(({
       });
     }
   }, [editingId]);
+
+  // Apply zoom transform directly to DOM (bypasses React re-render cycle)
+  const applyZoomToDOM = () => {
+    const inner = canvasInnerRef.current;
+    if (!inner) return;
+    const z = zoomRef.current;
+    inner.style.transform = z.scale > 1
+      ? `translate(${z.x}px, ${z.y}px) scale(${z.scale})`
+      : '';
+  };
+
+  // Schedule a DOM-only zoom update via rAF (coalesces multiple calls per frame)
+  const scheduleZoomDOM = () => {
+    if (!zoomRafRef.current) {
+      zoomRafRef.current = requestAnimationFrame(() => {
+        zoomRafRef.current = null;
+        applyZoomToDOM();
+      });
+    }
+  };
+
+  // Keep DOM in sync after every React render (prevents style prop from overriding direct DOM)
+  useLayoutEffect(() => {
+    applyZoomToDOM();
+  });
 
   // Pinch-to-zoom: non-passive touch & wheel listeners
   useEffect(() => {
@@ -177,7 +207,7 @@ const MemeCanvas = forwardRef(({
         let s = Math.min(5, Math.max(1, pinchStartRef.current.scale * ratio));
         const next = s < 1.05 ? { scale: 1, x: 0, y: 0 } : { ...zoomRef.current, scale: s };
         zoomRef.current = next;
-        setZoom(next);
+        scheduleZoomDOM(); // Direct DOM update, no React re-render
       } else if (e.touches.length === 1 && panStartRef.current && zoomRef.current.scale > 1) {
         e.preventDefault();
         const next = {
@@ -186,7 +216,7 @@ const MemeCanvas = forwardRef(({
           y: panStartRef.current.zoomY + (e.touches[0].clientY - panStartRef.current.touchY),
         };
         zoomRef.current = next;
-        setZoom(next);
+        scheduleZoomDOM(); // Direct DOM update, no React re-render
       }
     };
 
@@ -196,8 +226,9 @@ const MemeCanvas = forwardRef(({
         panStartRef.current = null;
         if (zoomRef.current.scale > 1 && zoomRef.current.scale < 1.1) {
           zoomRef.current = { scale: 1, x: 0, y: 0 };
-          setZoom({ scale: 1, x: 0, y: 0 });
         }
+        // Sync React state on gesture end (for zoom indicator + touch-action toggle)
+        setZoom({ ...zoomRef.current });
       }
     };
 
@@ -207,7 +238,12 @@ const MemeCanvas = forwardRef(({
         let s = Math.min(5, Math.max(1, zoomRef.current.scale * (e.deltaY > 0 ? 0.92 : 1.08)));
         const next = s < 1.05 ? { scale: 1, x: 0, y: 0 } : { ...zoomRef.current, scale: s };
         zoomRef.current = next;
-        setZoom(next);
+        scheduleZoomDOM(); // Direct DOM update, no React re-render
+        // Debounce React state sync to wheel gesture end
+        clearTimeout(wheelEndTimerRef.current);
+        wheelEndTimerRef.current = setTimeout(() => {
+          setZoom({ ...zoomRef.current });
+        }, 150);
       }
     };
 
@@ -220,6 +256,8 @@ const MemeCanvas = forwardRef(({
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
       el.removeEventListener('wheel', onWheel);
+      if (zoomRafRef.current) cancelAnimationFrame(zoomRafRef.current);
+      clearTimeout(wheelEndTimerRef.current);
     };
   }, []);
 
@@ -616,6 +654,7 @@ const MemeCanvas = forwardRef(({
       onPointerDown={onCanvasPointerDown}
       onContextMenu={(e) => e.preventDefault()}
       className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none rounded-none overflow-hidden"
+      style={{ touchAction: zoom.scale > 1 ? 'none' : 'pan-y' }}
       role="img"
       aria-label={description}
     >
@@ -641,9 +680,14 @@ const MemeCanvas = forwardRef(({
       />
 
       <div
-        ref={ref}
+        ref={(node) => {
+          canvasInnerRef.current = node;
+          if (typeof ref === 'function') ref(node);
+          else if (ref) ref.current = node;
+        }}
         data-meme-canvas="true"
         onPointerDown={(e) => {
+          e.stopPropagation(); // Prevent double-firing via bubble to outer container
           onCanvasPointerDown();
           handleCanvasLongPressStart(e);
         }}
@@ -658,7 +702,8 @@ const MemeCanvas = forwardRef(({
           height: 'auto',
           aspectRatio: containerAspect,
           maxWidth: '100%',
-          transform: zoom.scale > 1 ? `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})` : undefined,
+          // transform is managed by direct DOM manipulation (useLayoutEffect + applyZoomToDOM)
+          // to avoid re-rendering the entire component on every pinch/wheel frame
           transformOrigin: 'center center',
         }}
       >

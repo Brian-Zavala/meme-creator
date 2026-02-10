@@ -7,7 +7,7 @@ import LottieAnimation from "../Animations/LottieAnimation";
 // Preload the animation JSON to prevent pop-in on re-render
 const WALKING_PENCIL_SRC = "/animations/walking-pencil.json";
 
-export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
+export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
   const [isPending, startTransition] = useTransition();
 
   // Preload animation on mount to ensure it's cached
@@ -139,8 +139,8 @@ export default function MemeInputs({ texts, handleTextChange, onAddSticker, onMa
                     if (onEditingChange) onEditingChange(textItem.id);
                   }}
                   onBlur={() => {
-                    // Only clear editing state if we're not clicking another input (handled by new focus)
-                    // We can rely on handleCanvasPointerDown to clear it when clicking away
+                    // Commit transient text changes to undo history on blur
+                    if (onTextCommit) onTextCommit();
                   }}
                   value={textItem.content}
                 />

@@ -90,7 +90,7 @@ const MemeCanvas = forwardRef(({
   const [isHoveringElement, setIsHoveringElement] = useState(false); // Track text/sticker hover
 
   // Long-press cursor indicator state
-  const [longPressCursor, setLongPressCursor] = useState(null); // { x, y, progress }
+  const [longPressCursor, setLongPressCursor] = useState(null); // { x, y } — overlay animates itself
 
   // Long-press to add text refs
   const canvasLongPressTimerRef = useRef(null);
@@ -532,21 +532,9 @@ const MemeCanvas = forwardRef(({
     canvasLongPressTimerRef.current.delayTimerId = setTimeout(() => {
       if (!longPressStartPosRef.current) return;
 
-      // Show the cursor indicator after delay
-      setLongPressCursor({ x, y, progress: 0 });
-
-      // Animate progress over remaining 1.7 seconds (2s total - 0.3s delay)
-      const startTime = Date.now();
-      const remainingTime = 1700;
-
-      canvasLongPressTimerRef.current.progressInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / remainingTime, 1);
-        setLongPressCursor(prev => prev ? { ...prev, progress } : null);
-        if (progress >= 1) {
-          clearInterval(canvasLongPressTimerRef.current?.progressInterval);
-        }
-      }, 50);
+      // Show the cursor indicator after delay — CountdownOverlay animates itself via rAF
+      // so we only need one state update here (not 34 via setInterval)
+      setLongPressCursor({ x, y });
     }, 300);
 
     // Start 2 second timer for text creation
@@ -1228,7 +1216,6 @@ const MemeCanvas = forwardRef(({
           <CountdownOverlay
             x={longPressCursor.x}
             y={longPressCursor.y}
-            progress={longPressCursor.progress}
           />
         )}
       </div>

@@ -346,6 +346,7 @@ export default function Main() {
   const startPosRef = useRef({ x: 0, y: 0 });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const snapGuidesRef = useRef({ x: null, y: null });
+  const snapPointsCacheRef = useRef(null); // Pre-computed snap points for current drag
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
   const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
@@ -780,10 +781,10 @@ export default function Main() {
             // Snap-to-guide calculation (hold Shift to disable)
             if (!shiftHeld) {
               const SNAP_THRESHOLD = 2;
-              const STATIC_LINES = [33.33, 50, 66.67];
-              const siblings = [...prev.texts, ...prev.stickers].filter(item => item.id !== draggedId);
-              const snapXPoints = [...STATIC_LINES, ...siblings.map(s => s.x)];
-              const snapYPoints = [...STATIC_LINES, ...siblings.map(s => s.y)];
+              // Use pre-computed snap points from drag start (avoids 5 array allocations per frame)
+              const cached = snapPointsCacheRef.current;
+              const snapXPoints = cached ? cached.x : [33.33, 50, 66.67];
+              const snapYPoints = cached ? cached.y : [33.33, 50, 66.67];
 
               let closestX = null, minDistX = SNAP_THRESHOLD;
               for (const pt of snapXPoints) {
@@ -821,6 +822,7 @@ export default function Main() {
       const handleGlobalUp = () => {
         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
         snapGuidesRef.current = { x: null, y: null };
+        snapPointsCacheRef.current = null;
         setDraggedId(null);
       };
 
@@ -2126,7 +2128,9 @@ export default function Main() {
   }
 
   function handleTextChange(id, value) {
-    updateState((prev) => {
+    // Use transient update during typing to avoid flooding undo history
+    // History commit happens on blur via handleStyleCommit
+    updateTransient((prev) => {
       let newTexts = prev.texts.map((t) => (t.id === id ? { ...t, content: value } : t));
 
       // Find the last filled index after this change
@@ -3013,6 +3017,13 @@ export default function Main() {
       }
 
       setDraggedId(id);
+      // Pre-compute snap points once at drag start (avoids rebuilding 60x/sec during drag)
+      const STATIC_LINES = [33.33, 50, 66.67];
+      const siblings = [...meme.texts, ...meme.stickers].filter(item => item.id !== id);
+      snapPointsCacheRef.current = {
+        x: [...STATIC_LINES, ...siblings.map(s => s.x)],
+        y: [...STATIC_LINES, ...siblings.map(s => s.y)],
+      };
       if (navigator.vibrate) navigator.vibrate(20);
     },
     [meme.stickers, meme.texts, updateState],

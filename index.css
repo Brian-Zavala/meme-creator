@@ -416,13 +416,13 @@ body {
 }
 .snap-guide-v {
   width: 1px;
-  background: linear-gradient(to bottom, transparent, #00d4ff 15%, #00d4ff 85%, transparent);
-  box-shadow: 0 0 4px #00d4ff80;
+  background: linear-gradient(to bottom, transparent, var(--color-brand) 15%, var(--color-brand) 85%, transparent);
+  box-shadow: 0 0 4px oklch(53% 0.187 39 / 0.5);
 }
 .snap-guide-h {
   height: 1px;
-  background: linear-gradient(to right, transparent, #00d4ff 15%, #00d4ff 85%, transparent);
-  box-shadow: 0 0 4px #00d4ff80;
+  background: linear-gradient(to right, transparent, var(--color-brand) 15%, var(--color-brand) 85%, transparent);
+  box-shadow: 0 0 4px oklch(53% 0.187 39 / 0.5);
 }
 @keyframes snap-guide-in {
   from { opacity: 0; }

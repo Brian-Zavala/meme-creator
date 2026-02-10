@@ -459,6 +459,7 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                           embedded={true}
                           texts={meme.texts}
                           handleTextChange={handleTextChange}
+                          onTextCommit={handleStyleCommit}
                           onAddSticker={onAddSticker}
                           onMagicCaption={onMagicCaption}
                           isMagicGenerating={isMagicGenerating}

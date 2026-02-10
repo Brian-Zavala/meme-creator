@@ -201,11 +201,12 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            // Only sanitize present state — past/future are already clean from prior saves
-            // and the worker only deep-processes present anyway
+            // Sanitize all history entries for structured clone safety
             const cleanState = {
                 ...stateToSave,
                 present: sanitizeState(stateToSave.present),
+                past: (stateToSave.past || []).map(sanitizeState),
+                future: (stateToSave.future || []).map(sanitizeState),
             };
 
             if (useWorker && worker) {

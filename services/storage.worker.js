@@ -71,14 +71,20 @@ async function saveState(fullHistory) {
 
         let dataToStore;
         if (isFullHistory) {
-            // Only deep-process present state (past/future were already processed when current)
+            // Process all history entries — normalize sourceBlob → url: Blob for IndexedDB
             const processedPresent = await processSingleState(fullHistory.present);
+            const processedPast = await Promise.all(
+                (fullHistory.past || []).map(processSingleState)
+            );
+            const processedFuture = await Promise.all(
+                (fullHistory.future || []).map(processSingleState)
+            );
 
             dataToStore = {
                 version: 2,
                 present: processedPresent,
-                past: fullHistory.past,
-                future: fullHistory.future
+                past: processedPast,
+                future: processedFuture
             };
         } else {
             // Legacy single state mode

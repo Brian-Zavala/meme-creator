@@ -56,9 +56,15 @@ function inflateBlobUrls(state) {
   const processItems = (items) => {
     if (!items) return items;
     return items.map(item => {
+      // Case 1: URL is a raw Blob (from IndexedDB after worker processing)
       if (item.url && item.url instanceof Blob) {
         changed = true;
         return { ...item, url: URL.createObjectURL(item.url), sourceBlob: item.url };
+      }
+      // Case 2: URL is a revoked/dead blob: string, but sourceBlob is preserved
+      if (item.sourceBlob && item.sourceBlob instanceof Blob && typeof item.url === 'string') {
+        changed = true;
+        return { ...item, url: URL.createObjectURL(item.sourceBlob) };
       }
       return item;
     });

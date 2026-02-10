@@ -491,12 +491,6 @@ export default function Main() {
 
   const updateSelectedPanel = (url, memeData, blob) => {
     updateState((prev) => {
-      // Revoke old Object URL if the panel had one
-      const oldPanel = prev.panels.find(p => p.id === prev.activePanelId);
-      if (oldPanel?.url?.startsWith('blob:')) {
-        URL.revokeObjectURL(oldPanel.url);
-      }
-
       const newPanels = prev.panels.map((p) =>
         p.id === prev.activePanelId
           ? {
@@ -1019,12 +1013,6 @@ export default function Main() {
 
         const updatePanelWithImage = (url, blob = null) => {
           updateState((prev) => {
-            // Revoke old Object URL if the panel had one
-            const oldPanel = prev.panels.find(p => p.id === prev.activePanelId);
-            if (oldPanel?.url?.startsWith('blob:')) {
-              URL.revokeObjectURL(oldPanel.url);
-            }
-
             const newPanels = prev.panels.map(p =>
               p.id === prev.activePanelId
                 ? { ...p, url, isVideo: false, sourceBlob: blob, objectFit: "cover", posX: 50, posY: 50, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }

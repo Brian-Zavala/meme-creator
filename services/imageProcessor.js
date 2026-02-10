@@ -1,62 +1,83 @@
 /**
- * Applies deep fry effect to an image using a Web Worker for off-main-thread processing
+ * Applies deep fry effect to an image using a persistent Web Worker
+ * Reuses a single worker instance to avoid repeated creation/teardown overhead
  */
+
+// Persistent worker instance — created once, reused across all calls
+let persistentWorker = null;
+let pendingResolve = null;
+let pendingReject = null;
+
+function getWorker() {
+  if (!persistentWorker) {
+    persistentWorker = new Worker(new URL('./deepFry.worker.js', import.meta.url), { type: 'module' });
+
+    persistentWorker.onmessage = (e) => {
+      if (pendingResolve) {
+        if (e.data.success) {
+          const objectUrl = URL.createObjectURL(e.data.blob);
+          pendingResolve(objectUrl);
+        } else {
+          pendingReject(new Error(e.data.error));
+        }
+        pendingResolve = null;
+        pendingReject = null;
+      }
+    };
+
+    persistentWorker.onerror = (e) => {
+      console.error("Deep Fry Worker Error:", e);
+      if (pendingReject) {
+        pendingReject(e);
+        pendingResolve = null;
+        pendingReject = null;
+      }
+      // Worker is broken — allow recreation on next call
+      persistentWorker = null;
+    };
+  }
+  return persistentWorker;
+}
+
 export async function deepFryImage(imageSrc, level, signal = null) {
   if (!level || level <= 0) return null;
 
-  return new Promise(async (resolve, reject) => {
-    if (signal?.aborted) {
-      return reject(new Error("Aborted"));
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  return new Promise((resolve, reject) => {
+    const worker = getWorker();
+
+    // Cancel any in-flight request
+    if (pendingReject) {
+      pendingReject(new DOMException("Superseded", "AbortError"));
     }
 
-    const worker = new Worker(new URL('./deepFry.worker.js', import.meta.url), { type: 'module' });
-
+    pendingResolve = resolve;
+    pendingReject = reject;
 
     if (signal) {
-      signal.addEventListener('abort', () => {
-        worker.terminate();
-        reject(new DOMException("Aborted", "AbortError"));
-      });
-    }
-
-    worker.onmessage = (e) => {
-      worker.terminate();
-      if (e.data.success) {
-        // PERF: Use ObjectURL (O(1)) instead of FileReader (O(N) + Main Thread Hang)
-        const objectUrl = URL.createObjectURL(e.data.blob);
-        resolve(objectUrl);
-      } else {
-        reject(new Error(e.data.error));
-      }
-    };
-
-    worker.onerror = (e) => {
-      worker.terminate();
-      console.error("Deep Fry Worker Error:", e);
-      reject(e);
-    };
-
-    try {
-      // Handle CORS/Cache issues for non-local images
-      let finalSrc = imageSrc;
-      const isLocal = imageSrc.startsWith('data:') || imageSrc.startsWith('blob:');
-      if (!isLocal) {
-        // PERF: Enforce HTTPS to prevent Mixed Content errors on production
-        if (finalSrc.startsWith('http:')) {
-            finalSrc = finalSrc.replace('http:', 'https:');
+      const onAbort = () => {
+        if (pendingReject === reject) {
+          pendingReject(new DOMException("Aborted", "AbortError"));
+          pendingResolve = null;
+          pendingReject = null;
         }
-        finalSrc += (imageSrc.includes('?') ? '&' : '?') + `t=${Date.now()}`;
-      }
-
-      worker.postMessage({ imageSrc: finalSrc, level });
-
-
-    } catch (err) {
-      worker.terminate();
-      console.error("Deep Fry Setup Error:", err);
-      // Fallback: If createImageBitmap fails (rare), reject or fallback to main thread?
-      // For now, we reject to keep it clean.
-      reject(err);
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
     }
+
+    // Handle CORS/Cache issues for non-local images
+    let finalSrc = imageSrc;
+    const isLocal = imageSrc.startsWith('data:') || imageSrc.startsWith('blob:');
+    if (!isLocal) {
+      if (finalSrc.startsWith('http:')) {
+        finalSrc = finalSrc.replace('http:', 'https:');
+      }
+      finalSrc += (imageSrc.includes('?') ? '&' : '?') + `t=${Date.now()}`;
+    }
+
+    worker.postMessage({ imageSrc: finalSrc, level });
   });
 }

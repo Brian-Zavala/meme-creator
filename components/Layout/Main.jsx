@@ -331,7 +331,12 @@ export default function Main() {
   const [activeTool, setActiveTool] = useState("move");
   const [flashColor, setFlashColor] = useState(null);
   const [editingId, setEditingId] = useState(null); // Track actively edited text (shows blinking cursor)
-  const [isHoveringCanvasElement, setIsHoveringCanvasElement] = useState(false); // Track text/sticker hover for border
+  const hoverBorderRef = useRef(null); // Direct DOM ref for hover border overlay
+  const setIsHoveringCanvasElement = useRef((hovering) => {
+    if (hoverBorderRef.current) {
+      hoverBorderRef.current.style.display = hovering ? '' : 'none';
+    }
+  }).current;
   const memeRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0 });
   const globalLastTapRef = useRef(0);
@@ -340,7 +345,6 @@ export default function Main() {
   const startPosRef = useRef({ x: 0, y: 0 });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const snapGuidesRef = useRef({ x: null, y: null });
-  const [statusMessage, setStatusMessage] = useState("");
   const requestCounterRef = useRef(0);
   const canvasContainerRef = useRef(null);
   const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
@@ -393,53 +397,48 @@ export default function Main() {
   const [showMemeSuggestions, setShowMemeSuggestions] = useState(false);
   const [hoveredMeme, setHoveredMeme] = useState(null);
   const memeSearchRef = useRef(null);
-  const [memeDropdownStyle, setMemeDropdownStyle] = useState({});
+  const memeDropdownRef = useRef(null);
+
+  // Position dropdown via direct DOM manipulation to avoid re-renders on scroll/resize
+  const updateDropdownPosition = useCallback(() => {
+    const el = memeDropdownRef.current;
+    const input = memeSearchRef.current;
+    if (!el || !input) return;
+    const rect = input.getBoundingClientRect();
+    el.style.position = 'fixed';
+    el.style.top = `${rect.bottom + 8}px`;
+    el.style.left = `${rect.left + 12}px`;
+    el.style.width = `${rect.width - 24}px`;
+    el.style.zIndex = '9999';
+  }, []);
 
   // Calculate Image mode dropdown position based on input container
   useLayoutEffect(() => {
-    if (showMemeSuggestions && memeSearchRef.current) {
-      const rect = memeSearchRef.current.getBoundingClientRect();
-      setMemeDropdownStyle({
-        position: 'fixed',
-        top: rect.bottom + 8,
-        left: rect.left + 12, // account for padding
-        width: rect.width - 24, // account for padding on both sides
-        zIndex: 9999
-      });
-    }
-  }, [showMemeSuggestions]);
+    if (showMemeSuggestions) updateDropdownPosition();
+  }, [showMemeSuggestions, updateDropdownPosition]);
 
   // Update position on scroll/resize for Image mode dropdown (throttled)
   useEffect(() => {
     if (!showMemeSuggestions) return;
 
     let rafId = null;
-    const updatePosition = () => {
+    const onUpdate = () => {
       if (rafId) return;
       rafId = requestAnimationFrame(() => {
         rafId = null;
-        if (memeSearchRef.current) {
-          const rect = memeSearchRef.current.getBoundingClientRect();
-          setMemeDropdownStyle({
-            position: 'fixed',
-            top: rect.bottom + 8,
-            left: rect.left + 12,
-            width: rect.width - 24,
-            zIndex: 9999
-          });
-        }
+        updateDropdownPosition();
       });
     };
 
-    window.addEventListener('scroll', updatePosition, true);
-    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', onUpdate, true);
+    window.addEventListener('resize', onUpdate);
 
     return () => {
-      window.removeEventListener('scroll', updatePosition, true);
-      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', onUpdate, true);
+      window.removeEventListener('resize', onUpdate);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [showMemeSuggestions]);
+  }, [showMemeSuggestions, updateDropdownPosition]);
 
   // Filter the ~100 memes locally. Instant.
   const filteredMemes = useMemo(() => {
@@ -2246,7 +2245,7 @@ export default function Main() {
   }
 
   function handleStyleCommit() {
-    updateState((prev) => prev);
+    updateState((prev) => ({ ...prev }));
   }
 
   function handleDrawCommit(newPath) {
@@ -2772,7 +2771,6 @@ export default function Main() {
       ),
       duration: 2500
     });
-    setStatusMessage("Text added at position.");
   }
 
   function addSticker(urlOrEmoji, type = "emoji", isAnimated = false) {
@@ -2793,7 +2791,6 @@ export default function Main() {
         <ToastIcon src="/animations/waste-basket.json" />
       )
     });
-    setStatusMessage("Sticker removed.");
   }
 
   function removeText(id) {
@@ -2807,7 +2804,6 @@ export default function Main() {
       setEditingId(null);
     }
     toast.success("Text removed");
-    setStatusMessage("Text removed.");
   }
 
   function handleCanvasPointerDown() {
@@ -2926,7 +2922,6 @@ export default function Main() {
         duration: 2000,
         icon: <ToastIcon src="/animations/filter-frenzy.json" />
       });
-      setStatusMessage("Magic captions generated.");
       setIsMagicGenerating(false);
 
       showLongPressHint();
@@ -3663,8 +3658,8 @@ export default function Main() {
                     {/* Dropdown Results - Portaled to document.body */}
                     {showMemeSuggestions && createPortal(
                       <div
+                        ref={memeDropdownRef}
                         data-meme-dropdown-portal
-                        style={memeDropdownStyle}
                         className="card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2"
                       >
                         {!memeSearchQuery && (
@@ -3774,12 +3769,12 @@ export default function Main() {
                     />
                   )}
                   {/* Hover Border Overlay - Shows when hovering over OR actively dragging text/stickers */}
-                  {(isHoveringCanvasElement || draggedId) && (
-                    <div
-                      data-html2canvas-ignore="true"
-                      className="absolute inset-0 border-2 border-dashed border-white z-[101] pointer-events-none"
-                    />
-                  )}
+                  <div
+                    ref={hoverBorderRef}
+                    data-html2canvas-ignore="true"
+                    className="absolute inset-0 border-2 border-dashed border-white z-[101] pointer-events-none"
+                    style={{ display: draggedId ? '' : 'none' }}
+                  />
 
                   {/* Crop Selection Overlay */}
                   {isCropping && (

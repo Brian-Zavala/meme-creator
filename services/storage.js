@@ -201,7 +201,12 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            const cleanState = sanitizeState(stateToSave);
+            // Only sanitize present state — past/future are already clean from prior saves
+            // and the worker only deep-processes present anyway
+            const cleanState = {
+                ...stateToSave,
+                present: sanitizeState(stateToSave.present),
+            };
 
             if (useWorker && worker) {
                 await sendRequest('SAVE_STATE', cleanState);
@@ -285,16 +290,15 @@ function processState(state) {
 
     // Check if version 2 history
     if (state.version === 2) {
-        // Handle history arrays safely
-        const past = Array.isArray(state.past) ? state.past.map(processSingleState) : [];
-        const future = Array.isArray(state.future) ? state.future.map(processSingleState) : [];
+        // Only process present — lazily process past/future on undo/redo access
+        // to avoid creating unused Object URLs that pin blobs in memory
         const present = processSingleState(state.present);
 
         return {
             ...state,
-            past,
+            past: Array.isArray(state.past) ? state.past : [],
             present,
-            future
+            future: Array.isArray(state.future) ? state.future : []
         };
     }
 

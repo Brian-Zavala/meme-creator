@@ -18,7 +18,6 @@
     "clsx": "^2.1.1",
     "form-data": "^4.0.5",
     "gif.js": "^0.2.0",
-    "html2canvas-pro": "^1.6.3",
     "lucide-react": "^0.562.0",
     "omggif": "^1.0.10",
     "onnxruntime-web": "^1.21.0-dev.20250206-d981b153d3",

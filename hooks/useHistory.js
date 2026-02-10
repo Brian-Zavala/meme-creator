@@ -44,6 +44,33 @@ function areStatesEqual(a, b) {
   return true;
 }
 
+/**
+ * Lazily inflate Blob URLs in a state entry when it becomes present.
+ * Past/future entries from IndexedDB may have raw Blob objects in panel/sticker URLs
+ * that need conversion to Object URLs before they can be displayed.
+ */
+function inflateBlobUrls(state) {
+  if (!state) return state;
+  let changed = false;
+
+  const processItems = (items) => {
+    if (!items) return items;
+    return items.map(item => {
+      if (item.url && item.url instanceof Blob) {
+        changed = true;
+        return { ...item, url: URL.createObjectURL(item.url), sourceBlob: item.url };
+      }
+      return item;
+    });
+  };
+
+  const panels = processItems(state.panels);
+  const stickers = processItems(state.stickers);
+
+  if (!changed) return state;
+  return { ...state, panels, stickers };
+}
+
 export default function useHistory(initialState, initialHistory = null) {
   // Store all history state in a single object to ensure atomicity
   // and prevent synchronization issues (like the "double click" bug)
@@ -191,7 +218,7 @@ export default function useHistory(initialState, initialHistory = null) {
     setHistory((curr) => {
       if (curr.past.length === 0) return curr;
 
-      const previous = curr.past[curr.past.length - 1];
+      const previous = inflateBlobUrls(curr.past[curr.past.length - 1]);
       const newPast = curr.past.slice(0, -1);
 
       return {
@@ -213,7 +240,7 @@ export default function useHistory(initialState, initialHistory = null) {
     setHistory((curr) => {
       if (curr.future.length === 0) return curr;
 
-      const next = curr.future[0];
+      const next = inflateBlobUrls(curr.future[0]);
       const newFuture = curr.future.slice(1);
 
       return {

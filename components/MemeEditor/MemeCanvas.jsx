@@ -389,7 +389,7 @@ const MemeCanvas = forwardRef(({
   useEffect(() => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
 
     const rect = canvas.getBoundingClientRect();
     if (canvas.width !== rect.width || canvas.height !== rect.height) {
@@ -416,13 +416,17 @@ const MemeCanvas = forwardRef(({
     ctx.globalCompositeOperation = 'source-over';
   }, [meme.drawings, meme.paddingTop, meme.paddingBottom, containerWidth]);
 
+  // Cache draw rect to avoid forced layout reflow on every pointermove
+  const drawRectRef = useRef(null);
+
   const handleDrawStart = (e) => {
     if (activeTool !== 'pen' && activeTool !== 'eraser') return;
     e.stopPropagation();
     setIsDrawing(true);
 
     const canvas = drawCanvasRef.current;
-    const rect = canvas.getBoundingClientRect();
+    drawRectRef.current = canvas.getBoundingClientRect();
+    const rect = drawRectRef.current;
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     currentPathRef.current = [{ x, y }];
@@ -432,13 +436,14 @@ const MemeCanvas = forwardRef(({
     if (!isDrawing) return;
     e.stopPropagation();
 
-    const canvas = drawCanvasRef.current;
-    const rect = canvas.getBoundingClientRect();
+    const rect = drawRectRef.current;
+    if (!rect) return;
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     currentPathRef.current.push({ x, y });
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const canvas = drawCanvasRef.current;
+    const ctx = canvas.getContext('2d');
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = (meme.drawWidth || 5) * (rect.width / 800);

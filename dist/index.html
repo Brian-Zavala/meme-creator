@@ -18,6 +18,12 @@
     <meta name="apple-mobile-web-app-title" content="Meme Creator">
     <meta name="mobile-web-app-capable" content="yes">
 
+    <!-- Critical fonts loaded eagerly (non-blocking) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Bebas+Neue&family=Impact&family=Inter:wght@400;500;600;700;900&family=Lato:wght@400;700;900&family=Montserrat:wght@400;700;900&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Bebas+Neue&family=Impact&family=Inter:wght@400;500;600;700;900&family=Lato:wght@400;700;900&family=Montserrat:wght@400;700;900&display=swap"></noscript>
+
     <meta name="description" content="Create viral memes in seconds with Meme Creator. Features drag-and-drop text, stickers, deep fried filters, undo/redo, and magic AI captions. Free, no watermark, mobile-friendly." />
     <meta name="keywords" content="meme generator, meme creator, free meme maker, no watermark, deep fried meme, sticker meme, react meme app" />
     <meta name="author" content="Meme Creator" />
@@ -101,14 +107,23 @@
         display: none;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-BW_XMNbx.js"></script>
+    <script type="module" crossorigin src="/assets/index-Bjzp76f2.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/vendor-react-DZLG1AjA.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-utils-CYHD1b4D.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-media-Ci4gGdqC.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-analytics--gf8oHIU.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-BGvf3Q_s.css">
+    <link rel="stylesheet" crossorigin href="/assets/index-nudSuusU.css">
   <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
+    <!-- Lazy-load decorative fonts after page is interactive -->
+    <script>
+      requestIdleCallback(function() {
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Archivo+Black&family=Black+Ops+One&family=Bungee&family=Carter+One&family=Cinzel:wght@400;700&family=Comic+Neue:wght@400;700&family=Creepster&family=Fredoka:wght@400;700&family=Luckiest+Guy&family=Oswald:wght@400;700&family=Pacifico&family=Permanent+Marker&family=Press+Start+2P&family=Righteous&family=Rubik+Mono+One&family=Russo+One&family=Special+Elite&display=swap';
+        document.head.appendChild(link);
+      });
+    </script>
   </body>
 </html>

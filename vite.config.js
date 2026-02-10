@@ -10,8 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,onnx}'],
-        maximumFileSizeToCacheInBytes: 30000000, // Increase limit to 30MB for heavy models/animations
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        maximumFileSizeToCacheInBytes: 5000000, // 5MB - excludes WASM/ONNX from precache
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/models/'),
@@ -46,6 +46,20 @@ export default defineConfig({
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+              }
+            }
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith('.wasm') || url.pathname.endsWith('.onnx'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'wasm-models-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
               }
             }
           }
@@ -174,7 +188,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom", "react-hot-toast"],
-          "vendor-media": ["gif.js", "omggif", "html2canvas-pro", "@imgly/background-removal"],
+          "vendor-media": ["gif.js", "omggif", "@imgly/background-removal"],
           "vendor-utils": ["clsx", "tailwind-merge", "lucide-react"],
           "vendor-analytics": ["posthog-js"],
         },

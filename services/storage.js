@@ -241,11 +241,14 @@ function stripHeavyFields(entry) {
 
     if (result.panels) {
         result.panels = result.panels.map(p => {
-            const { sourceBlob, processedImage, processedDeepFryLevel, ...rest } = p;
-            // Strip data URLs from past/future -- they're multi-MB base64 strings.
-            // Remote URLs (https://) and blob: URLs (small reference) are fine.
+            // Keep sourceBlob for undo history!
+            // Only strip derived/cached data
+            const { processedImage, processedDeepFryLevel, ...rest } = p;
+
+            // Strip data URLs (strings) - they are the memory killers.
+            // Blobs are fine (handled by reference/disk).
             if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
-                rest.url = null; // Will show default image on undo
+                rest.url = null;
             }
             return rest;
         });
@@ -253,7 +256,7 @@ function stripHeavyFields(entry) {
 
     if (result.stickers) {
         result.stickers = result.stickers.map(s => {
-            const { sourceBlob, ...rest } = s;
+            const { processedImage, ...rest } = s;
             if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
                 rest.url = null;
             }
@@ -282,23 +285,31 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            // Strip heavy fields from ALL history entries (past/present/future)
-            // Present gets lighter treatment (keep URLs, strip blobs)
+            // Clean present state:
+            // 1. Keep sourceBlob (CRITICAL: used to restore image on reload since blob: URLs expire)
+            // 2. Strip processedImage (temporary cache, can be regenerated)
+            // 3. Strip deepFry level (reset on reload)
             const cleanPresent = sanitizeState(stateToSave.present);
             if (cleanPresent?.panels) {
                 cleanPresent.panels = cleanPresent.panels.map(p => {
-                    const { sourceBlob, processedImage, processedDeepFryLevel, ...rest } = p;
+                    // KEEP sourceBlob!
+                    const { processedImage, processedDeepFryLevel, ...rest } = p;
                     return rest;
                 });
             }
             if (cleanPresent?.stickers) {
                 cleanPresent.stickers = cleanPresent.stickers.map(s => {
-                    const { sourceBlob, ...rest } = s;
+                    const { processedImage, ...rest } = s;
                     return rest;
                 });
             }
 
-            // Past/future get aggressive stripping (remove data URLs too)
+            // Past/future: Strip heavy fields but TRY to keep sourceBlob if possible?
+            // Actually, for history, if we strip sourceBlob, Undo -> breaks image after reload.
+            // But preserving 15 blobs is heavy?
+            // IndexedDB handles blobs by reference usually.
+            // The constraint is 'postMessage' memory.
+            // Let's keep sourceBlob in history too, but strip DATA URLs (strings).
             const cleanState = {
                 ...stateToSave,
                 present: cleanPresent,
@@ -306,19 +317,12 @@ export async function saveState(state) {
                 future: (stateToSave.future || []).map(stripHeavyFields),
             };
 
-            // Size guard: estimate total size before attempting clone.
-            // DataCloneError OOM happens when total exceeds ~50-100MB.
+            // Size guard (~50MB limit)
             const estimatedBytes = estimateSize(cleanState);
             if (estimatedBytes > 50_000_000) {
-                console.warn(`State too large to save (~${(estimatedBytes / 1_000_000).toFixed(1)}MB), skipping`);
-                // Trim history to reduce size and try once more
-                cleanState.past = cleanState.past.slice(-3); // Keep only last 3
+                console.warn(`State too large (~${(estimatedBytes / 1_000_000).toFixed(1)}MB), trimming history`);
+                cleanState.past = cleanState.past.slice(-2); // Aggressive trim
                 cleanState.future = [];
-                const reducedSize = estimateSize(cleanState);
-                if (reducedSize > 50_000_000) {
-                    console.warn('State still too large after trimming, aborting save');
-                    return;
-                }
             }
 
             if (useWorker && worker) {

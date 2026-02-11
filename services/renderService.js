@@ -465,18 +465,29 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
 
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = text.color || 'white';
-        ctx.strokeStyle = text.strokeColor || 'black';
+        ctx.fillStyle = text.color || meme.textColor || 'white';
+        // FIX: Default stroke color to meme.textShadow (which is the outline color in the model)
+        // or black if not set.
+        ctx.strokeStyle = text.strokeColor || meme.textShadow || 'black';
         ctx.globalAlpha = opacity;
 
         // Base font size scaling relative to exportWidth vs 800px base
-        const baseFontSize = (text.fontSize || 40);
+        const baseFontSize = (text.fontSize || meme.fontSize || 40);
         const fontSize = baseFontSize * (exportWidth / 800) * scale;
+
+        // FIX: Match MemeCanvas stroke width calculation
+        // MemeCanvas: stroke = Math.max(1, (fontSize) / 25)
+        // WebkitTextStroke: stroke * 2
+        // So lineWidth should be (fontSize / 25) * 2
+        const strokeWidthBase = Math.max(1, fontSize / 25);
+        ctx.lineWidth = strokeWidthBase * 2;
+
         // FIX: Use the selected font family! (Default to Impact/Roboto if missing)
         // We must quote the font name in case it has spaces (e.g. "Comic Sans MS")
         const fontFamily = text.fontFamily || meme.fontFamily || 'Impact';
-        ctx.font = `900 ${fontSize}px "${fontFamily}", sans-serif`;
-        ctx.lineWidth = (text.strokeWidth || 3) * (exportWidth / 800) * scale;
+        // FIX: Ensure fontWeight 900 (Black) to match "Impact" look
+        ctx.font = `900 ${fontSize}px "${fontFamily}", "Impact", sans-serif`;
+
         ctx.lineJoin = 'round';
         ctx.miterLimit = 2;
 
@@ -504,11 +515,11 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
         ctx.translate(x + xOffset, y + yOffset);
         ctx.rotate(rotation);
 
-        // Shadow Support
-        ctx.shadowColor = 'black';
-        ctx.shadowBlur = 0;
+        // FIX: Add Drop Shadow to match CSS "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))"
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 2 * (exportWidth / 800); // Scale blur
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        ctx.shadowOffsetY = 2 * (exportWidth / 800); // Scale offset
 
         // Wrap Text
         const maxWidth = (text.maxWidth || 90) / 100 * exportWidth;
@@ -536,7 +547,13 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
             // Standard meme text usually grows down or up from anchor.
             // Let's stick to simple line offsets.
             const lineY = (i - (lines.length - 1) / 2) * lineHeight;
-            if (text.strokeWidth > 0) ctx.strokeText(l, 0, lineY);
+
+            // Draw Stroke (Outline)
+            if (ctx.lineWidth > 0) {
+                 ctx.strokeText(l, 0, lineY);
+            }
+
+            // Draw Fill
             ctx.fillText(l, 0, lineY);
         });
 

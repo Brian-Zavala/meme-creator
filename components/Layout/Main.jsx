@@ -512,6 +512,12 @@ export default function Main() {
       // Track Unsplash download for API compliance (fire-and-forget)
       if (memeData.source === "unsplash") trackUnsplashDownload(memeData);
 
+      // Bypass proxy for videos (Pexels supports CORS)
+      if (memeData.isVideo) {
+        updateSelectedPanel(memeData.url, memeData, null);
+        return;
+      }
+
       // Fetch via Weserv to avoid Tainted Canvas and COEP issues
       const response = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(memeData.url)}`);
       if (!response.ok) throw new Error("Weserv failed");
@@ -684,7 +690,7 @@ export default function Main() {
           ? {
             ...p,
             url: url,
-            isVideo: false,
+            isVideo: memeData.isVideo || false,
             sourceBlob: blob,
             objectFit: "cover",
             posX: 50,

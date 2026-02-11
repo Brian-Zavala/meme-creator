@@ -145,6 +145,16 @@ const TOAST_ANIMATIONS = [
   "/animations/cursed.json"
 ];
 
+const safeImport = async (importFn, retries = 3, interval = 1000) => {
+  try {
+    return await importFn();
+  } catch (error) {
+    if (retries === 0) throw error;
+    await new Promise((r) => setTimeout(r, interval));
+    return safeImport(importFn, retries - 1, interval);
+  }
+};
+
 export default function Main() {
   const [isPending, startTransition] = useTransition();
   // NEW: Track hydration status to prevent overwriting DB with default state
@@ -3295,7 +3305,7 @@ export default function Main() {
 
     try {
       const exportMeme = { ...meme, stickersOnly };
-      const { exportMemeAsGif: exportGif } = await import("../../services/gifExporter");
+      const { exportMemeAsGif: exportGif } = await safeImport(() => import("../../services/gifExporter"));
 
       const onProgress = (pct, msg) => {
         toast.loading(`${msg} (${pct}%)`, { id: toastId });
@@ -3322,7 +3332,12 @@ export default function Main() {
       toast.success("Downloaded!", { id: toastId, duration: 5000 });
     } catch (err) {
       console.error("GIF Export Error:", err);
-      toast.error("Export failed", { id: toastId });
+      const isChunkError = err.message?.includes("failed to fetch") || err.message?.includes("Importing a module script failed");
+      if (isChunkError) {
+        toast.error("Update available! Please refresh the page.", { id: toastId, duration: 8000 });
+      } else {
+        toast.error("Export failed", { id: toastId, duration: 5000 });
+      }
     }
   }, [meme, searchQuery]);
 
@@ -3333,7 +3348,7 @@ export default function Main() {
     const toastId = toast.loading("Initializing MP4 Encoder...", { duration: Infinity });
 
     try {
-      const { exportMemeAsMp4 } = await import("../../services/mp4Exporter");
+      const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
 
       const onProgress = (pct, msg) => {
         toast.loading(`${msg} (${pct}%)`, { id: toastId });
@@ -3361,7 +3376,12 @@ export default function Main() {
       toast.success("MP4 Downloaded!", { id: toastId, duration: 5000 });
     } catch (err) {
       console.error("MP4 Export Error:", err);
-      toast.error("Export failed: " + err.message, { id: toastId });
+      const isChunkError = err.message?.includes("failed to fetch") || err.message?.includes("Importing a module script failed");
+      if (isChunkError) {
+        toast.error("Update available! Please refresh the page.", { id: toastId, duration: 8000 });
+      } else {
+        toast.error("Export failed: " + err.message, { id: toastId, duration: 5000 });
+      }
     }
   }, [meme, searchQuery]);
 
@@ -3376,14 +3396,19 @@ export default function Main() {
       const toastId = toast.loading("Exporting sticker...", { duration: Infinity });
       try {
         // Use our new direct PNG exporter!
-        const { exportStickersAsPng } = await import("../../services/gifExporter");
+        const { exportStickersAsPng } = await safeImport(() => import("../../services/gifExporter"));
         const blob = await exportStickersAsPng(meme, meme.stickers);
         const filename = `stickers-${Date.now()}.png`;
         await triggerDownload(blob, filename);
         triggerFireworks();
-        toast.success("Downloaded!", { id: toastId });
+        toast.success("Downloaded!", { id: toastId, duration: 5000 });
       } catch (e) {
-        toast.error("Export failed", { id: toastId });
+        const isChunkError = e.message?.includes("failed to fetch");
+        if (isChunkError) {
+           toast.error("Update available! Please refresh.", { id: toastId, duration: 8000 });
+        } else {
+           toast.error("Export failed", { id: toastId, duration: 5000 });
+        }
       }
       return;
     }
@@ -3391,7 +3416,7 @@ export default function Main() {
     const toastId = toast.loading("Generating...", { duration: Infinity });
     try {
       // REPLACED: html2canvas with native renderer for filter consistency
-      const { exportImageAsPng } = await import("../../services/gifExporter");
+      const { exportImageAsPng } = await safeImport(() => import("../../services/gifExporter"));
       const blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
 
       const safeName = (meme.name || 'meme')
@@ -3405,10 +3430,15 @@ export default function Main() {
       const filename = `${safeName}-${Date.now()}.png`;
       await triggerDownload(blob, filename);
       triggerFireworks();
-      toast.success("Downloaded!", { id: toastId });
+      toast.success("Downloaded!", { id: toastId, duration: 5000 });
     } catch (err) {
       console.error("Image Export Error:", err);
-      toast.error("Export failed", { id: toastId });
+      const isChunkError = err.message?.includes("failed to fetch");
+      if (isChunkError) {
+         toast.error("Update available! Please refresh.", { id: toastId, duration: 8000 });
+      } else {
+         toast.error("Export failed", { id: toastId, duration: 5000 });
+      }
     }
   }, [meme, searchQuery]);
 

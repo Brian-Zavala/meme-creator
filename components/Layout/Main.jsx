@@ -23,7 +23,7 @@ const MemeToolbar = lazy(() => import("../MemeEditor/MemeToolbar"));
 const LayoutSelector = lazy(() => import("../MemeEditor/LayoutSelector").then(module => ({ default: module.LayoutSelector })));
 const ExportConfirmModal = lazy(() => import("../Modals/ExportConfirmModal").then(module => ({ default: module.ExportConfirmModal })));
 const SnippetSuccessModal = lazy(() => import("../Modals/SnippetSuccessModal").then(module => ({ default: module.SnippetSuccessModal })));
-const ToastIcon = lazy(() => import("../ui/ToastIcon").then(module => ({ default: module.ToastIcon })));
+import { ToastIcon } from "../ui/ToastIcon";
 const MemeStickerSection = lazy(() => import("../MemeEditor/MemeStickerSection").then(module => ({ default: module.MemeStickerSection })));
 
 // Lazy-loaded editor tools

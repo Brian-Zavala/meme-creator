@@ -1,51 +1,20 @@
-import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
-// Use DotLottieWorkerReact -- offloads ALL animation rendering to a Web Worker.
-// This completely eliminates main thread blocking from Lottie animations.
-const LazyDotLottieWorker = React.lazy(() =>
-    import('@lottiefiles/dotlottie-react').then(module => ({
-        default: module.DotLottieWorkerReact
-    }))
-);
-
-/**
- * Convert relative URLs to absolute for Web Worker compatibility.
- * Workers can't resolve relative paths like "/animations/fire.json"
- * because they don't share the page's base URL.
- */
-function toAbsoluteUrl(src) {
-    if (!src) return src;
-    // Already absolute
-    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('blob:')) {
-        return src;
-    }
-    // Relative path -> absolute
-    try {
-        return new URL(src, window.location.origin).href;
-    } catch {
-        return src;
-    }
-}
+// NOTE: We avoid React.lazy + Suspense here because React Concurrent Mode (startTransition)
+// causes Suspense boundaries to hide/reveal, which triggers "reappearLayoutEffects".
+// This was causing DotLottieWorkerReact to crash with "InvalidStateError: Cannot transfer control from a canvas...".
+//
+// SOLUTION: Imperative dynamic import in useEffect.
+// We load the STANDARD (non-worker) DotLottieReact to avoid transferControlToOffscreen issues entirely.
+// The worker version is great for main thread unblocking, but too fragile with React 18/19 transitions for now.
 
 /**
  * LottieAnimation Component
  *
- * Renders Lottie animations via Web Worker (off main thread).
- * - Uses DotLottieWorkerReact to prevent main thread blocking
- * - Shared workerId groups animations into a single worker
- * - freezeOnOffscreen pauses animations when not in viewport
- * - IntersectionObserver-based lazy mounting (only loads when visible)
- * - Converts relative URLs to absolute for Worker compatibility
- */
-/**
- * LottieAnimation Component
- *
- * Renders Lottie animations via Web Worker (off main thread).
- * - Uses DotLottieWorkerReact to prevent main thread blocking
- * - Shared workerId groups animations into a single worker
- * - freezeOnOffscreen pauses animations when not in viewport
- * - IntersectionObserver-based lazy mounting (only loads when visible)
- * - Converts relative URLs to absolute for Worker compatibility
+ * Renders Lottie animations using DotLottieReact (standard version).
+ * - Code-split via dynamic import in useEffect (no Suspense boundary)
+ * - IntersectionObserver-based lazy mounting (only loads/plays when visible)
+ * - Immune to React concurrent mode "hide/reveal" crashes
  */
 const LottieAnimation = React.memo(({
     src,
@@ -55,14 +24,14 @@ const LottieAnimation = React.memo(({
     style = {},
     width = '100%',
     height = '100%',
-    workerId = 'shared-lottie-worker',
+    // workerId prop is ignored now, but kept for API compatibility
     ...props
 }) => {
     const containerRef = useRef(null);
     const [isVisible, setIsVisible] = useState(false);
+    const [DotLottieComponent, setDotLottieComponent] = useState(null);
 
-    // Only mount the animation when the container scrolls into view.
-    // This prevents all remix backgrounds from initializing simultaneously.
+    // 1. Visibility Check (IntersectionObserver)
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
@@ -86,41 +55,43 @@ const LottieAnimation = React.memo(({
         return () => observer.disconnect();
     }, []);
 
-    // Convert relative src to absolute for Worker fetch compatibility
-    const absoluteSrc = toAbsoluteUrl(src);
+    // 2. Dynamic Import (Code Splitting without Suspense)
+    useEffect(() => {
+        if (isVisible && !DotLottieComponent) {
+            import('@lottiefiles/dotlottie-react').then(module => {
+                // Use the standard React component, NOT the worker one
+                setDotLottieComponent(() => module.DotLottieReact);
+            }).catch(err => {
+                console.warn('Failed to load Lottie player:', err);
+            });
+        }
+    }, [isVisible, DotLottieComponent]);
+
 
     // Dynamic DPI for quality
     const dpr = typeof window !== 'undefined'
         ? (window.innerWidth >= 1024 ? Math.max(window.devicePixelRatio || 2, 2) : 1)
         : 1;
 
-    // Memoize renderConfig to prevent unnecessary re-initialization of worker
-    // which causes "InvalidStateError: Cannot transfer control from a canvas for more than one time"
+    // Memoize renderConfig
     const renderConfig = useMemo(() => ({
         devicePixelRatio: dpr,
         freezeOnOffscreen: true,
     }), [dpr]);
 
-    // Memoize the style object passed to the worker component
-    const workerStyle = useMemo(() => ({
-        width: '100%',
-        height: '100%'
-    }), []);
-
     return (
         <div ref={containerRef} className={className} style={{ width, height, ...style }}>
-            {isVisible && (
-                <Suspense fallback={<div style={{ width, height }} />}>
-                    <LazyDotLottieWorker
-                        src={absoluteSrc}
-                        loop={loop}
-                        autoplay={autoplay}
-                        workerId={workerId}
-                        renderConfig={renderConfig}
-                        style={workerStyle}
-                        {...props}
-                    />
-                </Suspense>
+            {isVisible && DotLottieComponent ? (
+                <DotLottieComponent
+                    src={src}
+                    loop={loop}
+                    autoplay={autoplay}
+                    renderConfig={renderConfig}
+                    {...props}
+                />
+            ) : (
+                // Lightweight placeholder while loading
+                <div style={{ width, height }} />
             )}
         </div>
     );

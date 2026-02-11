@@ -1,43 +1,54 @@
-import React, { Suspense } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
-// Use Worker variant for toast icons too -- keeps main thread clean
-const LazyDotLottieWorker = React.lazy(() =>
-    import('@lottiefiles/dotlottie-react').then(module => ({
-        default: module.DotLottieWorkerReact
-    }))
-);
+// NOTE: No React.lazy + Suspense here — see LottieAnimation.jsx for the full explanation.
+// ToastIcon is rendered inside react-hot-toast portals, which are outside the Main component's
+// Suspense boundaries. Using React.lazy here caused the entire page to flash on first toast.
 
 const getDevicePixelRatio = () =>
   typeof window !== 'undefined' ? Math.max(window.devicePixelRatio || 2, 2) : 2;
 
-/**
- * Convert relative URLs to absolute for Web Worker compatibility.
- */
-function toAbsoluteUrl(src) {
-    if (!src) return src;
-    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('blob:')) {
-        return src;
-    }
-    try {
-        return new URL(src, window.location.origin).href;
-    } catch {
-        return src;
-    }
+// Module-level cache so all ToastIcon instances share a single import
+let _DotLottieReact = null;
+let _importPromise = null;
+
+function loadDotLottie() {
+  if (_DotLottieReact) return Promise.resolve(_DotLottieReact);
+  if (!_importPromise) {
+    _importPromise = import('@lottiefiles/dotlottie-react').then(module => {
+      _DotLottieReact = module.DotLottieReact;
+      return _DotLottieReact;
+    });
+  }
+  return _importPromise;
 }
 
 export function ToastIcon({ src, size = 32 }) {
+  const [Component, setComponent] = useState(() => _DotLottieReact);
+
+  useEffect(() => {
+    if (!Component) {
+      loadDotLottie().then(C => setComponent(() => C)).catch(() => {});
+    }
+  }, [Component]);
+
+  const renderConfig = useMemo(() => ({
+    devicePixelRatio: getDevicePixelRatio(),
+    freezeOnOffscreen: true,
+  }), []);
+
   return (
     <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Suspense fallback={<div style={{ width: size, height: size }} />}>
-        <LazyDotLottieWorker
-          src={toAbsoluteUrl(src)}
+      {Component ? (
+        <Component
+          src={src}
           loop
           autoplay
-          workerId="toast-lottie-worker"
           style={{ width: '100%', height: '100%' }}
-          renderConfig={{ devicePixelRatio: getDevicePixelRatio(), freezeOnOffscreen: true }}
+          renderConfig={renderConfig}
         />
-      </Suspense>
+      ) : (
+        <div style={{ width: size, height: size }} />
+      )}
     </div>
   );
 }

@@ -3296,7 +3296,12 @@ export default function Main() {
     try {
       const exportMeme = { ...meme, stickersOnly };
       const { exportGif } = await import("../../services/gifExporter");
-      const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
+
+      const onProgress = (pct, msg) => {
+        toast.loading(`${msg} (${pct}%)`, { id: toastId });
+      };
+
+      const blob = await exportGif(exportMeme, meme.texts, meme.stickers, onProgress);
       if (meme.id) registerShare(meme.id, searchQuery);
 
       const safeName = (meme.name || 'meme')
@@ -3311,13 +3316,52 @@ export default function Main() {
       await triggerDownload(blob, filename);
       triggerFireworks();
 
-      // Artificial delay to let the "Encoding..." toast be visible for a moment longer
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Artificial delay removed per user request for dynamic timing
+      // await new Promise(resolve => setTimeout(resolve, 1000));
 
       toast.success("Downloaded!", { id: toastId, duration: 5000 });
     } catch (err) {
       console.error("GIF Export Error:", err);
       toast.error("Export failed", { id: toastId });
+    }
+  }, [meme, searchQuery]);
+
+  // Helper: Execute MP4 export
+  const handleExportMp4 = useCallback(async () => {
+    if (!memeRef.current) return;
+
+    const toastId = toast.loading("Initializing MP4 Encoder...", { duration: Infinity });
+
+    try {
+      const { exportMemeAsMp4 } = await import("../../services/mp4Exporter");
+
+      const onProgress = (pct, msg) => {
+        toast.loading(`${msg} (${pct}%)`, { id: toastId });
+      };
+
+      const blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress);
+
+      if (meme.id) registerShare(meme.id, searchQuery);
+
+      const safeName = (meme.name || 'meme')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50)
+        || 'meme';
+
+      const filename = `${safeName}-${Date.now()}.mp4`;
+      await triggerDownload(blob, filename);
+      triggerFireworks();
+
+      // Artificial delay removed per user request for dynamic timing
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast.success("MP4 Downloaded!", { id: toastId, duration: 5000 });
+    } catch (err) {
+      console.error("MP4 Export Error:", err);
+      toast.error("Export failed: " + err.message, { id: toastId });
     }
   }, [meme, searchQuery]);
 
@@ -3329,7 +3373,7 @@ export default function Main() {
 
     // Special Case: Static Sticker Export via PNG (Transparent)
     if (stickersOnly) {
-      const toastId = toast.loading("Exporting sticker...");
+      const toastId = toast.loading("Exporting sticker...", { duration: Infinity });
       try {
         // Use our new direct PNG exporter!
         const { exportStickersAsPng } = await import("../../services/gifExporter");
@@ -3344,7 +3388,7 @@ export default function Main() {
       return;
     }
 
-    const toastId = toast.loading("Generating...");
+    const toastId = toast.loading("Generating...", { duration: Infinity });
     try {
       // REPLACED: html2canvas with native renderer for filter consistency
       const { exportImageAsPng } = await import("../../services/gifExporter");
@@ -3378,8 +3422,10 @@ export default function Main() {
     const hasAnyStickers = meme.stickers.length > 0;
 
     // If the base image is already animated (GIF/video), always export as GIF
+    // Update: Now we offer MP4 option too, so show modal
     if (hasVideoPanel) {
-      doGifExport();
+      // doGifExport(); // OLD: Auto-export GIF
+      setShowExportModal(true); // NEW: Show choice
       return;
     }
 
@@ -3841,6 +3887,7 @@ export default function Main() {
                 isOpen={showExportModal}
                 onClose={() => { setShowExportModal(false); setIsStickerExport(false); }}
                 onExportGif={() => doGifExport({ stickersOnly: isStickerExport })}
+                onExportMp4={handleExportMp4}
                 onExportStatic={() => doStaticExport({ stickersOnly: isStickerExport, forceStatic: isStickerExport })}
                 isStickerOnly={isStickerExport}
               />

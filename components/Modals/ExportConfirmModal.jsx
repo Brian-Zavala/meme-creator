@@ -1,11 +1,11 @@
-import { Film, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Film, Image as ImageIcon, Sparkles, Video } from "lucide-react";
 import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 
 /**
  * Modal to confirm export format when static image has animated content
  * Lets user choose between GIF (keep animations) or PNG (static export)
  */
-export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStatic, isStickerOnly }) {
+export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportMp4, onExportStatic, isStickerOnly }) {
     useLockBodyScroll(isOpen);
 
     if (!isOpen) return null;
@@ -57,6 +57,22 @@ export function ExportConfirmModal({ isOpen, onClose, onExportGif, onExportStati
                             <span className="absolute top-1 right-1 sm:top-2 sm:right-2 text-[length:clamp(0.45rem,1.5vw,0.625rem)] bg-brand/20 text-brand font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full uppercase tracking-wider shadow-sm">
                                 Recommended
                             </span>
+                        </button>
+
+                        {/* MP4 Export Option */}
+                        <button
+                            onClick={() => { onClose(); onExportMp4(); }}
+                            className="group relative bg-[#181818]/50 hover:bg-[#222222] border-2 border-[#2f3336] hover:border-brand/40 rounded-2xl p-4 transition-all active:scale-[0.98]"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                                    <Video className="w-6 h-6 text-purple-400" />
+                                </div>
+                                <div className="text-left flex-1">
+                                    <p className="text-white font-bold text-sm sm:text-base whitespace-nowrap">Export Video</p>
+                                    <p className="text-slate-400 text-xs">Save as MP4 (Higher Quality)</p>
+                                </div>
+                            </div>
                         </button>
 
                         {/* Static Export Option */}

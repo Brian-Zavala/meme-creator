@@ -1,694 +1,173 @@
 import GIF from 'gif.js';
-import { GifReader } from 'omggif';
-import { getAnimationById, hasAnimatedText, calculateGifLoopDuration } from '../constants/textAnimations';
+import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnimations';
+import { loadMemeAssets, renderMemeFrame, calculateDimensions, applyDeepFry } from './renderService';
 
-async function createGifProcessor(url) {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const arrayBuffer = await response.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        const reader = new GifReader(uint8Array);
-
-        const width = reader.width;
-        const height = reader.height;
-            const numFrames = reader.numFrames();
-
-        // Pre-calculate frame timing for accurate playback
-        const frameDelays = [];
-        let totalDuration = 0;
-        const cumulativeDelays = [0]; // Start at 0
-
-        for(let i=0; i<numFrames; i++) {
-            const info = reader.frameInfo(i);
-            const delay = (info.delay || 10) * 10; // Convert to ms (default 100ms if 0)
-            frameDelays.push(delay);
-            totalDuration += delay;
-            cumulativeDelays.push(totalDuration); // cumulativeDelays[i+1] is end time of frame i
-        }
-
-        // Canvas to hold the CURRENT state of the GIF (accumulated frames)
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        // Helper for decoding
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = width;
-        tempCanvas.height = height;
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-        const rawFrameData = new Uint8ClampedArray(width * height * 4);
-
-        let previousInfo = null;
-        let savedState = null; // For disposal = 3
-        let currentFrameIndex = -1;
-
-        return {
-            width,
-            height,
-            numFrames,
-            // Returns total duration of the GIF in ms
-            getDuration: () => totalDuration,
-
-            // Returns the correct frame index for a specific time (ms) in the loop
-            getFrameAtTime: (timeMs) => {
-                if (numFrames <= 1) return 0;
-                // Handle looping
-                const t = timeMs % totalDuration;
-
-                // Find frame where accum[i] <= t < accum[i+1]
-                // accum array has numFrames + 1 entries
-                // We want to find the first index where cumulativeDelays[index] > t
-                // Then the frame index is index - 1
-                const idx = cumulativeDelays.findIndex(d => d > t);
-
-                // If not found (shouldn't happen if logic is correct, but safe fallback), return last frame
-                return idx === -1 ? numFrames - 1 : Math.max(0, idx - 1);
-            },
-
-            // getDelay returns delay in centiseconds (1/100s) - GIF format standard
-            getDelay: (frameIndex = 0) => reader.frameInfo(Math.min(frameIndex, numFrames - 1)).delay,
-            // Get all frame delays for accurate timing export
-            getAllDelays: () => {
-                const delays = [];
-                for (let i = 0; i < numFrames; i++) {
-                    delays.push(reader.frameInfo(i).delay);
-                }
-                return delays;
-            },
-            // Renders the specific frame index to the internal canvas and returns it
-            renderFrame: (frameIndex) => {
-                // If we are asking for the next frame sequentially, great.
-                // If we skipped or looped, we might need to reset or seek.
-                // For simple looping (0 -> 1 -> ... -> N -> 0), we handle the wrap properly.
-
-                if (frameIndex === 0 && currentFrameIndex !== -1) {
-                    // Reset state for loop
-                    // MOBILE FIX: Use fillRect with transparent before clear to ensure
-                    // canvas is in a known state on all platforms (iOS Safari fix)
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.clearRect(0, 0, width, height);
-                    previousInfo = null;
-                    savedState = null;
-                    currentFrameIndex = -1;
-                }
-
-                // If we missed frames (shouldn't happen in our loop), we technically should catch up.
-                // But we assume sequential access for export.
-                if (frameIndex <= currentFrameIndex) return canvas; // Already there or behind (handled by reset above)
-
-                // Advance from currentFrameIndex + 1 to frameIndex
-                for (let i = currentFrameIndex + 1; i <= frameIndex; i++) {
-                    const info = reader.frameInfo(i);
-
-                    // Disposal from PREVIOUS frame
-                    if (i > 0 && previousInfo) {
-                        const { disposal, x, y, width: fW, height: fH } = previousInfo;
-                        if (disposal === 2) {
-                            ctx.clearRect(x, y, fW, fH);
-                        } else if (disposal === 3 && savedState) {
-                            ctx.putImageData(savedState, 0, 0);
-                        }
-                    }
-
-                    // Save state for THIS frame if needed
-                    if (info.disposal === 3) {
-                        savedState = ctx.getImageData(0, 0, width, height);
-                    }
-
-                    // Draw THIS frame
-                    rawFrameData.fill(0);
-                    reader.decodeAndBlitFrameRGBA(i, rawFrameData);
-                    const imageData = new ImageData(rawFrameData, width, height);
-                    tempCtx.putImageData(imageData, 0, 0);
-                    ctx.drawImage(tempCanvas, 0, 0);
-
-                    previousInfo = info;
-                }
-
-                currentFrameIndex = frameIndex;
-                const delay = reader.frameInfo(frameIndex).delay;
-                return { canvas, delay };
-            }
-        };
-    } catch (e) {
-        console.error("Failed to load GIF:", url, e);
-        return null; // Return null if not a valid GIF (maybe it's a static image masquerading?)
-    }
-}
 
 /**
  * Exports a meme as an animated GIF
  * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
  */
+export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
+    // 1. Load all assets (GIFs, Videos, Images)
+    if (onProgress) onProgress(10, "Loading assets...");
+    const assets = await loadMemeAssets(meme, stickers);
+
+    // 1b. Optimize Deep Fry: Pre-calculate fried versions of STATIC images
+    // This provides a HUGE speed boost (10x+) as we only deep fry once per image, instead of every frame
+    assets.friedImages = {};
+
+    for (const panel of meme.panels) {
+       // Only process static images that requested deep fry
+       if (assets.staticImages[panel.id] && (panel.filters?.deepFry || 0) > 0) {
+           const imgSrc = assets.staticImages[panel.id];
+           const canvas = document.createElement('canvas');
+           canvas.width = imgSrc.width;
+           canvas.height = imgSrc.height;
+           const ctx = canvas.getContext('2d');
+           ctx.drawImage(imgSrc, 0, 0);
+
+           // Apply Deep Fry ONCE
+           applyDeepFry(ctx, 0, 0, canvas.width, canvas.height, panel.filters.deepFry);
+
+           // Store the fried version for the renderer to use directly
+           assets.friedImages[panel.id] = canvas;
+       }
+    }
 
 
-async function createVideoProcessor(url) {
-    return new Promise((resolve) => {
-        const video = document.createElement('video');
-        // FIX: Do NOT set crossOrigin for blob/data URLs (local uploads)
-        if (!url.startsWith('data:') && !url.startsWith('blob:')) {
-            video.crossOrigin = "anonymous";
-        }
-        video.src = url;
-        video.muted = true;
-        video.playsInline = true;
+    if (onProgress) onProgress(20, "Analyzing dimensions...");
 
-        // Cleanup helper
-        const cleanup = () => {
-            video.pause();
-            video.src = "";
-            video.load();
+    // 2. Calculate Dimensions
+    let dimensions = calculateDimensions(meme, assets);
+    let { exportWidth, exportHeight } = dimensions; // Get dimensions that include padding
+
+    // QUALITY/SPEED BALANCE:
+    // GIFs are huge. We cap max dimension to 600px for speed and file size unless 'High Quality' is requested (Todo)
+    // 600px is standard for decent quality GIFs that load fast.
+    const MAX_GIF_DIMENSION = 600;
+    if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
+        const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
+        exportWidth = Math.round(exportWidth * scale);
+        exportHeight = Math.round(exportHeight * scale);
+
+        // Update dimensions object for renderMemeFrame
+        dimensions = {
+            ...dimensions,
+            exportWidth,
+            exportHeight,
+            contentHeight: Math.round(dimensions.contentHeight * scale),
+            contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
+            contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
         };
-
-        video.onloadedmetadata = () => {
-             // CAP DURATION to 5 seconds max for GIF export safety
-            const MAX_DURATION = 5.0; // seconds
-            const duration = Math.min(video.duration, MAX_DURATION);
-            const width = video.videoWidth;
-            const height = video.videoHeight;
-            const fps = 10; // Reduced FPS for GIF file size safety
-            const numFrames = Math.floor(duration * fps);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-            console.log(`Initialized Video Processor: ${width}x${height}, ${duration}s cap, ${numFrames} frames`);
+        console.log(`Scaled GIF export dimensions to ${exportWidth}x${exportHeight}`);
+    }
 
 
-            resolve({
-                width,
-                height,
-                numFrames,
-                getDelay: () => 1000 / fps / 10, // delay in centiseconds (1/100s)
-                renderFrame: async (frameIndex) => {
-                    // ASYNC SEEK: Wait for video to actually seek before drawing
-                    const time = frameIndex / fps;
-                    video.currentTime = time;
-
-                    await new Promise(r => {
-                         // If already there (rare with floats), resolve. Else wait.
-                         // But for robustness, just setting onseeked is safest.
-                         const clean = () => {
-                             video.removeEventListener('seeked', handler);
-                             r();
-                         };
-                         const handler = () => clean();
-                         video.addEventListener('seeked', handler, { once: true });
-
-                         // Fallback in case seeked doesn't fire (browser quirk)
-                         setTimeout(clean, 500);
-                    });
-
-                    // Clear and Draw
-                    ctx.drawImage(video, 0, 0, width, height);
-
-                    return { canvas, delay: 10 };
-                },
-                cleanup
-            });
-
-        };
-
-        video.onerror = (e) => {
-            console.error("Failed to load video for export", e);
-            resolve(null);
-        };
+    // 3. Setup GIF Encoder
+    const gif = new GIF({
+        workers: 4, // Max workers for speed (check browser limits)
+        quality: 10, // 10 is decent, 1 is best (slower)
+        width: exportWidth,
+        height: exportHeight,
+        workerScript: '/gif.worker.js', // Ensure this file exists in /public
+        dither: true // Better colors
     });
-}
 
-/**
- * Exports a meme as an animated GIF
- * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
- */
+    if (onProgress) onProgress(30, "Rendering frames...");
 
-
-async function loadMemeAssets(meme, stickers) {
-    const gifProcessors = {};
-    const staticImages = {};
-    const stickerProcessors = {};
-    const stickerImages = {};
-
-    // Helper: get a usable URL for loading, with sourceBlob fallback for stale blob URLs
-    const getLoadableUrl = (item) => {
-        if (item.url && !item.url.startsWith('blob:')) return item.url; // Regular URLs are always fine
-        if (item.url) return item.url; // Try the blob URL first
-        // If no URL but we have a sourceBlob, create a fresh one
-        if (item.sourceBlob instanceof Blob) {
-            return URL.createObjectURL(item.sourceBlob);
-        }
-        return null;
-    };
-
-    // Helper: attempt to load an image with sourceBlob fallback
-    const loadImageWithFallback = async (item) => {
-        const url = item.url || (item.sourceBlob instanceof Blob ? URL.createObjectURL(item.sourceBlob) : null);
-        if (!url) return null;
-        try {
-            const img = new Image();
-            if (!url.startsWith('data:') && !url.startsWith('blob:')) {
-                img.crossOrigin = "anonymous";
-            }
-            img.src = url;
-            await img.decode();
-            return img;
-        } catch (err) {
-            // If blob URL failed and we have sourceBlob, try a fresh URL
-            if (url.startsWith('blob:') && item.sourceBlob instanceof Blob) {
-                try {
-                    const freshUrl = URL.createObjectURL(item.sourceBlob);
-                    const img = new Image();
-                    img.src = freshUrl;
-                    await img.decode();
-                    return img;
-                } catch (retryErr) {
-                    console.warn("Retry with sourceBlob also failed:", retryErr);
-                }
-            }
-            console.warn("Failed to load/decode image:", url.substring(0, 50) + "...", err);
-            return null;
-        }
-    };
-
-    await Promise.all(meme.panels.map(async (panel) => {
-        const url = getLoadableUrl(panel);
-        if (!url) return;
-
-        let processor = null;
-
-        // FIX: Check for GIF FIRST (isGif flag, URL pattern, or data URL mime type)
-        // This prevents GIFs from being incorrectly routed to createVideoProcessor
-        // which fails because <video> elements cannot load animated GIFs.
-        // Blob URLs from user uploads don't contain '.gif', so the isGif flag is critical.
-        const isGif = panel.isGif ||
-                      url.includes('.gif') ||
-                      url.startsWith('data:image/gif');
-
-        // Only treat as video if it's NOT a GIF
-        const isVideo = !isGif && (
-            panel.isVideo ||
-            url.startsWith('data:video') ||
-            url.match(/\.(mp4|webm|mov)$/i)
-        );
-
-        if (isGif) {
-            processor = await createGifProcessor(url);
-            // Fallback: if blob URL failed, try sourceBlob
-            if (!processor && panel.sourceBlob instanceof Blob) {
-                const freshUrl = URL.createObjectURL(panel.sourceBlob);
-                processor = await createGifProcessor(freshUrl);
-            }
-        } else if (isVideo) {
-            processor = await createVideoProcessor(url);
-        }
-
-        if (processor) {
-            gifProcessors[panel.id] = processor;
-        } else if (!isGif || !processor) {
-            // Fallback to Static Image (if not animated or processor failed)
-            const img = await loadImageWithFallback(panel);
-            if (img) staticImages[panel.id] = img;
-        }
-    }));
-
-    await Promise.all((stickers || []).filter(s => s.type === 'image' || s.type === 'giphy' || s.type === 'tenor').map(async (s) => {
-        let processor = null;
-        if (s.isAnimated || s.url.includes('.gif')) {
-            processor = await createGifProcessor(s.url);
-            // Fallback: try sourceBlob if blob URL failed
-            if (!processor && s.sourceBlob instanceof Blob) {
-                const freshUrl = URL.createObjectURL(s.sourceBlob);
-                processor = await createGifProcessor(freshUrl);
-            }
-            if (processor) stickerProcessors[s.id] = processor;
-        }
-
-        if (!processor) {
-            const img = await loadImageWithFallback(s);
-            if (img) stickerImages[s.id] = img;
-        }
-    }));
-
-    return { gifProcessors, staticImages, stickerProcessors, stickerImages };
-}
-
-/**
- * Renders a single frame of the meme to the canvas context
- */
-async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, dimensions, options = {}) {
-    const { gifProcessors, staticImages, stickerProcessors, stickerImages } = assets;
-    const { exportWidth, exportHeight, contentHeight, contentOffsetY, baseWidth = 800 } = dimensions;
-    const { stickersOnly = false, totalFrames = 1, exportDelayMs = 100, gifLoopDurationMs = 1000, currentTimeMs = null } = options;
-    // Use passed currentTimeMs for accurate timing, or calculate from frame index as fallback
-    const effectiveTimeMs = currentTimeMs !== null ? currentTimeMs : frameIndex * exportDelayMs;
-
-
-    // MOBILE FIX: Ensure canvas context is valid before proceeding
-    if (!ctx || typeof ctx.fillRect !== 'function') {
-        console.error('Canvas context unavailable - possible memory issue on mobile');
-        return;
-    }
-
-    ctx.globalCompositeOperation = 'source-over';
-
-    // MOBILE FIX: For regular export, fill FIRST then content - prevents transparent flash on iOS
-    // For stickersOnly mode, we need true transparency so clear only
-    if (!stickersOnly) {
-        const paddingTop = meme.paddingTop || 0;
-        const paddingBottom = meme.paddingBottom || 0;
-
-        // Black background FIRST (before any clear) - iOS Safari fix
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, exportWidth, exportHeight);
-
-        // Top caption bar with custom color
-        if (paddingTop > 0) {
-            const topBarHeight = Math.round(exportWidth * (paddingTop / 100));
-            ctx.fillStyle = meme.paddingTopColor || '#ffffff';
-            ctx.fillRect(0, 0, exportWidth, topBarHeight);
-        }
-
-        // Bottom caption bar with custom color
-        if (paddingBottom > 0) {
-            const bottomBarHeight = Math.round(exportWidth * (paddingBottom / 100));
-            ctx.fillStyle = meme.paddingBottomColor || '#ffffff';
-            ctx.fillRect(0, exportHeight - bottomBarHeight, exportWidth, bottomBarHeight);
-        }
-    } else {
-        // STICKERS ONLY: Need true transparency - clear to transparent
-        ctx.clearRect(0, 0, exportWidth, exportHeight);
-    }
-
-
-    if (!stickersOnly) {
-        for (const panel of meme.panels) {
-            // FIX: Don't skip panels that have loaded assets even if panel.url is stale/null
-            // This can happen after Dexie state restore when blob URLs weren't rehydrated
-            const hasLoadedAsset = gifProcessors[panel.id] || staticImages[panel.id] || (assets.friedImages && assets.friedImages[panel.id]);
-            if (!panel.url && !hasLoadedAsset) continue;
-
-            const px = (panel.x / 100) * exportWidth;
-            const py = (panel.y / 100) * contentHeight + contentOffsetY;
-            const pw = (panel.w / 100) * exportWidth;
-            const ph = (panel.h / 100) * contentHeight;
-
-            let sourceCanvas = null;
-            let srcW = 0, srcH = 0;
-            // Check for PRE-FRIED static asset first
-            let isPreFried = false;
-
-            if (assets.friedImages && assets.friedImages[panel.id]) {
-                sourceCanvas = assets.friedImages[panel.id];
-                srcW = sourceCanvas.width;
-                srcH = sourceCanvas.height;
-                isPreFried = true;
-            } else if (gifProcessors[panel.id]) {
-                const proc = gifProcessors[panel.id];
-                const frameIdx = frameIndex % proc.numFrames;
-                // ASYNC AWAIT: Needed for Video Processor (GIF processor is sync but this works for both)
-                const result = await proc.renderFrame(frameIdx);
-                sourceCanvas = result.canvas;
-                srcW = proc.width;
-                srcH = proc.height;
-            } else if (staticImages[panel.id]) {
-                sourceCanvas = staticImages[panel.id];
-                srcW = sourceCanvas.width;
-                srcH = sourceCanvas.height;
-            }
-
-            if (sourceCanvas) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(px, py, pw, ph);
-                ctx.clip();
-
-                // MOBILE FIX: Ensure panel area has opaque background before drawing
-                // Prevents transparency bleed-through on iOS/Android
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(px, py, pw, ph);
-
-                const f = panel.filters || {};
-                const filterStr = `
-                    contrast(${f.contrast ?? 100}%)
-                    brightness(${f.brightness ?? 100}%)
-                    blur(${f.blur ?? 0}px)
-                    grayscale(${f.grayscale ?? 0}%)
-                    sepia(${f.sepia ?? 0}%)
-                    hue-rotate(${f.hueRotate ?? 0}deg)
-                    saturate(${f.saturate ?? 100}%)
-                    invert(${f.invert ?? 0}%)
-                `.replace(/\s+/g, ' ').trim();
-
-                if (filterStr !== 'none') ctx.filter = filterStr;
-
-                const ratioW = pw / srcW;
-                const ratioH = ph / srcH;
-                // For single layout, default to contain (show full image); for multi-panel, default to cover (fill panel)
-                const effectiveObjectFit = meme.layout === 'single'
-                    ? (panel.objectFit || 'contain')
-                    : (panel.objectFit || 'cover');
-                const ratio = effectiveObjectFit === 'contain' ? Math.min(ratioW, ratioH) : Math.max(ratioW, ratioH);
-
-                const newW = srcW * ratio;
-                const newH = srcH * ratio;
-                const offX = px + (pw - newW) / 2;
-                const offY = py + (ph - newH) / 2;
-
-                ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
-
-                // Only apply per-frame deep fry if it wasn't pre-calculated
-                if (!isPreFried && (f.deepFry || 0) > 0) {
-                    applyDeepFry(ctx, px, py, pw, ph, f.deepFry);
-                }
-
-                ctx.restore();
-            }
-        }
-    }
-
-
-    // TODO: Verify if drawings should be included in stickersOnly.
-    // Assuming YES as they are "on top" layers often used with stickers.
-    if (meme.drawings && meme.drawings.length > 0) {
-        ctx.save();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        meme.drawings.forEach(d => {
-            if (!d.points || d.points.length < 2) return;
-            ctx.beginPath();
-            ctx.strokeStyle = d.color;
-            ctx.lineWidth = d.width * (exportWidth / baseWidth);
-            ctx.globalCompositeOperation = d.mode === 'eraser' ? 'destination-out' : 'source-over';
-
-            ctx.moveTo(d.points[0].x * exportWidth, d.points[0].y * exportHeight);
-            for (let j = 1; j < d.points.length; j++) {
-                ctx.lineTo(d.points[j].x * exportWidth, d.points[j].y * exportHeight);
-            }
-            ctx.stroke();
-        });
-        ctx.restore();
-    }
-
-
-    // Use scaleFactor based on exportWidth / baseWidth (same as MemeCanvas uses containerWidth / 800)
-    const scaleFactor = exportWidth / baseWidth;
-
-    for (const sticker of (stickers || [])) {
-        const x = (sticker.x / 100) * exportWidth;
-        const y = (sticker.y / 100) * exportHeight;
-        const size = (meme.stickerSize || 100) * (sticker.scale ?? 1) * scaleFactor;
-
-        // Animation Transform
-        let animX = x;
-        let animY = y;
-        let animRotation = (sticker.rotation || 0) * (Math.PI / 180);
-        let animScaleX = 1;
-        let animScaleY = 1;
-        let animOpacity = 1;
-
-        if (sticker.animation && sticker.animation !== 'none') {
-            const anim = getAnimationById(sticker.animation);
-            if (anim && anim.getTransform) {
-                // TIME-BASED ANIMATION: Calculate progress based on current time in GIF loop
-                // and the animation's own duration (from CSS)
-                const currentTimeMs = effectiveTimeMs;
-                const animDurationMs = anim.duration || 1000;
-
-                // Progress within this animation's cycle (0 to 1, repeating)
-                const animProgress = (currentTimeMs % animDurationMs) / animDurationMs;
-                // Convert to virtual frame index for getTransform (which expects 0 to totalFrames)
-                const virtualFrameIndex = animProgress * totalFrames;
-
-                const t = anim.getTransform(virtualFrameIndex, totalFrames);
-
-                animX += (t.offsetX || 0) * scaleFactor;
-                animY += (t.offsetY || 0) * scaleFactor;
-                animRotation += (t.rotation || 0) * (Math.PI / 180);
-
-                const s = t.scale || 1;
-                animScaleX = t.scaleX ?? s;
-                animScaleY = t.scaleY ?? s;
-                animOpacity = t.opacity ?? 1;
-            }
-        }
-
-        ctx.save();
-        ctx.globalAlpha = animOpacity;
-        ctx.translate(animX, animY);
-        ctx.rotate(animRotation);
-        ctx.scale(animScaleX, animScaleY);
-
-        if (sticker.type === 'image' || sticker.type === 'giphy' || sticker.type === 'tenor') {
-            let drawCanvas = null;
-            let sw = 0, sh = 0;
-
-            if (stickerProcessors[sticker.id]) {
-                const proc = stickerProcessors[sticker.id];
-                // TIME-BASED FRAME SYNC: Calculate which source frame to show based on export timing
-                // This ensures native GIF stickers play at their original speed regardless of export frame rate
-                const exportTimeMs = effectiveTimeMs;  // Current time in the export loop
-
-                // Use robust time-based lookup if available (for GIFs)
-                let frameIdx = 0;
-
-                if (proc.getFrameAtTime) {
-                   frameIdx = proc.getFrameAtTime(exportTimeMs);
-                } else {
-                   // Fallback for simple processors (like video if not updated yet)
-                   // Note: Video processor uses renderFrame(time) directly usually, but here we treat it as frames
-                   const sourceGifDelayMs = (proc.getDelay(0) || 10) * 10;
-                   const sourceGifLoopMs = proc.numFrames * sourceGifDelayMs;
-                   const timeInSourceLoop = exportTimeMs % sourceGifLoopMs;
-                   frameIdx = Math.floor(timeInSourceLoop / sourceGifDelayMs) % proc.numFrames;
-                }
-
-                const result = await proc.renderFrame(frameIdx);
-                drawCanvas = result.canvas;
-                sw = proc.width;
-                sh = proc.height;
-            } else if (stickerImages[sticker.id]) {
-                drawCanvas = stickerImages[sticker.id];
-                sw = drawCanvas.width;
-                sh = drawCanvas.height;
-            }
-
-            if (drawCanvas) {
-                const aspect = sh / sw;
-                const drawWidth = size;
-                const drawHeight = size * aspect;
-
-                // Match CSS drop-shadow-md from preview: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))
-                // Canvas shadow is simpler, so we approximate with a single shadow
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-                ctx.shadowBlur = 3 * scaleFactor;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 3 * scaleFactor;
-
-                // Draw centered at (0,0) because we translated to center
-                ctx.drawImage(drawCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-
-                // Reset shadow after drawing sticker
-                ctx.shadowColor = 'transparent';
-                ctx.shadowBlur = 0;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
-            }
-        } else {
-            // Emoji stickers - apply same drop shadow as image stickers
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-            ctx.shadowBlur = 3 * scaleFactor;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 3 * scaleFactor;
-
-            ctx.font = `${size}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(sticker.url, 0, 0);
-
-            // Reset shadow
-            ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-        }
-        ctx.restore();
-    }
-
-
-    if (!stickersOnly) {
-        // TIME-BASED: Pass current time in ms for proper animation timing
-        const currentTimeMs = effectiveTimeMs;
-        drawText(ctx, texts, meme, exportWidth, exportHeight, 0, currentTimeMs, totalFrames);
-    }
-}
-
-/**
- * Calculates export canvas dimensions based on meme layout and content
- */
-function calculateDimensions(meme, assets) {
-    let containerAspect = 1;
-    let exportWidth = 1600; // Default base resolution (2x Quality)
-    let exportHeight = 1600;
-    const baseWidth = 800; // Reference width for scaling calculations (matches MemeCanvas)
+    // 4. Frame Logic
+    // We need to determine the Loop Length (LCM of all GIFs)
     const { gifProcessors, staticImages } = assets;
 
-    // Check if we actually have any valid panels (url OR loaded assets from sourceBlob fallback)
-    const hasValidPanel = meme.panels && meme.panels.length > 0 && (
-        meme.panels[0].url || gifProcessors[meme.panels[0].id] || staticImages[meme.panels[0].id]
-    );
+    // Default FPS = 10 (100ms delay) - Standard for memes
+    const delay = 100;
 
-    if (meme.stickersOnly) {
-        // Force standardized sticker size (e.g. for Telegram/Signal/WhatsApp)
-        exportWidth = 512;
-        exportHeight = 512;
-        containerAspect = 1;
-    } else if (hasValidPanel) {
-        if (meme.layout === 'single') {
-            const pid = meme.panels[0].id;
-            if (gifProcessors[pid]) {
-                exportWidth = gifProcessors[pid].width;
-                exportHeight = gifProcessors[pid].height;
-            } else if (staticImages[pid]) {
-                exportWidth = staticImages[pid].width;
-                exportHeight = staticImages[pid].height;
-            }
-            // If asset load failed but url exists, we might default to 800x800 or generic
-            containerAspect = exportWidth / exportHeight;
-        } else if (meme.layout === 'top-bottom') {
-            containerAspect = 3 / 4;
-        } else if (meme.layout === 'side-by-side') {
-            containerAspect = 4 / 3;
-        }
+    // Detect if we have specific delays or frame counts from source GIFs
+    // We want the LCM (Least Common Multiple) of durations ideally, or a cap.
+    // Cap at 50 frames (5 seconds) to prevent massive generation times.
+    const MAX_FRAMES = 50;
 
-        if (meme.layout !== 'single') {
-            exportHeight = Math.round(exportWidth / containerAspect);
-        }
-    } else {
-        // No panels (Empty Canvas / Sticker Only mode)
-        console.log("No valid panels found, defaulting to 1600x1600 square canvas");
-        exportWidth = 1600;
-        exportHeight = 1600;
-        containerAspect = 1;
+    // Calculate loop duration based on text animations and GIF sources
+    let totalFrames = 30; // Default 3s
+
+    // Check textual animations
+    if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
+         const durationMs = calculateGifLoopDuration(texts, stickers);
+         // Round to nearest frame count
+         totalFrames = Math.max(totalFrames, Math.ceil(durationMs / delay));
     }
 
-    const paddingTop = meme.paddingTop || 0;
-    const paddingBottom = meme.paddingBottom || 0;
-    const contentOffsetY = paddingTop > 0 ? Math.round(exportWidth * (paddingTop / 100)) : 0;
-    const contentOffsetBottom = paddingBottom > 0 ? Math.round(exportWidth * (paddingBottom / 100)) : 0;
-    const contentHeight = exportHeight;
-    exportHeight = contentHeight + contentOffsetY + contentOffsetBottom;
+    // Check GIF/Video panels
+    Object.values(gifProcessors).forEach(p => {
+        if (p.numFrames > 1) {
+            // Simple Logic: Take the longest GIF if reasonable, or 30 frames
+             totalFrames = Math.max(totalFrames, Math.min(p.numFrames, MAX_FRAMES));
+        }
+    });
+    // Check GIF Stickers
+     Object.values(assets.stickerProcessors).forEach(p => {
+        if (p.numFrames > 1) {
+             totalFrames = Math.max(totalFrames, Math.min(p.numFrames, MAX_FRAMES));
+        }
+    });
 
-    return { exportWidth, exportHeight, contentHeight, contentOffsetY, contentOffsetBottom, baseWidth };
+    // Hard Cap
+    totalFrames = Math.min(totalFrames, MAX_FRAMES);
+
+    console.log(`Exporting GIF: ${totalFrames} frames`);
+
+
+    // 5. Render Loop
+    const canvas = document.createElement('canvas');
+    canvas.width = exportWidth;
+    canvas.height = exportHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    for (let i = 0; i < totalFrames; i++) {
+        // Render FRAME i
+        await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
+             stickersOnly: false,
+             totalFrames,
+             exportDelayMs: delay
+        });
+
+        // Add to GIF
+        gif.addFrame(ctx, { copy: true, delay }); // standard 100ms delay
+
+        // Progress Update
+        if (onProgress) {
+            const pct = 30 + Math.round((i / totalFrames) * 40); // 30% -> 70%
+            onProgress(pct, `Rendering Frame ${i + 1}/${totalFrames}`);
+        }
+
+        // Yield to main thread briefly so UI doesn't freeze
+        await new Promise(r => setTimeout(r, 0));
+    }
+
+    if (onProgress) onProgress(75, "Encoding GIF...");
+
+    // 6. Finalize
+    return new Promise((resolve, reject) => {
+        gif.on('finished', (blob) => {
+            if (onProgress) onProgress(100, "Done!");
+            resolve(blob);
+        });
+
+        // Progress from the worker
+        gif.on('progress', (p) => {
+             if (onProgress) {
+                // Map p (0-1) to 75-99%
+                const pct = 75 + Math.round(p * 24);
+                onProgress(pct, "Encoding pixels...");
+             }
+        });
+
+        try {
+            gif.render();
+        } catch (e) {
+            reject(e);
+        }
+    });
 }
 
 
@@ -804,526 +283,4 @@ export async function exportImageAsPng(meme, texts, stickers) {
             resolve(blob);
         }, 'image/png');
     });
-}
-
-
-/**
- * Exports a meme as an animated GIF
- */
-export async function exportGif(meme, texts, stickers) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            // 1. Load Assets
-            const assets = await loadMemeAssets(meme, stickers);
-            const { gifProcessors, stickerProcessors } = assets;
-
-            // 2. Dimensions
-            let dimensions = calculateDimensions(meme, assets);
-            let { exportWidth, exportHeight } = dimensions;
-
-            // --- OPTIMIZATION: Pre-Calculate Deep Fry for Static Images ---
-            const friedImages = {}; // Map of panelId -> Canvas
-
-            // Only strictly needed if we have panels with deep fry > 0
-            const hasDeepFry = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
-
-            if (hasDeepFry && !meme.stickersOnly) {
-                console.log("Pre-calculating deep fry for static panels...");
-                const { staticImages } = assets;
-
-                for (const panel of meme.panels) {
-                    // Only cache for: Static Images + Has Fry Level > 0
-                    if (staticImages[panel.id] && (panel.filters?.deepFry || 0) > 0) {
-                        try {
-                            const rawImg = staticImages[panel.id];
-                            const w = rawImg.width;
-                            const h = rawImg.height;
-
-                            // Create offscreen canvas for this fried asset
-                            const c = document.createElement('canvas');
-                            c.width = w;
-                            c.height = h;
-                            const cx = c.getContext('2d');
-
-                            // Draw original
-                            cx.drawImage(rawImg, 0, 0);
-
-                            // Apply Fry (O(Pixels) cost PAID ONCE)
-                            applyDeepFry(cx, 0, 0, w, h, panel.filters.deepFry);
-
-                            friedImages[panel.id] = c;
-                        } catch (e) {
-                            console.warn("Failed to pre-fry image:", e);
-                        }
-                    }
-                }
-            }
-            // Add to assets so renderMemeFrame can find them
-            assets.friedImages = friedImages;
-            // -------------------------------------------------------------
-
-            // QUALITY FIX: Enforce MINIMUM resolution for crisp text rendering in GIFs
-            // Small source GIFs cause blurry text when exported at native size
-            const MIN_GIF_DIMENSION = 480;
-            if (exportWidth < MIN_GIF_DIMENSION && exportHeight < MIN_GIF_DIMENSION) {
-                const scale = MIN_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
-                exportWidth = Math.round(exportWidth * scale);
-                exportHeight = Math.round(exportHeight * scale);
-
-                dimensions = {
-                    ...dimensions,
-                    exportWidth,
-                    exportHeight,
-                    contentHeight: Math.round(dimensions.contentHeight * scale),
-                    contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
-                    contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
-                };
-                console.log(`Upscaled GIF dimensions to ${exportWidth}x${exportHeight} for crisp text quality`);
-            }
-
-            // Scale down large images for reasonable GIF file sizes
-            // QUALITY FIX: Increased from 600 to 800 for sharper text/stickers
-            // 800px provides good balance between quality and file size
-            // For high-quality exports, we prioritize visual fidelity
-            const MAX_GIF_DIMENSION = 800;
-            if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
-                const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
-                exportWidth = Math.round(exportWidth * scale);
-                exportHeight = Math.round(exportHeight * scale);
-
-                // Update dimensions object for renderMemeFrame
-                // IMPORTANT: We must also scale contentHeight and offsets to prevent aspect ratio mismatch (zoomed in effect)
-                dimensions = {
-                    ...dimensions,
-                    exportWidth,
-                    exportHeight,
-                    contentHeight: Math.round(dimensions.contentHeight * scale),
-                    contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
-                    contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
-                };
-                console.log(`Scaled GIF dimensions to ${exportWidth}x${exportHeight} for file size optimization`);
-            }
-
-            // 3. Initialize Encoder
-            const base = import.meta.env.BASE_URL || '/';
-            const workerPath = `${base}gif.worker.js`.replace(/\/+/g, '/');
-
-            let workerBlobUrl = null;
-            try {
-                const response = await fetch(workerPath);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const workerScriptText = await response.text();
-                const blob = new Blob([workerScriptText], { type: 'application/javascript' });
-                workerBlobUrl = URL.createObjectURL(blob);
-            } catch (err) {
-                console.error("Worker load failed:", err);
-                workerBlobUrl = workerPath;
-            }
-
-            // QUALITY FIX: Reduced quality value to 5 for best color accuracy
-            // gif.js quality: 1 = best (slowest), 20 = default, higher = faster but worse
-            // Value of 5 provides excellent color reproduction with acceptable encoding time
-            const gif = new GIF({
-                workers: 4,
-                quality: 5,
-                width: exportWidth,
-                height: exportHeight,
-                workerScript: workerBlobUrl,
-                repeat: 0,
-                // For stickersOnly GIF export, we try our best with transparency
-                transparent: meme.stickersOnly ? 0x00000000 : null,
-                background: meme.stickersOnly ? null : '#000000',
-                // Enable dithering for smoother gradients and fewer artifacts
-                dither: 'FloydSteinberg'
-            });
-
-            // 4. Determine Loop Length and Frame Timing
-            let maxFrames = 1;
-            let masterDelay = 10; // centiseconds (10 = 100ms)
-            let gifLoopDurationMs = 1000;
-            let perFrameDelays = null; // Array of delays per frame (in centiseconds)
-            const activeProcessors = [...Object.values(gifProcessors), ...Object.values(stickerProcessors)];
-
-            const hasCSSAnimation = hasAnimatedText(texts) || (stickers && stickers.some(s => s.animation && s.animation !== 'none'));
-
-            if (meme.forceStatic) {
-                maxFrames = 1;
-                gifLoopDurationMs = 100;
-            } else if (activeProcessors.length > 0) {
-                // GIF/Video background - use source timing with per-frame delays
-                const primaryProcessor = activeProcessors[0];
-                maxFrames = Math.max(...activeProcessors.map(p => p.numFrames));
-
-                // Get per-frame delays if available (for accurate playback speed)
-                if (primaryProcessor.getAllDelays) {
-                    perFrameDelays = primaryProcessor.getAllDelays();
-                    // Calculate total loop duration from actual frame delays
-                    gifLoopDurationMs = perFrameDelays.reduce((sum, d) => sum + (d || 10) * 10, 0);
-                    // Use median delay as masterDelay for logging (not actually used for export)
-                    const sortedDelays = [...perFrameDelays].sort((a, b) => a - b);
-                    masterDelay = sortedDelays[Math.floor(sortedDelays.length / 2)] || 10;
-                } else {
-                    masterDelay = primaryProcessor.getDelay(0) || 10;
-                    gifLoopDurationMs = maxFrames * masterDelay * 10;
-                }
-
-                console.log(`GIF/Video background: ${maxFrames} frames, per-frame delays: ${perFrameDelays ? 'yes' : 'no'}, ~${masterDelay * 10}ms median delay, ${gifLoopDurationMs}ms loop`);
-            } else if (hasCSSAnimation) {
-                // Static background with CSS animations (text/sticker)
-                // Calculate GIF loop duration based on the longest animation
-                // This ensures all animations complete at least one full cycle
-                gifLoopDurationMs = calculateGifLoopDuration(texts, stickers);
-
-                // Target ~30fps for smooth animation, but cap at 50 frames for file size
-                // Use 20ms minimum delay (browser-safe) = 50fps max
-                const targetFps = 30;
-                const frameDelayMs = Math.max(20, Math.round(1000 / targetFps)); // 33ms at 30fps
-                masterDelay = frameDelayMs / 10; // Convert to centiseconds
-
-                // Calculate frames needed for the loop duration
-                maxFrames = Math.round(gifLoopDurationMs / frameDelayMs);
-
-                // Ensure we have enough frames for smooth animation (min 15 for short anims)
-                maxFrames = Math.max(15, maxFrames);
-
-                // Recalculate actual loop duration based on frame count
-                gifLoopDurationMs = maxFrames * frameDelayMs;
-
-                console.log(`CSS animation on static image: ${maxFrames} frames at ${frameDelayMs}ms delay (${gifLoopDurationMs}ms loop)`);
-            } else if (stickers && stickers.length > 0) {
-                // Static stickers on static background (no animation) - just needs 1 frame
-                maxFrames = 1;
-                masterDelay = 10;
-                gifLoopDurationMs = 100;
-                console.log('Static stickers on static image, creating single-frame GIF');
-            } else {
-                maxFrames = 1;
-                gifLoopDurationMs = 100;
-            }
-
-            // Cap frames for file size (but allow more for longer animations)
-            const maxAllowedFrames = Math.min(120, Math.max(60, Math.ceil(gifLoopDurationMs / 16)));
-            if (maxFrames > maxAllowedFrames && !perFrameDelays) {
-                // Only adjust if we don't have per-frame delays (preserve original GIF timing)
-                console.warn(`Clamping GIF frames from ${maxFrames} to ${maxAllowedFrames} for file size`);
-                const oldDelay = masterDelay;
-                maxFrames = maxAllowedFrames;
-                // Adjust delay to maintain loop duration
-                masterDelay = Math.round(gifLoopDurationMs / maxFrames / 10);
-                console.log(`Adjusted delay from ${oldDelay * 10}ms to ${masterDelay * 10}ms to maintain timing`);
-            }
-
-            const actualDelayMs = masterDelay * 10;
-            console.log(`Exporting ${maxFrames} frames at ~${actualDelayMs}ms delay (${gifLoopDurationMs}ms total loop), per-frame: ${perFrameDelays ? 'enabled' : 'disabled'}`);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = exportWidth;
-            canvas.height = exportHeight;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-            // QUALITY FIX: Enable high-quality image rendering for sharper text/stickers
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-
-            // 5. Render Loop - Calculate cumulative time for accurate animation sync
-            let cumulativeTimeMs = 0;
-            for (let i = 0; i < maxFrames; i++) {
-                // Yield to main thread to keep UI responsive (spinner moving)
-                await new Promise(r => setTimeout(r, 0));
-
-                // Get the actual delay for this frame (supports variable frame rates)
-                // perFrameDelays is in centiseconds, convert to ms
-                const frameDelayCentiseconds = perFrameDelays ? (perFrameDelays[i % perFrameDelays.length] || 10) : masterDelay;
-                // GIF spec: 0 or very small delays are often interpreted as ~100ms by browsers
-                // Use minimum 20ms (50fps max) for consistent playback
-                const frameDelayMs = Math.max(20, frameDelayCentiseconds * 10);
-
-                // Use Refactored Render Function with time-based animation
-                // Pass cumulativeTimeMs for accurate CSS animation sync
-                await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
-                    stickersOnly: meme.stickersOnly,
-                    totalFrames: maxFrames,
-                    exportDelayMs: frameDelayMs,
-                    gifLoopDurationMs: gifLoopDurationMs,
-                    currentTimeMs: cumulativeTimeMs // Pass actual time position for animation sync
-                });
-
-                gif.addFrame(canvas, {
-                    delay: frameDelayMs,
-                    copy: true,
-                    disposal: 2 // Restore to background (transparent) to prevent ghosting
-                });
-
-                // Accumulate time for next frame
-                cumulativeTimeMs += frameDelayMs;
-            }
-
-            // 6. Finish
-            const timeoutId = setTimeout(() => {
-                try { gif.abort(); } catch (e) { }
-                if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
-                reject(new Error("Encoding timed out. Worker likely failed to start."));
-            }, 60000);
-
-            gif.on('finished', (blob) => {
-                clearTimeout(timeoutId);
-                if (workerBlobUrl && workerBlobUrl.startsWith('blob:')) URL.revokeObjectURL(workerBlobUrl);
-                resolve(blob);
-            });
-
-            gif.on('progress', (p) => {
-                // You could pass this up to a callback if needed, but for now we'll just log
-                console.log(`Encoding progress: ${Math.round(p * 100)}%`);
-            });
-
-            gif.render();
-
-        } catch (err) {
-            reject(err);
-        }
-    });
-}
-
-// --- Helpers ---
-
-function applyDeepFry(ctx, x, y, w, h, level) {
-    // Ensure integer coordinates for ImageData
-    x = Math.floor(x); y = Math.floor(y);
-    w = Math.floor(w); h = Math.floor(h);
-    if (w <= 0 || h <= 0) return;
-
-    const imageData = ctx.getImageData(x, y, w, h);
-    const data = imageData.data;
-
-    const contrastFactor = 1 + (level / 20);
-    const noiseAmount = level * 1.5;
-    const satBoost = 1 + (level / 50);
-
-    for (let p = 0; p < data.length; p += 4) {
-        let r = data[p];
-        let g = data[p + 1];
-        let b = data[p + 2];
-
-        const noise = (Math.random() - 0.5) * noiseAmount;
-        r += noise;
-        g += noise + (level * 0.2);
-        b += noise;
-
-        r = (r - 128) * contrastFactor + 128;
-        g = (g - 128) * contrastFactor + 128;
-        b = (b - 128) * contrastFactor + 128;
-
-        const gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
-        r = gray + (r - gray) * satBoost;
-        g = gray + (g - gray) * satBoost;
-        b = gray + (b - gray) * satBoost;
-
-        data[p] = r < 0 ? 0 : r > 255 ? 255 : r;
-        data[p + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
-        data[p + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
-    }
-    ctx.putImageData(imageData, x, y);
-}
-
-function drawText(ctx, texts, meme, width, height, offsetY, currentTimeMs = 0, totalFrames = 1) {
-    const scale = width / 800;
-
-    for (const textItem of texts) {
-        if (!textItem.content.trim()) continue;
-
-        const baseX = (textItem.x / 100) * width;
-        const baseY = (textItem.y / 100) * height + offsetY;
-        const fontSize = (meme.fontSize || 40) * (textItem.scale ?? 1) * scale;
-        const stroke = Math.max(1, fontSize / 25);
-        const baseRotation = (textItem.rotation || 0) * (Math.PI / 180);
-        const maxWidth = ((meme.maxWidth || 100) / 100) * width;
-        const lineHeight = fontSize * 1.2;
-
-        // Get animation transform for this frame
-        let animX = baseX;
-        let animY = baseY;
-        let animRotation = baseRotation;
-        let animScaleX = 1;
-        let animScaleY = 1;
-        let animOpacity = 1;
-
-        if (textItem.animation && textItem.animation !== 'none') {
-            const anim = getAnimationById(textItem.animation);
-            if (anim && anim.getTransform) {
-                // TIME-BASED ANIMATION: Calculate progress based on current time and animation duration
-                // This ensures exported animation matches CSS preview speed exactly
-                const animDurationMs = anim.duration || 1000;
-                const animProgress = (currentTimeMs % animDurationMs) / animDurationMs;
-                // Convert to virtual frame index for getTransform (which expects 0 to totalFrames)
-                const virtualFrameIndex = animProgress * totalFrames;
-
-                const transform = anim.getTransform(virtualFrameIndex, totalFrames, 0, 1);
-                animX += (transform.offsetX || 0) * scale;
-                animY += (transform.offsetY || 0) * scale;
-                animRotation += (transform.rotation || 0) * (Math.PI / 180);
-
-                // Support both uniform 'scale' and independent 'scaleX/scaleY'
-                const uniformScale = transform.scale || 1;
-                animScaleX = transform.scaleX ?? uniformScale;
-                animScaleY = transform.scaleY ?? uniformScale;
-
-                animOpacity = transform.opacity ?? 1;
-            }
-        }
-
-        ctx.save();
-        ctx.globalAlpha = animOpacity;
-        ctx.translate(animX, animY);
-        ctx.rotate(animRotation);
-        ctx.scale(animScaleX, animScaleY);
-
-        // Match CSS fontFamily default: MemeCanvas uses 'Roboto' as default
-        ctx.font = `bold ${fontSize}px ${meme.fontFamily || 'Roboto'}, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Letter spacing - calculate scaled value once
-        const letterSpacing = (meme.letterSpacing || 0) * scale;
-
-        // Try to set native letterSpacing if supported
-        const hasNativeLetterSpacing = ctx.letterSpacing !== undefined;
-        // We only use native spacing if supported AND we are NOT using the 'wave' animation (which requires manual char positioning)
-        const useNativeSpacing = hasNativeLetterSpacing && textItem.animation !== 'wave';
-
-        if (useNativeSpacing) {
-            ctx.letterSpacing = `${letterSpacing}px`;
-        } else if (hasNativeLetterSpacing) {
-            // Explicitly reset to 0 if we have the capability but chose not to use it (for wave)
-            ctx.letterSpacing = '0px';
-        }
-
-        const lines = [];
-        const rawLines = textItem.content.toUpperCase().split('\n');
-
-        // Helper to measure text width including letter spacing
-        const measureTextWithSpacing = (text) => {
-            if (useNativeSpacing) {
-                return ctx.measureText(text).width;
-            }
-            const baseWidth = ctx.measureText(text).width;
-            // Add letter spacing for each character except the last
-            return baseWidth + Math.max(0, text.length - 1) * letterSpacing;
-        };
-
-        for (const rawLine of rawLines) {
-            const words = rawLine.split(' ');
-            let currentLine = words[0];
-
-            for (let i = 1; i < words.length; i++) {
-                const word = words[i];
-                const w = measureTextWithSpacing(currentLine + " " + word);
-                if (w < maxWidth) {
-                    currentLine += " " + word;
-                } else {
-                    lines.push(currentLine);
-                    currentLine = word;
-                }
-            }
-            lines.push(currentLine);
-        }
-
-        const totalHeight = lines.length * lineHeight;
-        const startY = -(totalHeight / 2) + (lineHeight / 2);
-
-        if (meme.textBgColor && meme.textBgColor !== 'transparent') {
-            let maxLineWidth = 0;
-            lines.forEach(line => {
-                const w = measureTextWithSpacing(line);
-                if (w > maxLineWidth) maxLineWidth = w;
-            });
-
-            const bgWidth = maxLineWidth + (fontSize * 1.0);
-            const bgHeight = totalHeight + (fontSize * 0.5);
-
-            ctx.fillStyle = meme.textBgColor;
-            const radius = fontSize * 0.2;
-            const bx = -bgWidth / 2;
-            const by = -(totalHeight / 2) - (fontSize * 0.25);
-
-            ctx.beginPath();
-            ctx.roundRect(bx, by, bgWidth, bgHeight, radius);
-            ctx.fill();
-        }
-
-        // Match CSS drop-shadow(0px 2px 2px rgba(0,0,0,0.8)) from preview
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 2 * scale;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 2 * scale;
-        // Match CSS -webkit-text-stroke visual weight: preview uses stroke * 2
-        // Canvas strokeText renders slightly thinner than CSS text-stroke, so we match the 2x multiplier
-        ctx.lineWidth = stroke * 2;
-        ctx.lineJoin = 'round';
-        ctx.miterLimit = 2;
-        ctx.strokeStyle = meme.textShadow || '#000000';
-        ctx.fillStyle = meme.textColor || '#ffffff';
-
-        // Helper to draw text with proper letter spacing (char-by-char if needed)
-        const drawTextWithSpacing = (text, x, y, isStroke = false) => {
-            // For animated text or when native letterSpacing isn't supported, draw char-by-char
-            if (letterSpacing !== 0 && !useNativeSpacing) {
-                const chars = text.split('');
-                const totalWidth = measureTextWithSpacing(text);
-                let currentX = x - totalWidth / 2; // Center-align
-
-                chars.forEach((char) => {
-                    const charWidth = ctx.measureText(char).width;
-                    if (isStroke) {
-                        ctx.strokeText(char, currentX + charWidth / 2, y);
-                    } else {
-                        ctx.fillText(char, currentX + charWidth / 2, y);
-                    }
-                    currentX += charWidth + letterSpacing;
-                });
-            } else {
-                // Native letterSpacing supported or no spacing needed
-                if (isStroke) {
-                    ctx.strokeText(text, x, y);
-                } else {
-                    ctx.fillText(text, x, y);
-                }
-            }
-        };
-
-        lines.forEach((line, index) => {
-            const lineY = startY + (index * lineHeight);
-
-            if (textItem.animation === 'wave') {
-                // Per-character Wave - always draw char-by-char with proper spacing
-                const totalLineWidth = measureTextWithSpacing(line);
-                let currentX = -totalLineWidth / 2; // Start from center (centered text alignment)
-
-                const chars = line.split('');
-                chars.forEach((char, charIdx) => {
-                    const charWidth = ctx.measureText(char).width;
-                    const anim = getAnimationById('wave');
-                    // TIME-BASED: Use animation's own duration for proper speed matching
-                    const animDurationMs = anim.duration || 1000;
-                    const animProgress = (currentTimeMs % animDurationMs) / animDurationMs;
-                    const virtualFrame = animProgress * totalFrames;
-                    const transform = anim.getTransform(virtualFrame, totalFrames, charIdx);
-
-                    const charY = lineY + (transform.offsetY || 0) * scale;
-                    const charCenterX = currentX + charWidth / 2;
-
-                    ctx.strokeText(char, charCenterX, charY);
-                    ctx.fillText(char, charCenterX, charY);
-
-                    // Add letter spacing to character advancement
-                    currentX += charWidth + letterSpacing;
-                });
-            } else {
-                // Standard block animation - use helper for proper letter spacing
-                drawTextWithSpacing(line, 0, lineY, true);  // stroke
-                drawTextWithSpacing(line, 0, lineY, false); // fill
-            }
-        });
-
-        ctx.restore();
-    }
 }

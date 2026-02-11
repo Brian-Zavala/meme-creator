@@ -3890,6 +3890,7 @@ export default function Main() {
                 onExportMp4={handleExportMp4}
                 onExportStatic={() => doStaticExport({ stickersOnly: isStickerExport, forceStatic: isStickerExport })}
                 isStickerOnly={isStickerExport}
+                hasVideo={meme.panels.some(p => p.isVideo)}
               />
             </Suspense>
 

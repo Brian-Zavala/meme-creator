@@ -102,10 +102,10 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress) {
     });
 
     videoEncoder.configure({
-        codec: 'avc1.42001f', // Baseline Profile Level 3.1
+        codec: 'avc1.4d002a', // Main Profile Level 4.2 (Supports up to 1080p @ 60fps)
         width: exportWidth,
         height: exportHeight,
-        bitrate: 2_500_000, // 2.5 Mbps - Good quality for sharing
+        bitrate: 4_000_000, // 4 Mbps - High quality for HD video
         framerate: FPS
     });
 
@@ -124,41 +124,54 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress) {
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, exportWidth, exportHeight);
 
-    for (let i = 0; i < totalFrames; i++) {
-        // Calculate precise time in MS for this frame
-        const currentTimeMs = i * FRAME_DURATION_MS;
-        const timestampMicroseconds = i * (1_000_000 / FPS);
+    try {
+        for (let i = 0; i < totalFrames; i++) {
+            // Check if encoder died
+            if (videoEncoder.state === 'closed') {
+                throw new Error("VideoEncoder closed unexpectedly");
+            }
 
-        // Render Frame
-        await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
-            stickersOnly: false,
-            totalFrames,
-            exportDelayMs: FRAME_DURATION_MS, // Not strictly used if currentTimeMs is passed, but good for fallback
-            currentTimeMs: currentTimeMs
-        });
+            // Calculate precise time in MS for this frame
+            const currentTimeMs = i * FRAME_DURATION_MS;
+            const timestampMicroseconds = i * (1_000_000 / FPS);
 
-        // Encode Frame
-        // We must draw to a VideoFrame.
-        // Note: Direct canvas construction is more efficient than creating bitmap first in some browsers
-        const frame = new VideoFrame(canvas, {
-            timestamp: timestampMicroseconds,
-            duration: 1_000_000 / FPS
-        });
+            // Render Frame
+            await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
+                stickersOnly: false,
+                totalFrames,
+                exportDelayMs: FRAME_DURATION_MS, // Not strictly used if currentTimeMs is passed, but good for fallback
+                currentTimeMs: currentTimeMs
+            });
 
-        // Keyframe every 2 seconds (2 * 30 = 60 frames)
-        const keyFrame = i % 60 === 0;
+            // Encode Frame
+            // We must draw to a VideoFrame.
+            let frame = null;
+            try {
+                frame = new VideoFrame(canvas, {
+                    timestamp: timestampMicroseconds,
+                    duration: 1_000_000 / FPS
+                });
 
-        videoEncoder.encode(frame, { keyFrame });
-        frame.close();
+                // Keyframe every 2 seconds (2 * 30 = 60 frames)
+                const keyFrame = i % 60 === 0;
 
-        // Progress Update
-        if (onProgress) {
-            const pct = 30 + Math.round((i / totalFrames) * 60); // 30% -> 90%
-            onProgress(pct, `Encoding Frame ${i + 1}/${totalFrames}`);
+                videoEncoder.encode(frame, { keyFrame });
+            } finally {
+                if (frame) frame.close();
+            }
+
+            // Progress Update
+            if (onProgress) {
+                const pct = 30 + Math.round((i / totalFrames) * 60); // 30% -> 90%
+                onProgress(pct, `Encoding Frame ${i + 1}/${totalFrames}`);
+            }
+
+            // Yield to prevent UI freeze
+            await new Promise(r => setTimeout(r, 0));
         }
-
-        // Yield to prevent UI freeze
-        await new Promise(r => setTimeout(r, 0));
+    } catch (e) {
+        console.error("Encoding Loop Error:", e);
+        throw e; // Re-throw to be caught by caller
     }
 
     if (onProgress) onProgress(95, "Finalizing MP4...");

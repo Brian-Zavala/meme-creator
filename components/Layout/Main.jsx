@@ -3295,7 +3295,7 @@ export default function Main() {
 
     try {
       const exportMeme = { ...meme, stickersOnly };
-      const { exportGif } = await import("../../services/gifExporter");
+      const { exportMemeAsGif: exportGif } = await import("../../services/gifExporter");
 
       const onProgress = (pct, msg) => {
         toast.loading(`${msg} (${pct}%)`, { id: toastId });

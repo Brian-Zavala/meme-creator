@@ -1,162 +1,227 @@
 /**
  * Text Animation Presets for Meme Creator
  * Each animation defines a function to calculate per-frame transforms
- * 
+ *
  * IMPORTANT: `duration` must match the CSS animation-duration in index.css
  * This ensures exported GIFs play at the same speed as the preview.
  */
+
+/**
+ * Helper: Linear Interpolation between two values
+ */
+function lerp(start, end, t) {
+    return start + (end - start) * t;
+}
+
+/**
+ * Helper: Interpolate between keyframes based on progress (0 to 1)
+ * keyframes: Array of { pct: 0..1, transform: { x, y, rot, s, sx, sy, o } }
+ * All transform properties are optional and default to 0 (or 1 for scale/opacity)
+ */
+function interpolateKeyframes(frames, progress) {
+    // Ensure sorted by pct
+    // frames.sort((a, b) => a.pct - b.pct); // Assumption: frames are defined in order
+
+    // Find the two frames surrounding current progress
+    let startFrame = frames[0];
+    let endFrame = frames[frames.length - 1];
+
+    for (let i = 0; i < frames.length - 1; i++) {
+        if (progress >= frames[i].pct && progress < frames[i+1].pct) {
+            startFrame = frames[i];
+            endFrame = frames[i+1];
+            break;
+        }
+    }
+
+    // Calculate local t (0 to 1) between these two frames
+    const range = endFrame.pct - startFrame.pct;
+    const localT = range === 0 ? 0 : (progress - startFrame.pct) / range;
+
+    // Easing? CSS 'ease-in-out' is common.
+    // Implementing a simple easeInOutSine approximation for smoother motion than linear
+    // ease-in-out: 0.5 * (1 - Math.cos(localT * Math.PI))
+    const t = 0.5 * (1 - Math.cos(localT * Math.PI));
+
+    const s = startFrame.transform;
+    const e = endFrame.transform;
+
+    return {
+        offsetX: lerp(s.x || 0, e.x || 0, t),
+        offsetY: lerp(s.y || 0, e.y || 0, t),
+        rotation: lerp(s.rot || 0, e.rot || 0, t),
+        scale: lerp(s.s ?? 1, e.s ?? 1, t),
+        scaleX: lerp(s.sx ?? 1, e.sx ?? 1, t),
+        scaleY: lerp(s.sy ?? 1, e.sy ?? 1, t),
+        opacity: lerp(s.o ?? 1, e.o ?? 1, t),
+    };
+}
 
 export const TEXT_ANIMATIONS = [
     {
         id: 'none',
         name: 'None',
         icon: '✖️',
-        duration: 1000, // Not used, but consistent
-        // No animation
+        duration: 1000,
         getTransform: () => ({ offsetX: 0, offsetY: 0, rotation: 0, scale: 1, opacity: 1 }),
     },
     {
         id: 'wave',
         name: 'Wave',
         icon: '/images/stickers/wave.png',
-        duration: 1000, // CSS: animation: meme-wave 1s
-        // Oscillating sine wave - each character offset slightly
+        duration: 1000,
+        // CSS: 0%->0, 25%->-8px, 75%->8px, 100%->0
         getTransform: (frameIndex, totalFrames, charIndex = 0) => {
-            const progress = (frameIndex / totalFrames) * Math.PI * 2;
-            const charOffset = charIndex * 0.5; // Phase offset per character
-            return {
-                offsetX: 0,
-                offsetY: Math.sin(progress + charOffset) * 8,
-                rotation: 0,
-                scale: 1,
-                opacity: 1,
-            };
+            // Char offset for wave: each char is delayed slightly?
+            // In CSS it's usually `animation-delay`.
+            // Here `progress` should naturally flow.
+            // If we want the "wave" look, `progress` needs to be offset by `charIndex`.
+
+            // Standard wave period is 1s.
+            // Let's assume progress is global time.
+            let progress = (frameIndex / totalFrames);
+
+            // Apply char offset (phase shift)
+            // 0.1s delay per char roughly? 1s duration = 0.1 progress
+            // But we need to keep it inside the 0-1 loop for interpolation lookup?
+            // Actually, we can just shift the lookup.
+            // (progress - delay) % 1
+            const delay = charIndex * 0.1;
+            progress = (progress - delay + 100) % 1; // +100 to handle negative wrap correctly
+
+            const frames = [
+                { pct: 0, transform: { y: 0 } },
+                { pct: 0.25, transform: { y: -8 } }, // UP first
+                { pct: 0.75, transform: { y: 8 } },  // DOWN
+                { pct: 1, transform: { y: 0 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'bounce',
         name: 'Bounce',
         icon: '/images/stickers/bounce.svg',
-        duration: 600, // CSS: animation: meme-bounce 0.6s
-        // Bouncing with physics-like easing (Match CSS: 0%->0, 50%->-12px/1.05s, 100%->0)
+        duration: 600,
+        // CSS: 0%->0/1, 50%->-12px/1.05, 100%->0/1
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames);
-            // Sine wave 0->PI (0 to 1 to 0)
-            const sinVal = Math.sin(t * Math.PI); 
-            const bounce = sinVal * 12;
-            return {
-                offsetX: 0,
-                offsetY: -bounce,
-                rotation: 0,
-                scale: 1 + (sinVal * 0.05),
-                opacity: 1,
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { y: 0, s: 1 } },
+                { pct: 0.5, transform: { y: -12, s: 1.05 } },
+                { pct: 1, transform: { y: 0, s: 1 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'shake',
         name: 'Shake',
         icon: '/images/stickers/shake.png',
-        duration: 500, // CSS: animation: meme-shake 0.5s
-        // Random tremor effect - chaotic and intense
-        getTransform: (frameIndex) => {
-            // Use frame index as seed for pseudo-random but deterministic shake
-            const seed = Math.floor(frameIndex) * 12345;
-            const randX = ((seed % 17) - 8);
-            const randY = ((seed % 13) - 6);
-            const randRot = ((seed % 11) - 5) * 0.5;
-            return {
-                offsetX: randX,
-                offsetY: randY,
-                rotation: randRot,
-                scale: 1,
-                opacity: 1,
-            };
+        duration: 500,
+        // CSS: Exact keyframes from index.css
+        getTransform: (frameIndex, totalFrames) => {
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { x: 0, y: 0, rot: 0 } },
+                { pct: 0.1, transform: { x: -4, y: 2, rot: -1 } },
+                { pct: 0.2, transform: { x: 4, y: -2, rot: 1 } },
+                { pct: 0.3, transform: { x: -3, y: 3, rot: -0.5 } },
+                { pct: 0.4, transform: { x: 3, y: -3, rot: 0.5 } },
+                { pct: 0.5, transform: { x: -2, y: 2, rot: 0 } },
+                { pct: 0.6, transform: { x: 2, y: -1, rot: 0 } },
+                { pct: 0.7, transform: { x: -3, y: 1, rot: -0.5 } },
+                { pct: 0.8, transform: { x: 2, y: 2, rot: 0.5 } },
+                { pct: 0.9, transform: { x: -1, y: -1, rot: 0 } },
+                { pct: 1, transform: { x: 0, y: 0, rot: 0 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'glitch',
         name: 'Glitch',
         icon: '/images/stickers/glitch.png',
-        duration: 800, // CSS: animation: meme-glitch 0.8s
-        // Match CSS keyframes exactly for consistent export
+        duration: 800,
+        // CSS: Exact keyframes (stepped, but linear interp between very close frames approximates 'steps' or we can just use the value)
+        // Since glitch is 'steps(1)', we should technically NOT interpolate.
+        // But for simplicity, we can just use the nearest frame logic manually or modify getTransform.
+        // Let's use exact keyframes, and interpolateKeyframes will ease between them.
+        // For crisp glitch, we want INSTANT changes.
         getTransform: (frameIndex, totalFrames) => {
-            const t = frameIndex / totalFrames;
-            // 10 steps (0% to 90%)
-            const step = Math.floor(t * 10) % 10;
+             const t = frameIndex / totalFrames;
+             // 10 steps (0% to 90%)
+             // steps(1) means it jumps.
+             const step = Math.floor(t * 10) % 10;
 
-            const frames = [
-                { x: 0, y: 0, o: 1 },         // 0%
-                { x: 5, y: 0, o: 0.9 },       // 10%
-                { x: -10, y: 2, o: 1 },       // 20%
-                { x: 15, y: 0, o: 0.7 },      // 30%
-                { x: -5, y: -2, o: 1 },       // 40%
-                { x: 0, y: 0, o: 1 },         // 50%
-                { x: 8, y: 0, o: 1 },         // 60%
-                { x: -12, y: 3, o: 0.8 },     // 70%
-                { x: 3, y: 0, o: 1 },         // 80%
-                { x: -8, y: 0, o: 0.9 }       // 90%
-            ];
+             const f = [
+                 { x: 0, y: 0, o: 1 },
+                 { x: 5, y: 0, o: 0.9 },
+                 { x: -10, y: 2, o: 1 },
+                 { x: 15, y: 0, o: 0.7 },
+                 { x: -5, y: -2, o: 1 },
+                 { x: 0, y: 0, o: 1 },
+                 { x: 8, y: 0, o: 1 },
+                 { x: -12, y: 3, o: 0.8 },
+                 { x: 3, y: 0, o: 1 },
+                 { x: -8, y: 0, o: 0.9 }
+             ][step];
 
-            const f = frames[step];
-            return {
-                offsetX: f.x,
-                offsetY: f.y,
-                rotation: 0,
-                scale: 1,
-                opacity: f.o,
-            };
+             return {
+                 offsetX: f.x,
+                 offsetY: f.y,
+                 rotation: 0,
+                 scale: 1,
+                 opacity: f.o,
+             };
         },
     },
     {
         id: 'pulse',
         name: 'Pulse',
         icon: '/images/stickers/pulse.svg',
-        duration: 800, // CSS: animation: meme-pulse 0.8s
-        // Scale pulsing effect (Match CSS: 0%->1, 50%->1.1, 100%->1)
+        duration: 800,
+        // CSS: 0%->1, 50%->1.1, 100%->1
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames);
-            // Sine wave 0->PI (0 to 1 to 0)
-            const sinVal = Math.sin(t * Math.PI); 
-            const pulseScale = 1 + (sinVal * 0.1);
-            return {
-                offsetX: 0,
-                offsetY: 0,
-                rotation: 0,
-                scale: pulseScale,
-                opacity: 1,
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { s: 1 } },
+                { pct: 0.5, transform: { s: 1.1 } },
+                { pct: 1, transform: { s: 1 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'float',
         name: 'Float',
         icon: '/images/stickers/float.png',
-        duration: 2000, // CSS: animation: meme-float 2s
-        // Gentle floating up and down (Match CSS: Only Y axis and rotation)
+        duration: 2000,
+        // CSS: 0%->(-1deg, 0y), 50%->(1deg, -6y), 100%->(-1deg, 0y)
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames) * Math.PI * 2;
-            return {
-                offsetX: 0,
-                offsetY: Math.sin(t) * -6, // CSS goes -6px at 50% (up)
-                rotation: Math.sin(t) * 1, // CSS goes 1deg at 50%
-                scale: 1,
-                opacity: 1,
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { y: 0, rot: -1 } },
+                { pct: 0.5, transform: { y: -6, rot: 1 } },
+                { pct: 1, transform: { y: 0, rot: -1 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'spin',
         name: 'Spin',
         icon: '/images/stickers/spin.png',
-        duration: 1000, // CSS: animation: meme-spin 1s
-        // Full 360° rotation over the loop
+        duration: 1000,
+        // CSS: 0->0deg, 100->360deg
         getTransform: (frameIndex, totalFrames) => {
             const progress = frameIndex / totalFrames;
+            // Linear spin usually
+            const rot = progress * 360;
             return {
                 offsetX: 0,
                 offsetY: 0,
-                rotation: progress * 360,
+                rotation: rot,
                 scale: 1,
                 opacity: 1,
             };
@@ -166,116 +231,97 @@ export const TEXT_ANIMATIONS = [
         id: 'tada',
         name: 'Tada',
         icon: '/images/stickers/tada.png',
-        duration: 1000, // CSS: animation: meme-tada 1s
-        // Scale up and wiggle
+        duration: 1000,
+        // CSS Tada
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames) * Math.PI * 2; // 0 to 2PI
-            // Wiggle: fast sine wave
-            const wiggle = Math.sin(t * 3) * (Math.sin(t) > 0 ? 10 : 0); // Wiggle mostly during "up" phase
-            // Scale: pulse up once
-            const scale = 1 + (Math.sin(t) > 0 ? Math.sin(t) * 0.2 : 0);
-            return {
-                offsetX: 0,
-                offsetY: 0,
-                rotation: wiggle,
-                scale: scale,
-                opacity: 1,
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { s: 1, rot: 0 } },
+                { pct: 0.1, transform: { s: 0.9, rot: -3 } },
+                { pct: 0.2, transform: { s: 0.9, rot: -3 } },
+                { pct: 0.3, transform: { s: 1.1, rot: 3 } },
+                { pct: 0.4, transform: { s: 1.1, rot: -3 } },
+                { pct: 0.5, transform: { s: 1.1, rot: 3 } },
+                { pct: 0.6, transform: { s: 1.1, rot: -3 } },
+                { pct: 0.7, transform: { s: 1.1, rot: 3 } },
+                { pct: 0.8, transform: { s: 1.1, rot: -3 } },
+                { pct: 0.9, transform: { s: 1.1, rot: 3 } },
+                { pct: 1, transform: { s: 1, rot: 0 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'wobble',
         name: 'Wobble',
         icon: '/images/stickers/wobble.png',
-        duration: 2000, // CSS: animation: meme-wobble 2s
-        // Swaying back and forth combined with rotation
+        duration: 2000,
+        // CSS Wobble
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames) * Math.PI * 2;
-            const x = Math.sin(t) * 10;
-            const rot = Math.sin(t) * 5;
-            return {
-                offsetX: x,
-                offsetY: 0,
-                rotation: rot,
-                scale: 1,
-                opacity: 1,
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { x: 0, rot: 0 } },
+                { pct: 0.15, transform: { x: -15, rot: -5 } },
+                { pct: 0.30, transform: { x: 10, rot: 3 } },
+                { pct: 0.45, transform: { x: -10, rot: -3 } },
+                { pct: 0.60, transform: { x: 5, rot: 2 } },
+                { pct: 0.75, transform: { x: -2, rot: -1 } },
+                { pct: 1, transform: { x: 0, rot: 0 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'heartbeat',
         name: 'Heartbeat',
         icon: '/images/stickers/heartbeat.png',
-        duration: 1300, // CSS: animation: meme-heartbeat 1.3s
-        // Iconic double-pulse (Match CSS: 0%, 14%, 28%, 42%, 70%)
+        duration: 1300,
+        // CSS: 0/14/28/42/70
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames); // 0 to 1
-            // Heartbeat mathematical approximation
-            // Two rapid pulses per cycle
-            let scale = 1;
-            // First pulse: 0% to 28% (Peak at 14%)
-            if (t < 0.28) {
-                scale = 1 + Math.sin((t / 0.28) * Math.PI) * 0.15;
-            } 
-            // Second pulse: 28% to 70% (Peak at 42% -> 28 + 14) - CSS peak is at 42%, ends at 70%
-            // 28% to 70% is a range of 0.42. 
-            // Peak at 42% is (42-28)/42 = 14/42 = 1/3 of the way through the pulse? 
-            // Actually CSS is 28->42->70. The peak is at 42. (42-28)=14. (70-42)=28. 
-            // So it rises fast (14%) and falls slow (28%).
-            else if (t >= 0.28 && t < 0.70) {
-                 const localT = (t - 0.28) / (0.70 - 0.28); // 0 to 1
-                 // Use a sine wave but shifted? Or just a simple up/down.
-                 // Let's use standard sine for simplicity, close enough to CSS ease-in-out
-                 scale = 1 + Math.sin(localT * Math.PI) * 0.15;
-            }
-
-            return {
-                offsetX: 0,
-                offsetY: 0,
-                rotation: 0,
-                scale: scale,
-                opacity: 1,
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { s: 1 } },
+                { pct: 0.14, transform: { s: 1.15 } },
+                { pct: 0.28, transform: { s: 1 } },
+                { pct: 0.42, transform: { s: 1.15 } },
+                { pct: 0.70, transform: { s: 1 } },
+                { pct: 1, transform: { s: 1 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'flip',
         name: 'Flip',
         icon: '/images/stickers/flip.png',
-        duration: 1000, // Default 1s (no CSS reference found, using reasonable default)
-        // 3D Flip simulated with 2D scaleX
+        duration: 1000,
+        // CSS: 0 (1), 50 (-1), 100 (1)
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames) * Math.PI * 2;
-            const scaleX = Math.cos(t);
-            return {
-                offsetX: 0,
-                offsetY: 0,
-                rotation: 0,
-                scaleX: scaleX,
-                scaleY: 1,
-                opacity: 1,
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { sx: 1 } },
+                { pct: 0.5, transform: { sx: -1 } },
+                { pct: 1, transform: { sx: 1 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         },
     },
     {
         id: 'jelly',
         name: 'Jelly',
         icon: '/images/stickers/jelly.png',
-        duration: 900, // CSS: animation: meme-jelly 0.9s
-        // Squash and stretch bounce
+        duration: 900,
+        // CSS Jelly
         getTransform: (frameIndex, totalFrames) => {
-            const t = (frameIndex / totalFrames) * Math.PI * 2;
-            // When going up, stretch Y (scale > 1). When hitting bottom, squash (scale < 1).
-            // Since we only have uniform scale, we can't do true conservation of volume (scaleX * scaleY = 1).
-            // We'll simulate a "Zooming" jelly effect.
-            const scale = 1 + Math.sin(t * 2) * 0.1 + Math.cos(t) * 0.05;
-            return {
-                offsetX: 0,
-                offsetY: Math.sin(t) * 5,
-                rotation: Math.cos(t) * 5,
-                scale: scale,
-                opacity: 1
-            };
+            const progress = (frameIndex / totalFrames);
+            const frames = [
+                { pct: 0, transform: { sx: 1, sy: 1, y: 0 } },
+                { pct: 0.25, transform: { sx: 1.1, sy: 0.9, y: 0 } },
+                { pct: 0.50, transform: { sx: 0.9, sy: 1.1, y: -10 } },
+                { pct: 0.75, transform: { sx: 1.15, sy: 0.85, y: 0 } },
+                { pct: 1, transform: { sx: 1, sy: 1, y: 0 } }
+            ];
+            return interpolateKeyframes(frames, progress);
         }
     }
 ];
@@ -300,7 +346,7 @@ export function hasAnimatedText(texts) {
  */
 export function getMaxAnimationDuration(texts, stickers) {
     let maxDuration = 0;
-    
+
     for (const text of (texts || [])) {
         if (text.animation && text.animation !== 'none') {
             const anim = getAnimationById(text.animation);
@@ -309,7 +355,7 @@ export function getMaxAnimationDuration(texts, stickers) {
             }
         }
     }
-    
+
     for (const sticker of (stickers || [])) {
         if (sticker.animation && sticker.animation !== 'none') {
             const anim = getAnimationById(sticker.animation);
@@ -318,7 +364,7 @@ export function getMaxAnimationDuration(texts, stickers) {
             }
         }
     }
-    
+
     return maxDuration || 1000; // Default to 1s if no animations
 }
 

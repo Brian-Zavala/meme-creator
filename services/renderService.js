@@ -360,19 +360,39 @@ export function calculateDimensions(meme, assets) {
     } else if (hasValidPanel) {
         if (meme.layout === 'single') {
             const pid = meme.panels[0].id;
+            let rawWidth = 800;
+            let rawHeight = 800;
+
             if (gifProcessors[pid]) {
-                exportWidth = gifProcessors[pid].width;
-                exportHeight = gifProcessors[pid].height;
+                rawWidth = gifProcessors[pid].width;
+                rawHeight = gifProcessors[pid].height;
             } else if (staticImages[pid]) {
-                exportWidth = staticImages[pid].width;
-                exportHeight = staticImages[pid].height;
+                rawWidth = staticImages[pid].width;
+                rawHeight = staticImages[pid].height;
             }
+
+            // QUALITY UPGRADE: Enforce minimum width of 1080px for crisp text
+            // If the source (GIF/Image) is smaller, we upscale the canvas dimensions.
+            // The browser/canvas will handle scaling the image, and text will be drawn at high res.
+            const MIN_EXPORT_WIDTH = 1080;
+            if (rawWidth < MIN_EXPORT_WIDTH) {
+                const scale = MIN_EXPORT_WIDTH / rawWidth;
+                exportWidth = Math.round(rawWidth * scale);
+                exportHeight = Math.round(rawHeight * scale);
+                console.log(`Upscaling export from ${rawWidth}x${rawHeight} to ${exportWidth}x${exportHeight} for text quality.`);
+            } else {
+                exportWidth = rawWidth;
+                exportHeight = rawHeight;
+            }
+
             // If asset load failed but url exists, we might default to 800x800 or generic
             containerAspect = exportWidth / exportHeight;
         } else if (meme.layout === 'top-bottom') {
             containerAspect = 3 / 4;
+            exportWidth = 1080; // Standard high res
         } else if (meme.layout === 'side-by-side') {
             containerAspect = 4 / 3;
+            exportWidth = 1080; // Standard high res
         }
 
         if (meme.layout !== 'single') {

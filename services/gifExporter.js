@@ -42,9 +42,9 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
     let { exportWidth, exportHeight } = dimensions; // Get dimensions that include padding
 
     // QUALITY/SPEED BALANCE:
-    // GIFs are huge. We cap max dimension to 600px for speed and file size unless 'High Quality' is requested (Todo)
-    // 600px is standard for decent quality GIFs that load fast.
-    const MAX_GIF_DIMENSION = 600;
+    // GIFs are huge. We cap max dimension to 1080px (formerly 600px) to ensure text readability.
+    // 1080px is now standard for high quality social sharing.
+    const MAX_GIF_DIMENSION = 1080;
     if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
         const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
         exportWidth = Math.round(exportWidth * scale);
@@ -66,7 +66,7 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
     // 3. Setup GIF Encoder
     const gif = new GIF({
         workers: 4, // Max workers for speed (check browser limits)
-        quality: 10, // 10 is decent, 1 is best (slower)
+        quality: 1, // 1 is best quality (slower), 10 is default. We want crisp text.
         width: exportWidth,
         height: exportHeight,
         workerScript: '/gif.worker.js', // Ensure this file exists in /public

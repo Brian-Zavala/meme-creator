@@ -180,28 +180,15 @@ export async function saveState(state) {
                 cleanPresent.stickers = await Promise.all(cleanPresent.stickers.map(processItemSafe));
             }
 
-            // Past/future: Strip heavy fields but TRY to keep sourceBlob if possible?
-            // Actually, for history, if we strip sourceBlob, Undo -> breaks image after reload.
-            // But preserving 15 blobs is heavy?
-            // IndexedDB handles blobs by reference usually.
-            // The constraint is 'postMessage' memory.
-            // Let's keep sourceBlob in history too, but strip DATA URLs (strings).
+            // OOM Prevention: We do NOT persist undo/redo history to disk.
+            // The serialization cost of cloning 8+ massive image states causes DataCloneError on mobile.
+            // Users reload to current state, but lose undo stack (standard PWA tradeoff).
             const cleanState = {
                 ...stateToSave,
                 present: cleanPresent,
-                past: (stateToSave.past || []).map(stripHeavyFields),
-                future: (stateToSave.future || []).map(stripHeavyFields),
+                past: [],   // Drop history to save memory
+                future: [], // Drop future to save memory
             };
-
-            // Dexie handles Blobs efficiently (storing by reference on disk mostly),
-            // so we don't need to be AS aggressive as with workers, but keeping history trim is good.
-            // Size guard (~50MB limit)
-            const estimatedBytes = estimateSize(cleanState);
-            if (estimatedBytes > 100_000_000) { // Bumped to 100MB for Dexie
-                console.warn(`State too large (~${(estimatedBytes / 1_000_000).toFixed(1)}MB), trimming history`);
-                cleanState.past = cleanState.past.slice(-5);
-                cleanState.future = [];
-            }
 
             // Save via Dexie
             await db.appState.put(cleanState, KEY);

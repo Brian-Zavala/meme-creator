@@ -2426,7 +2426,7 @@ export default function Main() {
                 ...p,
                 url: objectUrl,
                 sourceBlob: isProcessed ? null : file,
-                isVideo: isVideo || isGif,
+                isVideo: isVideo,
                 isGif: isGif,
                 objectFit: "cover",
                 posX: 50,
@@ -2515,7 +2515,7 @@ export default function Main() {
                   ...p,
                   url: objectUrl,
                   sourceBlob: isProcessed ? null : file,
-                  isVideo: isVideo || isGif,
+                  isVideo: isVideo,
                   isGif: isGif,
                   objectFit: "cover",
                   posX: 50,
@@ -2530,7 +2530,7 @@ export default function Main() {
             ...prev,
             panels: newPanels,
             activePanelId: panelId,
-            mode: newPanels.some(p => p.isVideo) ? "video" : "image"
+            mode: newPanels.some(p => p.isVideo || p.isGif) ? "video" : "image"
           };
         });
       });
@@ -3159,7 +3159,7 @@ export default function Main() {
     if (!memeRef.current) return;
 
     // Determine content types
-    const hasVideoPanel = meme.panels.some(p => p.isVideo || (p.url && p.url.includes('.gif')));
+    const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
     const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
     const hasAnimatedTextContent = hasAnimatedText(meme.texts);
     const hasAnyStickers = meme.stickers.length > 0;
@@ -3244,7 +3244,7 @@ export default function Main() {
       }
 
       // Determine if content is animated
-      const hasVideoPanel = meme.panels.some(p => p.isVideo || (p.url && p.url.includes('.gif')));
+      const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
       const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
       const hasAnimatedTextContent = hasAnimatedText(meme.texts);
       const isAnimated = hasVideoPanel || hasGifSticker || hasAnimatedTextContent;

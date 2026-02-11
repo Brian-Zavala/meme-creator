@@ -153,7 +153,10 @@ async function createGifProcessor(url) {
 async function createVideoProcessor(url) {
     return new Promise((resolve) => {
         const video = document.createElement('video');
-        video.crossOrigin = "anonymous";
+        // FIX: Do NOT set crossOrigin for blob/data URLs (local uploads)
+        if (!url.startsWith('data:') && !url.startsWith('blob:')) {
+            video.crossOrigin = "anonymous";
+        }
         video.src = url;
         video.muted = true;
         video.playsInline = true;
@@ -235,40 +238,85 @@ async function loadMemeAssets(meme, stickers) {
     const stickerProcessors = {};
     const stickerImages = {};
 
+    // Helper: get a usable URL for loading, with sourceBlob fallback for stale blob URLs
+    const getLoadableUrl = (item) => {
+        if (item.url && !item.url.startsWith('blob:')) return item.url; // Regular URLs are always fine
+        if (item.url) return item.url; // Try the blob URL first
+        // If no URL but we have a sourceBlob, create a fresh one
+        if (item.sourceBlob instanceof Blob) {
+            return URL.createObjectURL(item.sourceBlob);
+        }
+        return null;
+    };
+
+    // Helper: attempt to load an image with sourceBlob fallback
+    const loadImageWithFallback = async (item) => {
+        const url = item.url || (item.sourceBlob instanceof Blob ? URL.createObjectURL(item.sourceBlob) : null);
+        if (!url) return null;
+        try {
+            const img = new Image();
+            if (!url.startsWith('data:') && !url.startsWith('blob:')) {
+                img.crossOrigin = "anonymous";
+            }
+            img.src = url;
+            await img.decode();
+            return img;
+        } catch (err) {
+            // If blob URL failed and we have sourceBlob, try a fresh URL
+            if (url.startsWith('blob:') && item.sourceBlob instanceof Blob) {
+                try {
+                    const freshUrl = URL.createObjectURL(item.sourceBlob);
+                    const img = new Image();
+                    img.src = freshUrl;
+                    await img.decode();
+                    return img;
+                } catch (retryErr) {
+                    console.warn("Retry with sourceBlob also failed:", retryErr);
+                }
+            }
+            console.warn("Failed to load/decode image:", url.substring(0, 50) + "...", err);
+            return null;
+        }
+    };
 
     await Promise.all(meme.panels.map(async (panel) => {
-        if (!panel.url) return;
+        const url = getLoadableUrl(panel);
+        if (!url) return;
 
         let processor = null;
-        // Detect Video vs GIF
-        // Note: DataURL mime type check or Extension check
-        const isVideo = panel.isVideo ||
-                        panel.url.startsWith('data:video') ||
-                        panel.url.match(/\.(mp4|webm|mov)$/i);
 
-        if (isVideo) {
-            processor = await createVideoProcessor(panel.url);
-        } else if (panel.url.includes('.gif') || panel.url.startsWith('data:image/gif')) {
-            processor = await createGifProcessor(panel.url);
+        // FIX: Check for GIF FIRST (isGif flag, URL pattern, or data URL mime type)
+        // This prevents GIFs from being incorrectly routed to createVideoProcessor
+        // which fails because <video> elements cannot load animated GIFs.
+        // Blob URLs from user uploads don't contain '.gif', so the isGif flag is critical.
+        const isGif = panel.isGif ||
+                      url.includes('.gif') ||
+                      url.startsWith('data:image/gif');
+
+        // Only treat as video if it's NOT a GIF
+        const isVideo = !isGif && (
+            panel.isVideo ||
+            url.startsWith('data:video') ||
+            url.match(/\.(mp4|webm|mov)$/i)
+        );
+
+        if (isGif) {
+            processor = await createGifProcessor(url);
+            // Fallback: if blob URL failed, try sourceBlob
+            if (!processor && panel.sourceBlob instanceof Blob) {
+                const freshUrl = URL.createObjectURL(panel.sourceBlob);
+                processor = await createGifProcessor(freshUrl);
+            }
+        } else if (isVideo) {
+            processor = await createVideoProcessor(url);
         }
 
         if (processor) {
             gifProcessors[panel.id] = processor;
-        } else {
-             // Fallback to Static Image (if not video/gif or processor failed)
-            try {
-                const img = new Image();
-                // FIX: Do NOT set crossOrigin for Data URLs or Blob URLs (local uploads)
-                // Setting it on data: URIs can sometimes cause Tainted Canvas issues in specific browsers
-                if (!panel.url.startsWith('data:') && !panel.url.startsWith('blob:')) {
-                    img.crossOrigin = "anonymous";
-                }
-                img.src = panel.url;
-                await img.decode();
-                staticImages[panel.id] = img;
-            } catch (err) {
-                console.warn("Failed to load/decode image:", panel.url.substring(0, 50) + "...", err);
-            }
+        } else if (!isGif || !processor) {
+            // Fallback to Static Image (if not animated or processor failed)
+            const img = await loadImageWithFallback(panel);
+            if (img) staticImages[panel.id] = img;
         }
     }));
 
@@ -276,22 +324,17 @@ async function loadMemeAssets(meme, stickers) {
         let processor = null;
         if (s.isAnimated || s.url.includes('.gif')) {
             processor = await createGifProcessor(s.url);
+            // Fallback: try sourceBlob if blob URL failed
+            if (!processor && s.sourceBlob instanceof Blob) {
+                const freshUrl = URL.createObjectURL(s.sourceBlob);
+                processor = await createGifProcessor(freshUrl);
+            }
             if (processor) stickerProcessors[s.id] = processor;
         }
 
         if (!processor) {
-            try {
-                const img = new Image();
-                // FIX: Do NOT set crossOrigin for Data URLs or Blob URLs (local uploads)
-                if (!s.url.startsWith('data:') && !s.url.startsWith('blob:')) {
-                    img.crossOrigin = "anonymous";
-                }
-                img.src = s.url;
-                await img.decode();
-                stickerImages[s.id] = img;
-            } catch (err) {
-                console.warn("Failed to load sticker:", s.url, err);
-            }
+            const img = await loadImageWithFallback(s);
+            if (img) stickerImages[s.id] = img;
         }
     }));
 
@@ -348,7 +391,10 @@ async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, assets, d
 
     if (!stickersOnly) {
         for (const panel of meme.panels) {
-            if (!panel.url) continue;
+            // FIX: Don't skip panels that have loaded assets even if panel.url is stale/null
+            // This can happen after Dexie state restore when blob URLs weren't rehydrated
+            const hasLoadedAsset = gifProcessors[panel.id] || staticImages[panel.id] || (assets.friedImages && assets.friedImages[panel.id]);
+            if (!panel.url && !hasLoadedAsset) continue;
 
             const px = (panel.x / 100) * exportWidth;
             const py = (panel.y / 100) * contentHeight + contentOffsetY;
@@ -596,8 +642,10 @@ function calculateDimensions(meme, assets) {
     const baseWidth = 800; // Reference width for scaling calculations (matches MemeCanvas)
     const { gifProcessors, staticImages } = assets;
 
-    // Check if we actually have any valid panels
-    const hasValidPanel = meme.panels && meme.panels.length > 0 && meme.panels[0].url;
+    // Check if we actually have any valid panels (url OR loaded assets from sourceBlob fallback)
+    const hasValidPanel = meme.panels && meme.panels.length > 0 && (
+        meme.panels[0].url || gifProcessors[meme.panels[0].id] || staticImages[meme.panels[0].id]
+    );
 
     if (meme.stickersOnly) {
         // Force standardized sticker size (e.g. for Telegram/Signal/WhatsApp)

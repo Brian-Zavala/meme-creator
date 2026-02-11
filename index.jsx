@@ -1,4 +1,6 @@
-import { StrictMode } from 'react'
+// StrictMode removed: incompatible with DotLottieWorkerReact
+// (double-invokes effects -> transferControlToOffscreen crash)
+import { /* StrictMode */ } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
@@ -36,7 +38,7 @@ function AppWithProviders() {
       </PostHogProvider>
     );
   }
-  
+
   // Render without PostHog if no API key
   if (import.meta.env.DEV) {
     console.warn('PostHog API key not found - analytics disabled');
@@ -69,10 +71,8 @@ if (!localStorage.getItem(RESET_KEY)) {
 } else {
   // Normal app startup - wrapped in Error Boundary
   createRoot(document.getElementById('root')).render(
-    <StrictMode>
-      <ErrorBoundary>
-        <AppWithProviders />
-      </ErrorBoundary>
-    </StrictMode>
+    <ErrorBoundary>
+      <AppWithProviders />
+    </ErrorBoundary>
   )
 }

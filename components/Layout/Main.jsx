@@ -145,10 +145,17 @@ export default function Main() {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // Preload toast animations
-    TOAST_ANIMATIONS.forEach(src => {
-      fetch(src).catch(() => { });
-    });
+    // Defer toast animation preloads until the browser is idle.
+    // These 12 fetches were firing during the critical loading phase,
+    // competing with Lottie/storage for main thread time.
+    const preloadAnimations = () => {
+      TOAST_ANIMATIONS.forEach(src => {
+        fetch(src).catch(() => { });
+      });
+    };
+    const idleId = typeof requestIdleCallback !== 'undefined'
+      ? requestIdleCallback(preloadAnimations, { timeout: 5000 })
+      : setTimeout(preloadAnimations, 2000);
 
     // Hydrate state from IndexedDB
     loadState().then((saved) => {
@@ -3409,13 +3416,58 @@ export default function Main() {
     ? (meme.texts.find((t) => t.id === meme.selectedId) || meme.stickers.find((s) => s.id === meme.selectedId))
     : null;
 
-  // HYDRATION LOADER: Prevent flickering by showing a loading screen until state is restored
+  // HYDRATION SKELETON: Show a layout skeleton until IndexedDB state is restored
   if (!isHydrated) {
+    const SkeletonPulse = ({ className = "", style = {} }) => (
+      <div
+        className={`animate-pulse rounded-xl ${className}`}
+        style={{ background: "linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%)", backgroundSize: "400px 100%", ...style }}
+      />
+    );
     return (
-      <div className="flex items-center justify-center min-h-[50vh] flex-col gap-4 animate-in fade-in zoom-in-95 duration-500">
-        <Loader2 className="w-12 h-12 text-brand animate-spin" />
-        <p className="text-slate-400 font-medium text-sm animate-pulse">Restoring Session...</p>
-      </div>
+      <main className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 animate-in fade-in duration-300">
+        {/* LEFT: Toolbar skeleton (desktop) */}
+        <div className="hidden lg:flex lg:col-span-4 flex-col gap-4">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
+            <SkeletonPulse className="h-11" />
+            <SkeletonPulse className="h-11" />
+            <SkeletonPulse className="h-11 w-11" />
+          </div>
+          <div className="flex rounded-xl overflow-hidden border border-[#2f3336]">
+            <SkeletonPulse className="flex-1 h-11 rounded-none" />
+            <SkeletonPulse className="flex-1 h-11 rounded-none" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {Array.from({ length: 12 }).map((_, i) => <SkeletonPulse key={i} className="h-[72px]" />)}
+          </div>
+          <SkeletonPulse className="h-11" />
+          <div className="grid grid-cols-2 gap-3">
+            <SkeletonPulse className="h-11" />
+            <SkeletonPulse className="h-11" />
+          </div>
+        </div>
+
+        {/* CENTER: Canvas skeleton */}
+        <div className="lg:col-span-4 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <SkeletonPulse className="h-11" />
+            <SkeletonPulse className="h-11" />
+          </div>
+          <SkeletonPulse className="h-11" />
+          <div className="h-11 bg-brand/30 rounded-none" />
+          <SkeletonPulse className="h-[400px] border-2 border-dashed border-[#2f3336]" />
+        </div>
+
+        {/* RIGHT: Sidebar skeleton (desktop) */}
+        <div className="hidden lg:flex lg:col-span-4 flex-col gap-4">
+          <div className="grid grid-cols-3 rounded-xl overflow-hidden border border-[#2f3336]">
+            <SkeletonPulse className="h-11 rounded-none" />
+            <SkeletonPulse className="h-11 rounded-none" />
+            <SkeletonPulse className="h-11 rounded-none" />
+          </div>
+          <SkeletonPulse className="h-[380px]" />
+        </div>
+      </main>
     );
   }
 

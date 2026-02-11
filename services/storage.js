@@ -1,8 +1,10 @@
 // Storage service with robust error handling and worker fallback
 // Handles IndexedDB operations off the main thread when possible
 
-// Timeout for worker operations (5 seconds)
-const WORKER_TIMEOUT_MS = 5000;
+// Timeout for worker operations (15 seconds)
+// Increased from 5s because Lottie can block the main thread for 10s+,
+// preventing the worker's postMessage callback from firing in time.
+const WORKER_TIMEOUT_MS = 15000;
 
 // Track if we're using the worker or fallback mode
 let useWorker = true;
@@ -250,34 +252,32 @@ export async function saveState(state) {
 }
 
 export async function loadState() {
-    try {
-        let state;
-
-        if (useWorker && worker) {
-            state = await sendRequest('LOAD_STATE');
-        } else {
-            state = await loadStateFallback();
-        }
-
-        if (!state) return null;
-
-        return processState(state);
-
-    } catch (err) {
-        console.error('Failed to load state:', err);
-
-        // Try fallback if worker failed
-        if (useWorker) {
-            useWorker = false;
-            try {
-                const state = await loadStateFallback();
-                return processState(state);
-            } catch (fallbackErr) {
-                console.error('Fallback load also failed:', fallbackErr);
+    // Strategy: Worker (attempt 1) -> Worker retry (attempt 2) -> Main-thread fallback
+    // The worker itself responds in ~50ms, but the callback can be delayed 10s+
+    // if the main thread is blocked by heavy libraries (e.g. Lottie).
+    for (let attempt = 0; attempt < 2; attempt++) {
+        if (!useWorker || !worker) break;
+        try {
+            const state = await sendRequest('LOAD_STATE');
+            if (!state) return null;
+            return processState(state);
+        } catch (err) {
+            if (attempt === 0) {
+                console.warn('Storage worker attempt 1 failed, retrying...', err.message);
+            } else {
+                console.warn('Storage worker attempt 2 failed, falling back to main thread', err.message);
+                useWorker = false;
             }
         }
+    }
 
-        // Return null on complete failure - app will use defaults
+    // Main-thread fallback -- always works but blocks the thread briefly
+    try {
+        const state = await loadStateFallback();
+        if (!state) return null;
+        return processState(state);
+    } catch (fallbackErr) {
+        console.error('All storage load attempts failed:', fallbackErr);
         return null;
     }
 }

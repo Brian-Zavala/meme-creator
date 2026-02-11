@@ -7,7 +7,8 @@ import { removeImageBackground } from "../../services/backgroundRemover";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
 import { searchGiphy, registerShare, getAutocomplete, getCategories } from "../../services/giphy";
-import { searchImages, trackUnsplashDownload, getRandomImage } from "../../services/imageSearch";
+import { searchImages, trackUnsplashDownload, getRandomImage, searchPexelsVideos, getRandomPexelsVideo } from "../../services/imageSearch";
+import VideoSourceTabs from "../MemeEditor/VideoSourceTabs";
 // gifExporter is now lazy loaded
 import { hasAnimatedText } from "../../constants/textAnimations";
 import { deepFryImage } from "../../services/imageProcessor";
@@ -419,15 +420,23 @@ export default function Main() {
   const memeSearchRef = useRef(null);
   const memeDropdownRef = useRef(null);
 
-  // Image source state (Unsplash / Pexels / Imgflip)
-  const [imageSource, setImageSource] = useState(() => localStorage.getItem("meme_img_source") || "imgflip");
+  // Image Search State
+  const [imageSource, setImageSource] = useState("imgflip");
   const [imageSearchResults, setImageSearchResults] = useState([]);
-  const [imageSearchLoading, setImageSearchLoading] = useState(false);
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
   const [imageSearchPage, setImageSearchPage] = useState(1);
   const [imageSearchTotalPages, setImageSearchTotalPages] = useState(0);
-  const imageSearchControllerRef = useRef(null);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
 
-  // Position dropdown via direct DOM manipulation to avoid re-renders on scroll/resize
+  // Video Search State (Pexels)
+  const [videoSource, setVideoSource] = useState("giphy");
+  const [pexelsVideoResults, setPexelsVideoResults] = useState([]);
+  const [pexelsVideoQuery, setPexelsVideoQuery] = useState("");
+  const [pexelsVideoPage, setPexelsVideoPage] = useState(1);
+  const [pexelsVideoTotalPages, setPexelsVideoTotalPages] = useState(0);
+  const [pexelsVideoLoading, setPexelsVideoLoading] = useState(false);
+
+  // Magic Caption Statedropdown via direct DOM manipulation to avoid re-renders on scroll/resize
   const updateDropdownPosition = useCallback(() => {
     const el = memeDropdownRef.current;
     const input = memeSearchRef.current;
@@ -597,6 +606,70 @@ export default function Main() {
     } catch (e) {
       console.error("Random image error:", e);
       toast.error("Error fetching random image");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Pexels Video Search Handler
+  const handlePexelsVideoSearch = async (query, page = 1) => {
+    if (!query.trim()) return;
+
+    // 400ms debounce
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+    // Clear previous results if new search
+    if (page === 1) {
+      setPexelsVideoResults([]);
+      setPexelsVideoTotalPages(0);
+    }
+
+    setPexelsVideoLoading(true);
+    setPexelsVideoPage(page);
+    setPexelsVideoQuery(query);
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      // Abort previous
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      abortControllerRef.current = new AbortController();
+
+      try {
+        const { results, totalPages } = await searchPexelsVideos(
+          query,
+          page,
+          abortControllerRef.current.signal
+        );
+
+        if (page === 1) {
+          setPexelsVideoResults(results);
+        } else {
+          setPexelsVideoResults(prev => [...prev, ...results]);
+        }
+        setPexelsVideoTotalPages(totalPages);
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          console.error(e);
+          toast.error("Failed to search Pexels videos");
+        }
+      } finally {
+        setPexelsVideoLoading(false);
+      }
+    }, 400);
+  };
+
+  // Random Video Handler (Pexels)
+  const handleRandomVideo = async () => {
+    setGenerating(true);
+    try {
+      const result = await getRandomPexelsVideo();
+      if (result) {
+        await loadSelectedMeme(result);
+      } else {
+        toast.error("Failed to get random video");
+      }
+    } catch (e) {
+      console.error("Random video error:", e);
+      toast.error("Error fetching random video");
     } finally {
       setGenerating(false);
     }
@@ -3812,30 +3885,89 @@ export default function Main() {
 
                 {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}
 
-                {/* CASE 1: VIDEO MODE (Existing Tenor Search) */}
+                {/* CASE 1: VIDEO MODE (GIFs or Pexels) */}
                 {meme.mode === "video" && (
-                  <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
-                    <div className="p-3 border-b border-[#2f3336]">
-                      <GifSearch
-                        searchQuery={searchQuery}
-                        onSearchInput={handleSearchInput}
-                        onFocus={() => setShowSuggestions(true)}
-                        onClear={clearSearch}
-                        suggestions={suggestions}
-                        showSuggestions={showSuggestions}
-                        categories={categories}
-                        onSelectSuggestion={selectSuggestion}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            setShowSuggestions(false);
-                            performSearch(searchQuery);
-                          }
-                        }}
-                        containerRef={searchContainerRef}
-                        placeholder={isMobileScreen ? "Search GIFs..." : "Search GIFs..."}
-                      />
+                  <div className="relative border-b border-[#2f3336]">
+                    {/* Video Source Tabs */}
+                    <div className="px-3 pt-3 pb-2">
+                       <Suspense fallback={<div className="h-9 bg-[#111]/60 rounded-xl animate-pulse" />}>
+                         <VideoSourceTabs
+                           activeSource={videoSource}
+                           onSourceChange={(source) => {
+                             setVideoSource(source);
+                             // Reset states when switching
+                             if (source === "giphy") {
+                               setSearchQuery("");
+                               setSuggestions([]);
+                             } else {
+                               setPexelsVideoQuery("");
+                               setPexelsVideoResults([]);
+                             }
+                           }}
+                         />
+                       </Suspense>
                     </div>
-                  </Suspense>
+
+                    {videoSource === "giphy" ? (
+                      <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                        <div className="p-3 pt-0">
+                          <GifSearch
+                            searchQuery={searchQuery}
+                            onSearchInput={handleSearchInput}
+                            onFocus={() => setShowSuggestions(true)}
+                            onClear={clearSearch}
+                            suggestions={suggestions}
+                            showSuggestions={showSuggestions}
+                            categories={categories}
+                            onSelectSuggestion={selectSuggestion}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                setShowSuggestions(false);
+                                performSearch(searchQuery);
+                              }
+                            }}
+                            containerRef={searchContainerRef}
+                            placeholder={isMobileScreen ? "Search GIFs..." : "Search GIFs..."}
+                          />
+                        </div>
+                      </Suspense>
+                    ) : (
+                      <div className="px-3 pb-3">
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand transition-colors">
+                            <Search className="w-4 h-4" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Search Pexels videos..."
+                            value={pexelsVideoQuery}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPexelsVideoQuery(val);
+                              handlePexelsVideoSearch(val, 1);
+                            }}
+                            className="w-full input-field pl-10 pr-10 py-3 placeholder:text-xs md:placeholder:text-sm"
+                          />
+                          {/* Reuse MemeDropdownGrid for Pexels Videos */}
+                          {pexelsVideoQuery && createPortal(
+                            <Suspense fallback={null}>
+                              <MemeDropdownGrid
+                                filteredMemes={pexelsVideoResults}
+                                memeSearchQuery={pexelsVideoQuery}
+                                onSelectMeme={loadSelectedMeme}
+                                dropdownRef={memeDropdownRef}
+                                source="pexels_video"
+                                isLoading={pexelsVideoLoading}
+                                hasMore={pexelsVideoPage < pexelsVideoTotalPages}
+                                onLoadMore={() => handlePexelsVideoSearch(pexelsVideoQuery, pexelsVideoPage + 1)}
+                              />
+                            </Suspense>,
+                            document.body
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* CASE 2: IMAGE MODE (Multi-Source Search) */}
@@ -3921,10 +4053,19 @@ export default function Main() {
                     if (navigator.vibrate) navigator.vibrate(30);
                     setPingKey(Date.now());
 
-                    if (imageSource === "imgflip") {
-                      getMemeImage();
+                    if (meme.mode === "image") {
+                      if (imageSource === "imgflip") {
+                        getMemeImage();
+                      } else {
+                        handleRandomImage();
+                      }
                     } else {
-                      handleRandomImage();
+                      // Video Mode
+                      if (videoSource === "giphy") {
+                         getMemeImage(); // Existing Giphy Random
+                      } else {
+                         handleRandomVideo(); // New Pexels Random
+                      }
                     }
                   }}
                   disabled={loading || generating}
@@ -3940,7 +4081,7 @@ export default function Main() {
                       <RefreshCcw className="w-5 h-5" />
                     )}
                     <span className="text-lg">
-                      {generating ? "Cooking..." : meme.mode === "video" ? "Get Random GIF" : "Get Random Image"}
+                      {generating ? "Cooking..." : meme.mode === "video" ? (videoSource === "giphy" ? "Get Random GIF" : "Get Random Video") : "Get Random Image"}
                     </span>
                   </div>
                 </button>

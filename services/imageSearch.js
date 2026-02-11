@@ -285,6 +285,79 @@ export async function getRandomPexelsImage() {
   }
 }
 
+/**
+ * Search Pexels Videos
+ */
+export async function searchPexelsVideos(query, page = 1) {
+  const params = new URLSearchParams({
+    query,
+    page: String(page),
+    per_page: "20",
+    endpoint: "search",
+    type: "video",
+  });
+
+  try {
+    const res = await fetch(`/.netlify/functions/pexels?${params}`);
+    if (!res.ok) throw new Error(`Pexels video search ${res.status}`);
+    const data = await res.json();
+    return {
+      results: (data.videos || []).map(mapPexelsVideo),
+      totalPages: Math.ceil((data.total_results || 0) / 20),
+    };
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    console.error("Pexels video search error:", err);
+    return { results: [], totalPages: 0 };
+  }
+}
+
+/**
+ * Get random Pexels Video (from popular)
+ */
+export async function getRandomPexelsVideo() {
+  const page = Math.floor(Math.random() * 50) + 1; // Popular videos
+  const params = new URLSearchParams({
+    endpoint: "curated", // maps to /videos/popular
+    type: "video",
+    page: String(page),
+    per_page: "1",
+  });
+
+  try {
+    const res = await fetch(`/.netlify/functions/pexels?${params}`);
+    if (!res.ok) throw new Error(`Pexels random video ${res.status}`);
+    const data = await res.json();
+    const video = data.videos?.[0];
+    return video ? mapPexelsVideo(video) : null;
+  } catch (err) {
+    console.error("Pexels random video error:", err);
+    return null;
+  }
+}
+
+function mapPexelsVideo(video) {
+  // Find best quality MP4 (HD preferential)
+  const files = video.video_files || [];
+  const bestFile = files.find(f => f.quality === "hd" && f.width <= 1280) ||
+                   files.find(f => f.quality === "sd") ||
+                   files[0];
+
+  return {
+    id: String(video.id),
+    name: toImageName("Pexels Video", "Video"),
+    url: bestFile?.link,
+    thumbUrl: video.image, // Pexels provides a poster image
+    width: bestFile?.width || video.width,
+    height: bestFile?.height || video.height,
+    photographer: video.user.name,
+    photographerUrl: video.user.url + "?utm_source=meme_creator&utm_medium=referral",
+    source: "pexels_video",
+    isVideo: true,
+    duration: video.duration
+  };
+}
+
 // ─── Unified Search Dispatcher ────────────────────────────────────────
 /**
  * Search images from the specified source.

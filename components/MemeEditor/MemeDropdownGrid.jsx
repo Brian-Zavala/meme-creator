@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, Search, Camera, Aperture, Loader2, ChevronDown } from "lucide-react";
+import { TrendingUp, Search, Camera, Aperture, Loader2, ChevronDown, Video } from "lucide-react";
 
 /**
  * Isolated meme/image dropdown grid — owns hoveredMeme state internally
@@ -19,7 +19,7 @@ export default function MemeDropdownGrid({
 }) {
   const [hoveredMeme, setHoveredMeme] = useState(null);
 
-  const isAPI = source === "unsplash" || source === "pexels";
+  const isAPI = source === "unsplash" || source === "pexels" || source === "pexels_video";
 
   // Source-specific config
   const sourceConfig = {
@@ -62,6 +62,22 @@ export default function MemeDropdownGrid({
         </a>
       ),
     },
+    pexels_video: {
+      headerIcon: <Video className="w-4 h-4 text-[#05A081]" />,
+      headerLabel: "Pexels Videos",
+      emptyIcon: <Video className="w-10 h-10 opacity-20" />,
+      emptyPrefix: "No videos found for",
+      attribution: (
+        <a
+          href="https://www.pexels.com/videos/?utm_source=meme_creator&utm_medium=referral"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          Powered by <span className="font-bold text-[#05A081]">Pexels</span>
+        </a>
+      ),
+    },
   };
 
   const config = sourceConfig[source] || sourceConfig.imgflip;
@@ -83,7 +99,7 @@ export default function MemeDropdownGrid({
         </div>
         <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
           {config.emptyIcon}
-          <p className="text-sm">Type to search {source === "unsplash" ? "Unsplash" : "Pexels"} photos</p>
+          <p className="text-sm">Type to search {source === "unsplash" ? "Unsplash" : source === "pexels" ? "Pexels photos" : source === "pexels_video" ? "Pexels videos" : "Pexels"}</p>
           <p className="text-[10px] text-slate-600">Millions of free, high-quality images</p>
         </div>
       </div>

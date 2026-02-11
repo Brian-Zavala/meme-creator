@@ -10,9 +10,9 @@ export async function handler(event) {
     };
   }
 
-  const { query, page = "1", per_page = "30", endpoint = "search" } = event.queryStringParameters || {};
+  const { query, page = "1", per_page = "30", endpoint = "search", type = "photo" } = event.queryStringParameters || {};
 
-  // For search, query is required. For curated, it's not.
+  // For search, query is required. For curated/popular, it's not.
   if (endpoint === "search" && !query) {
     return {
       statusCode: 400,
@@ -29,8 +29,19 @@ export async function handler(event) {
     params.append("query", query);
   }
 
-  const baseUrl = "https://api.pexels.com/v1";
-  const targetUrl = endpoint === "curated" ? `${baseUrl}/curated` : `${baseUrl}/search`;
+  // Base URL depends on type (photo vs video)
+  const isVideo = type === "video";
+  const baseUrl = isVideo ? "https://api.pexels.com/videos" : "https://api.pexels.com/v1";
+
+  // Endpoint mapping
+  // Photo: /v1/search, /v1/curated
+  // Video: /videos/search, /videos/popular
+  let targetPath = "";
+  if (endpoint === "search") targetPath = "/search";
+  else if (endpoint === "curated") targetPath = isVideo ? "/popular" : "/curated";
+  else targetPath = "/search"; // fallback
+
+  const targetUrl = `${baseUrl}${targetPath}`;
 
   try {
     const response = await fetch(

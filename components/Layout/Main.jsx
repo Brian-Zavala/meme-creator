@@ -3667,18 +3667,18 @@ export default function Main() {
               <span>GIF downloaded!</span>
               <span className="text-xs opacity-80 font-normal">Apps prevented clipboard copy.</span>
             </div>
-          ), { id: toastId });
+          ), { id: toastId, duration: 4000 });
         }
       } else {
         // PNG: Try clipboard with focus handling
         try {
           await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          toast.success("Copied to clipboard!", { id: toastId });
+          toast.success("Copied to clipboard!", { id: toastId, duration: 3000 });
         } catch (clipboardError) {
           // Clipboard failed (focus lost or not supported) - fall back to download
           console.warn("Clipboard failed, downloading instead:", clipboardError);
           await triggerDownload(blob, `meme-${Date.now()}.png`);
-          toast.success("Downloaded! (Clipboard unavailable)", { id: toastId });
+          toast.success("Downloaded! (Clipboard unavailable)", { id: toastId, duration: 4000 });
         }
       }
     } catch (e) {

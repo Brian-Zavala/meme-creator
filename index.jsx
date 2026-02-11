@@ -19,10 +19,18 @@ const posthogOptions = {
     : `${window.location.origin}/ph`,
   ui_host: 'https://us.posthog.com',
   defaults: '2025-11-30',
-  // Prevent PostHog from blocking render on initialization failure
   bootstrap: { distinctID: undefined },
+  // CRITICAL: Disable session recording - DOM mutations from Lottie animations
+  // flood mobile bandwidth and crash the page within 10-15 seconds
+  disable_session_recording: true,
+  // Disable autocapture to reduce event volume on mobile
+  autocapture: false,
+  // Only capture explicit pageview/pageleave events
+  capture_pageview: true,
+  capture_pageleave: true,
+  // Disable scroll depth tracking (unnecessary overhead)
+  disable_scroll_properties: true,
   loaded: (posthog) => {
-    // PostHog loaded successfully
     if (import.meta.env.DEV) console.log('PostHog initialized');
   },
 }

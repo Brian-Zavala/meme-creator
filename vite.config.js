@@ -10,7 +10,15 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico}'],
+        // Exclude heavy/non-essential assets from precache to prevent
+        // mobile bandwidth saturation on first visit
+        globIgnores: [
+          'giphy/**',
+          '**/ort.*.js',
+          '**/background.worker*',
+          '**/deepFry.worker*',
+        ],
         maximumFileSizeToCacheInBytes: 5000000, // 5MB - excludes WASM/ONNX from precache
         runtimeCaching: [
           {
@@ -66,7 +74,7 @@ export default defineConfig({
         ],
         // Offline fallback for navigation requests
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/ph/]
+        navigateFallbackDenylist: [/^\/api/, /^\/ph/, /^\/.netlify/]
       },
       manifest: {
         start_url: 'https://meme-creator.app/',
@@ -174,7 +182,7 @@ export default defineConfig({
   server: {
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Embedder-Policy": "credentialless",
     }
   },
 

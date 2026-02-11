@@ -151,6 +151,12 @@ export default function Main() {
     // These 12 fetches were firing during the critical loading phase,
     // competing with Lottie/storage for main thread time.
     const preloadAnimations = () => {
+      // Skip preloading on slow/metered connections to avoid competing for bandwidth
+      if (navigator.connection?.saveData ||
+          (navigator.connection?.effectiveType &&
+           ['slow-2g', '2g', '3g'].includes(navigator.connection.effectiveType))) {
+        return;
+      }
       TOAST_ANIMATIONS.forEach(src => {
         fetch(src).catch(() => { });
       });

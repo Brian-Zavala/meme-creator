@@ -802,6 +802,14 @@ export default function Main() {
       return;
     }
 
+    // SKIP PRE-PROCESSING FOR VIDEOS/GIFS
+    // They are rendered per-frame in renderService.js (applyDeepFry) to support animation.
+    // Trying to deep-fry a video as a static image in the worker will fail with encoding errors.
+    const isGif = activePanel.url.toLowerCase().includes('.gif') || activePanel.url.startsWith('data:image/gif');
+    if (activePanel.isVideo || isGif) {
+      return;
+    }
+
     // Track if this specific effect instance started processing
     let didStartProcessing = false;
 
@@ -812,18 +820,6 @@ export default function Main() {
       try {
         didStartProcessing = true;
         setIsProcessing(true); // Start loading spinner
-
-        if (activePanel.isVideo) {
-          toast("GIF freezes for performance, but export stays animated!", {
-            id: "fry-warning",
-            icon: (
-              <picture>
-                <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.webp" type="image/webp" />
-                <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f6a8/512.gif" alt="🚨" width="32" height="32" />
-              </picture>
-            ),
-          });
-        }
 
         // Call your service with a timeout wrapper
         const timeoutMs = 15000; // 15 second max for entire operation

@@ -1,140 +1,10 @@
-// Storage service with robust error handling and worker fallback
-// Handles IndexedDB operations off the main thread when possible
 
-// Timeout for worker operations (15 seconds)
-// Increased from 5s because Lottie can block the main thread for 10s+,
-// preventing the worker's postMessage callback from firing in time.
-const WORKER_TIMEOUT_MS = 15000;
+// Storage service using Dexie.js for robust, main-thread async storage
+// Replaces the crash-prone Worker implementation.
 
-// Track if we're using the worker or fallback mode
-let useWorker = true;
-let worker = null;
+import { db } from './db';
 
-// Request Tracker
-let nextRequestId = 0;
-const pendingRequests = new Map();
-
-/**
- * Initialize worker with error handling
- * Falls back to main-thread implementation if workers fail
- */
-function initWorker() {
-    try {
-        worker = new Worker(new URL('./storage.worker.js', import.meta.url), { type: 'module' });
-
-        worker.onmessage = (e) => {
-            const { id, type, payload, success, error } = e.data;
-            const request = pendingRequests.get(id);
-
-            if (request) {
-                clearTimeout(request.timeoutId);
-                if (success) {
-                    request.resolve(payload);
-                } else {
-                    console.error(`Storage Worker Error (${type}):`, error);
-                    request.reject(new Error(error));
-                }
-                pendingRequests.delete(id);
-            }
-        };
-
-        worker.onerror = (e) => {
-            console.error('Storage worker error:', e);
-            useWorker = false;
-            // Reject all pending requests
-            pendingRequests.forEach((request, id) => {
-                clearTimeout(request.timeoutId);
-                request.reject(new Error('Worker crashed'));
-                pendingRequests.delete(id);
-            });
-        };
-    } catch (err) {
-        console.warn('Failed to initialize storage worker, using fallback:', err);
-        useWorker = false;
-    }
-}
-
-// Initialize worker on load
-initWorker();
-
-/**
- * Send request to worker with timeout
- */
-function sendRequest(type, payload = null) {
-    return new Promise((resolve, reject) => {
-        if (!useWorker || !worker) {
-            reject(new Error('Worker not available'));
-            return;
-        }
-
-        const id = nextRequestId++;
-
-        // Set timeout to prevent hanging forever
-        const timeoutId = setTimeout(() => {
-            if (pendingRequests.has(id)) {
-                pendingRequests.delete(id);
-                console.warn(`Storage worker request timed out after ${WORKER_TIMEOUT_MS}ms`);
-                reject(new Error('Worker request timeout'));
-            }
-        }, WORKER_TIMEOUT_MS);
-
-        pendingRequests.set(id, { resolve, reject, timeoutId });
-        worker.postMessage({ type, payload, id });
-    });
-}
-
-// ============================================
-// FALLBACK: Main-thread IndexedDB implementation
-// Used when workers are unavailable
-// ============================================
-
-const DB_NAME = 'MemeCreatorDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'appState';
 const KEY = 'meme-generator-state';
-
-function openDBFallback() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
-
-        request.onsuccess = (event) => {
-            resolve(event.target.result);
-        };
-
-        request.onerror = (event) => {
-            reject(event.target.error);
-        };
-    });
-}
-
-async function saveStateFallback(state) {
-    const db = await openDBFallback();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.put(state, KEY);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function loadStateFallback() {
-    const db = await openDBFallback();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.get(KEY);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
 
 // ============================================
 // EXPORTED API
@@ -191,11 +61,6 @@ function sanitizeState(data) {
 // Coalesce rapid saves - only the latest one runs
 let pendingSaveTimer = null;
 let pendingSaveState = null;
-// Circuit breaker: stop retrying after consecutive OOM failures
-let consecutiveFailures = 0;
-const MAX_CONSECUTIVE_FAILURES = 3;
-const FAILURE_COOLDOWN_MS = 30000; // 30s cooldown after max failures
-let cooldownUntil = 0;
 
 /**
  * Estimate rough byte size of a value for clone guard.
@@ -268,13 +133,6 @@ function stripHeavyFields(entry) {
 }
 
 export async function saveState(state) {
-    // Circuit breaker: skip saves during cooldown after repeated OOM failures
-    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        if (Date.now() < cooldownUntil) return;
-        // Cooldown expired, reset and try again
-        consecutiveFailures = 0;
-    }
-
     // Coalesce: if a save is already pending, just update the state to save
     pendingSaveState = state;
     if (pendingSaveTimer) return;
@@ -289,6 +147,7 @@ export async function saveState(state) {
             // 1. Keep sourceBlob (CRITICAL: used to restore image on reload since blob: URLs expire)
             // 2. Strip processedImage (temporary cache, can be regenerated)
             // 3. Strip deepFry level (reset on reload)
+
             // Helper to safely process items: Convert Data URL to Blob if sourceBlob is missing
             const processItemSafe = async (item) => {
                 const { processedImage, processedDeepFryLevel, ...rest } = item;
@@ -334,106 +193,43 @@ export async function saveState(state) {
                 future: (stateToSave.future || []).map(stripHeavyFields),
             };
 
+            // Dexie handles Blobs efficiently (storing by reference on disk mostly),
+            // so we don't need to be AS aggressive as with workers, but keeping history trim is good.
             // Size guard (~50MB limit)
             const estimatedBytes = estimateSize(cleanState);
-            if (estimatedBytes > 50_000_000) {
+            if (estimatedBytes > 100_000_000) { // Bumped to 100MB for Dexie
                 console.warn(`State too large (~${(estimatedBytes / 1_000_000).toFixed(1)}MB), trimming history`);
-                cleanState.past = cleanState.past.slice(-2); // Aggressive trim
+                cleanState.past = cleanState.past.slice(-5);
                 cleanState.future = [];
             }
 
-            if (useWorker && worker) {
-                await sendRequest('SAVE_STATE', cleanState);
-            } else {
-                await saveStateFallback(cleanState);
-            }
+            // Save via Dexie
+            await db.appState.put(cleanState, KEY);
 
-            // Success: reset circuit breaker
-            consecutiveFailures = 0;
         } catch (err) {
-            consecutiveFailures++;
-            console.error(`Failed to save state (attempt ${consecutiveFailures}):`, err.message);
-
-            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-                cooldownUntil = Date.now() + FAILURE_COOLDOWN_MS;
-                console.warn(`Save failed ${MAX_CONSECUTIVE_FAILURES} times, cooling down for ${FAILURE_COOLDOWN_MS / 1000}s`);
-                return;
-            }
-
-            // Fallback: try main-thread save with even more aggressive trimming
-            if (useWorker) {
-                useWorker = false;
-                try {
-                    // Use the ALREADY SANITIZED state, not the raw one
-                    const minimalState = {
-                        ...stateToSave,
-                        version: stateToSave.version || 2,
-                        present: sanitizeState(stateToSave.present),
-                        past: [],   // Drop history entirely for the emergency save
-                        future: [],
-                    };
-                    // Strip blobs from present too
-                    if (minimalState.present?.panels) {
-                        minimalState.present.panels = minimalState.present.panels.map(p => {
-                            const { sourceBlob, processedImage, processedDeepFryLevel, ...rest } = p;
-                            return rest;
-                        });
-                    }
-                    await saveStateFallback(minimalState);
-                    consecutiveFailures = 0; // Fallback succeeded
-                } catch (fallbackErr) {
-                    console.error('Fallback save also failed:', fallbackErr.message);
-                }
-            }
+            console.error(`Failed to save state via Dexie:`, err.message);
+            // Non-fatal, just log. Most likely quota or corrupt object.
         }
     }, 100);
 }
 
 export async function loadState() {
-    // Strategy: Worker (attempt 1) -> Worker retry (attempt 2) -> Main-thread fallback
-    // The worker itself responds in ~50ms, but the callback can be delayed 10s+
-    // if the main thread is blocked.
     try {
-        for (let attempt = 0; attempt < 2; attempt++) {
-            if (!useWorker || !worker) break;
-            try {
-                // Short timeout for load - if it takes 5s it's probably stuck/huge
-                const state = await Promise.race([
-                    sendRequest('LOAD_STATE'),
-                    new Promise((_, r) => setTimeout(() => r(new Error('Load timeout')), 5000))
-                ]);
-                if (!state) return null;
-                return processState(state);
-            } catch (err) {
-                if (attempt === 0) {
-                    console.warn(`Storage worker load attempt ${attempt + 1} failed:`, err.message);
-                } else {
-                    console.warn(`Storage worker load attempt ${attempt + 1} failed, falling back`, err.message);
-                    useWorker = false;
-                }
-            }
-        }
-
-        // Main-thread fallback
-        const state = await loadStateFallback();
+        // Load via Dexie
+        const state = await db.appState.get(KEY);
         if (!state) return null;
         return processState(state);
-    } catch (finalErr) {
-        console.error('CRITICAL: All storage load attempts failed. Database likely corrupted/huge.', finalErr);
-        // NUCLEAR OPTION: Wipe the DB to allow the app to start
+    } catch (err) {
+        console.error('CRITICAL: Failed to load storage via Dexie.', err);
+        // Fallback: Wipe DB if corrupted beyond repair
         try {
-            console.warn('Wiping IndexedDB to recover from crash loop...');
-            await new Promise((resolve, reject) => {
-                const req = indexedDB.deleteDatabase(DB_NAME);
-                req.onsuccess = resolve;
-                req.onerror = reject;
-                req.onblocked = resolve; // Just proceed if blocked
-            });
-            console.log('Database wiped. App should recover on reload.');
+            console.warn('Wiping Dexie DB to recover from corruption...');
+            await db.delete();
+            await db.open(); // Re-open fresh
         } catch (wipeErr) {
             console.error('Failed to wipe DB:', wipeErr);
         }
-        return null; // Return empty state so app starts fresh
+        return null;
     }
 }
 

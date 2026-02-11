@@ -16,6 +16,8 @@
     "busboy": "^1.6.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
     "form-data": "^4.0.5",
     "gif.js": "^0.2.0",
     "lucide-react": "^0.562.0",

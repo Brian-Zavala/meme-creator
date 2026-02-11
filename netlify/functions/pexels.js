@@ -81,6 +81,7 @@ export async function handler(event) {
       },
       body: JSON.stringify({
         photos,
+        videos: data.videos || [],
         total_results: data.total_results || 0,
       }),
     };

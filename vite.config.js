@@ -191,6 +191,7 @@ export default defineConfig({
           "vendor-media": ["gif.js", "omggif", "@imgly/background-removal"],
           "vendor-utils": ["clsx", "tailwind-merge", "lucide-react"],
           "vendor-analytics": ["posthog-js"],
+          "vendor-posthog-react": ["posthog-js/react"],
           "vendor-lottie": ["@lottiefiles/dotlottie-react"],
         },
       },

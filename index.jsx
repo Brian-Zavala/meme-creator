@@ -1,11 +1,15 @@
 // StrictMode removed: incompatible with DotLottieWorkerReact
 // (double-invokes effects -> transferControlToOffscreen crash)
-import { /* StrictMode */ } from 'react'
+import { Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
-import { PostHogProvider } from 'posthog-js/react'
+
+// PostHog loaded lazily after first paint
+const PostHogProvider = lazy(() =>
+  import('posthog-js/react').then(module => ({ default: module.PostHogProvider }))
+);
 
 // PostHog configuration - only used if API key is available
 const posthogApiKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
@@ -33,9 +37,11 @@ function AppWithProviders() {
   // Only wrap with PostHog if API key exists and is valid
   if (posthogApiKey && typeof posthogApiKey === 'string' && posthogApiKey.length > 0) {
     return (
-      <PostHogProvider apiKey={posthogApiKey} options={posthogOptions}>
-        <App />
-      </PostHogProvider>
+      <Suspense fallback={null}>
+        <PostHogProvider apiKey={posthogApiKey} options={posthogOptions}>
+          <App />
+        </PostHogProvider>
+      </Suspense>
     );
   }
 

@@ -1,28 +1,31 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, Eraser, Sparkles, ImagePlus } from "lucide-react";
+// Services - Imported dynamically when needed
 import { removeImageBackground } from "../../services/backgroundRemover";
-import toast from "react-hot-toast";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
 import { searchGiphy, registerShare, getAutocomplete, getCategories } from "../../services/giphy";
-import { exportGif, exportStickersAsPng, exportImageAsPng } from "../../services/gifExporter";
+// gifExporter is now lazy loaded
 import { hasAnimatedText } from "../../constants/textAnimations";
 import { deepFryImage } from "../../services/imageProcessor";
 import { processFileInWorker } from "../../services/fileLoader";
 import { MEME_QUOTES } from "../../constants/memeQuotes";
 import { STICKER_KEYWORDS } from "../../constants/stickerKeywords";
+import { saveState, loadState } from "../../services/storage"; // moved up from below
 
-import MemeCanvas from "../MemeEditor/MemeCanvas";
-import MemeDropdownGrid from "../MemeEditor/MemeDropdownGrid";
-import MemeToolbar from "../MemeEditor/MemeToolbar";
+// Lazy load heavy components to reduce initial bundle size
+const MemeCanvas = lazy(() => import("../MemeEditor/MemeCanvas"));
+const MemeDropdownGrid = lazy(() => import("../MemeEditor/MemeDropdownGrid"));
+const MemeToolbar = lazy(() => import("../MemeEditor/MemeToolbar"));
 
-import { LayoutSelector } from "../MemeEditor/LayoutSelector";
-import { ExportConfirmModal } from "../Modals/ExportConfirmModal";
-import { SnippetSuccessModal } from "../Modals/SnippetSuccessModal";
-import { saveState, loadState } from "../../services/storage";
-const RemixCarousel = lazy(() => import("../MemeEditor/RemixCarousel"));
+const LayoutSelector = lazy(() => import("../MemeEditor/LayoutSelector").then(module => ({ default: module.LayoutSelector })));
+const ExportConfirmModal = lazy(() => import("../Modals/ExportConfirmModal").then(module => ({ default: module.ExportConfirmModal })));
+const SnippetSuccessModal = lazy(() => import("../Modals/SnippetSuccessModal").then(module => ({ default: module.SnippetSuccessModal })));
+const ToastIcon = lazy(() => import("../ui/ToastIcon").then(module => ({ default: module.ToastIcon })));
+const MemeStickerSection = lazy(() => import("../MemeEditor/MemeStickerSection").then(module => ({ default: module.MemeStickerSection })));
 
+// Lazy-loaded editor tools
 const MemeActions = lazy(() => import("../MemeEditor/MemeActions").then((module) => ({ default: module.MemeActions })));
 const GifSearch = lazy(() => import("../MemeEditor/GifSearch").then((module) => ({ default: module.GifSearch })));
 const ModeSelector = lazy(() =>
@@ -30,8 +33,7 @@ const ModeSelector = lazy(() =>
 );
 const ColorControls = lazy(() => import("../MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
-import { ToastIcon } from "../ui/ToastIcon";
-import { MemeStickerSection } from "../MemeEditor/MemeStickerSection";
+const RemixCarousel = lazy(() => import("../MemeEditor/RemixCarousel"));
 
 
 
@@ -2314,6 +2316,7 @@ export default function Main() {
       }
 
       // First, export the full meme using the existing reliable method
+      const { exportImageAsPng } = await import("../../services/gifExporter");
       const fullBlob = await exportImageAsPng(meme, meme.texts, meme.stickers);
 
       // Load the full image
@@ -2450,6 +2453,7 @@ export default function Main() {
                 toast.dismiss(t.id);
                 const toastId = toast.loading("Removing background...", { style: { minWidth: '250px' } });
                 try {
+                  const { removeImageBackground } = await import("../../services/backgroundRemover");
                   const blob = await removeImageBackground(file);
                   const reader = new FileReader();
                   reader.onloadend = () => {
@@ -2539,6 +2543,7 @@ export default function Main() {
                 toast.dismiss(t.id);
                 const toastId = toast.loading("Removing background...", { style: { minWidth: '250px' } });
                 try {
+                  const { removeImageBackground } = await import("../../services/backgroundRemover");
                   const blob = await removeImageBackground(file);
                   const reader = new FileReader();
                   reader.onloadend = () => {
@@ -3051,6 +3056,7 @@ export default function Main() {
 
     try {
       const exportMeme = { ...meme, stickersOnly };
+      const { exportGif } = await import("../../services/gifExporter");
       const blob = await exportGif(exportMeme, meme.texts, meme.stickers);
       if (meme.id) registerShare(meme.id, searchQuery);
 
@@ -3087,6 +3093,7 @@ export default function Main() {
       const toastId = toast.loading("Exporting sticker...");
       try {
         // Use our new direct PNG exporter!
+        const { exportStickersAsPng } = await import("../../services/gifExporter");
         const blob = await exportStickersAsPng(meme, meme.stickers);
         const filename = `stickers-${Date.now()}.png`;
         await triggerDownload(blob, filename);
@@ -3101,6 +3108,7 @@ export default function Main() {
     const toastId = toast.loading("Generating...");
     try {
       // REPLACED: html2canvas with native renderer for filter consistency
+      const { exportImageAsPng } = await import("../../services/gifExporter");
       const blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
 
       const safeName = (meme.name || 'meme')
@@ -3218,9 +3226,11 @@ export default function Main() {
       let blob, file;
       if (isAnimated) {
         toast.loading("Encoding GIF...", { id: toastId });
+        const { exportGif } = await import("../../services/gifExporter");
         blob = await exportGif(meme, meme.texts, meme.stickers);
         file = new File([blob], `meme.gif`, { type: "image/gif" });
       } else {
+        const { exportImageAsPng } = await import("../../services/gifExporter");
         blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
         file = new File([blob], `meme.png`, { type: "image/png" });
       }
@@ -3587,22 +3597,26 @@ export default function Main() {
         return (
           <>
             {/* Export Confirmation Modal */}
-            <ExportConfirmModal
-              isOpen={showExportModal}
-              onClose={() => { setShowExportModal(false); setIsStickerExport(false); }}
-              onExportGif={() => doGifExport({ stickersOnly: isStickerExport })}
-              onExportStatic={() => doStaticExport({ stickersOnly: isStickerExport, forceStatic: isStickerExport })}
-              isStickerOnly={isStickerExport}
-            />
+            <Suspense fallback={null}>
+              <ExportConfirmModal
+                isOpen={showExportModal}
+                onClose={() => { setShowExportModal(false); setIsStickerExport(false); }}
+                onExportGif={() => doGifExport({ stickersOnly: isStickerExport })}
+                onExportStatic={() => doStaticExport({ stickersOnly: isStickerExport, forceStatic: isStickerExport })}
+                isStickerOnly={isStickerExport}
+              />
+            </Suspense>
 
             {/* Snippet Success Modal */}
-            <SnippetSuccessModal
-              isOpen={showSnippetModal}
-              onClose={handleCropCancel}
-              onRetry={handleCropRetry}
-              onExport={handleCropExport}
-              croppedImageUrl={croppedImageUrl}
-            />
+            <Suspense fallback={null}>
+              <SnippetSuccessModal
+                isOpen={showSnippetModal}
+                onClose={handleCropCancel}
+                onRetry={handleCropRetry}
+                onExport={handleCropExport}
+                croppedImageUrl={croppedImageUrl}
+              />
+            </Suspense>
 
             <div className="lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
               {/* Controls moved to Toolbar */}
@@ -3637,37 +3651,41 @@ export default function Main() {
                     }}
                   />
                 </Suspense>
-                <LayoutSelector
-                  layout={meme.layout}
-                  onLayoutChange={handleLayoutChange}
-                />
+                <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                  <LayoutSelector
+                    layout={meme.layout}
+                    onLayoutChange={handleLayoutChange}
+                  />
+                </Suspense>
               </div>
               <div className="relative flex flex-col shadow-2xl rounded-t-2xl border border-[#2f3336] card-bg overflow-hidden">
                 {/* MemeToolbar - Mobile/Tablet Only (inside card) */}
                 <div className="lg:hidden">
-                  <MemeToolbar
-                    meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
-                    activeTool={activeTool}
-                    setActiveTool={setActiveTool}
-                    handleStyleChange={handleStyleChange}
-                    handleFilterChange={handleFilterChange}
-                    handleStyleCommit={handleStyleCommit}
-                    onResetFilters={resetFilters}
-                    onClearDrawings={handleClearDrawings}
-                    onDrawerExpand={handleToolbarExpand}
-                    onAnimationChange={handleAnimationChange}
-                    onStickerAnimationChange={handleStickerAnimationChange}
-                    editingId={editingId}
-                    handleTextChange={handleTextChange}
-                    onAddSticker={addSticker}
-                    onMagicCaption={generateMagicCaption}
-                    isMagicGenerating={isMagicGenerating}
-                    onChaos={handleChaos}
-                    onExportStickers={handleExportStickers}
-                    onEditingChange={setEditingId}
-                    onStartCrop={handleStartCrop}
-                    isCropping={isCropping}
-                  />
+                  <Suspense fallback={<div className="h-20 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                    <MemeToolbar
+                      meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
+                      activeTool={activeTool}
+                      setActiveTool={setActiveTool}
+                      handleStyleChange={handleStyleChange}
+                      handleFilterChange={handleFilterChange}
+                      handleStyleCommit={handleStyleCommit}
+                      onResetFilters={resetFilters}
+                      onClearDrawings={handleClearDrawings}
+                      onDrawerExpand={handleToolbarExpand}
+                      onAnimationChange={handleAnimationChange}
+                      onStickerAnimationChange={handleStickerAnimationChange}
+                      editingId={editingId}
+                      handleTextChange={handleTextChange}
+                      onAddSticker={addSticker}
+                      onMagicCaption={generateMagicCaption}
+                      isMagicGenerating={isMagicGenerating}
+                      onChaos={handleChaos}
+                      onExportStickers={handleExportStickers}
+                      onEditingChange={setEditingId}
+                      onStartCrop={handleStartCrop}
+                      isCropping={isCropping}
+                    />
+                  </Suspense>
                 </div>
 
                 {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}
@@ -3728,12 +3746,14 @@ export default function Main() {
 
                     {/* Dropdown Results - Portaled to document.body */}
                     {showMemeSuggestions && createPortal(
-                      <MemeDropdownGrid
-                        filteredMemes={filteredMemes}
-                        memeSearchQuery={memeSearchQuery}
-                        onSelectMeme={loadSelectedMeme}
-                        dropdownRef={memeDropdownRef}
-                      />,
+                      <Suspense fallback={null}>
+                        <MemeDropdownGrid
+                          filteredMemes={filteredMemes}
+                          memeSearchQuery={memeSearchQuery}
+                          onSelectMeme={loadSelectedMeme}
+                          dropdownRef={memeDropdownRef}
+                        />
+                      </Suspense>,
                       document.body
                     )}
                   </div>
@@ -3873,40 +3893,42 @@ export default function Main() {
                     </button>
                   )}
 
-                  <MemeCanvas
-                    ref={memeRef}
-                    meme={meme}
-                    loading={loading}
-                    isProcessing={isProcessing}
-                    draggedId={draggedId}
-                    selectedId={meme.selectedId}
-                    editingId={editingId}
-                    activeTool={activeTool}
-                    onDrawCommit={handleDrawCommit}
-                    onFineTune={handleFineTune}
-                    onFineTuneCommit={handleFineTuneCommit}
-                    onCenterText={handleCenterText}
-                    onPointerDown={handlePointerDown}
-                    onRemoveSticker={removeSticker}
-                    onRemoveText={removeText}
-                    onTextChange={handleTextChange}
-                    onAddTextAtPosition={addTextAtPosition}
-                    onStartEditing={setEditingId}
-                    onCanvasPointerDown={handleCanvasPointerDown}
-                    onHoverChange={setIsHoveringCanvasElement}
+                  <Suspense fallback={<div className="absolute inset-0 bg-slate-900/10 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-500" /></div>}>
+                    <MemeCanvas
+                      ref={memeRef}
+                      meme={meme}
+                      loading={loading}
+                      isProcessing={isProcessing}
+                      draggedId={draggedId}
+                      selectedId={meme.selectedId}
+                      editingId={editingId}
+                      activeTool={activeTool}
+                      onDrawCommit={handleDrawCommit}
+                      onFineTune={handleFineTune}
+                      onFineTuneCommit={handleFineTuneCommit}
+                      onCenterText={handleCenterText}
+                      onPointerDown={handlePointerDown}
+                      onRemoveSticker={removeSticker}
+                      onRemoveText={removeText}
+                      onTextChange={handleTextChange}
+                      onAddTextAtPosition={addTextAtPosition}
+                      onStartEditing={setEditingId}
+                      onCanvasPointerDown={handleCanvasPointerDown}
+                      onHoverChange={setIsHoveringCanvasElement}
 
-                    // New Props
-                    activePanelId={meme.activePanelId}
-                    onPanelSelect={handlePanelSelect}
-                    layouts={DEFAULT_LAYOUTS}
-                    onDrop={handleCanvasDrop}
-                    onClearPanel={handleClearPanel}
-                    onToggleFit={togglePanelFit}
-                    onPanelPosChange={handlePanelPosChange}
-                    isCropping={isCropping}
-                    onCropCancel={handleCropCancel}
-                    snapGuides={draggedId ? snapGuidesRef.current : null}
-                  />
+                      // New Props
+                      activePanelId={meme.activePanelId}
+                      onPanelSelect={handlePanelSelect}
+                      layouts={DEFAULT_LAYOUTS}
+                      onDrop={handleCanvasDrop}
+                      onClearPanel={handleClearPanel}
+                      onToggleFit={togglePanelFit}
+                      onPanelPosChange={handlePanelPosChange}
+                      isCropping={isCropping}
+                      onCropCancel={handleCropCancel}
+                      snapGuides={draggedId ? snapGuidesRef.current : null}
+                    />
+                  </Suspense>
                 </div>
                 {selectedText && (
                   <Suspense fallback={null}>
@@ -3930,11 +3952,13 @@ export default function Main() {
 
                 {/* Mobile-Only Sticker Section */}
                 <div className="card-bg rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm p-4 relative z-50">
-                  <MemeStickerSection
-                    onAddSticker={addSticker}
-                    hasStickers={meme.stickers?.length > 0}
-                    onExportStickers={handleExportStickers}
-                  />
+                  <Suspense fallback={<div className="h-32 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                    <MemeStickerSection
+                      onAddSticker={addSticker}
+                      hasStickers={meme.stickers?.length > 0}
+                      onExportStickers={handleExportStickers}
+                    />
+                  </Suspense>
                 </div>
               </div>
 
@@ -3944,30 +3968,32 @@ export default function Main() {
             <div className="hidden lg:flex lg:col-span-4 order-3 flex-1">
               <div className="sticky top-8 w-full flex flex-col">
                 <div className="toolbar-sidebar flex-1 w-full">
-                  <MemeToolbar
-                    className="h-full glass-panel rounded-2xl shadow-xl"
-                    meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
-                    activeTool={activeTool}
-                    setActiveTool={setActiveTool}
-                    handleStyleChange={handleStyleChange}
-                    handleFilterChange={handleFilterChange}
-                    handleStyleCommit={handleStyleCommit}
-                    onResetFilters={resetFilters}
-                    onClearDrawings={handleClearDrawings}
-                    onDrawerExpand={handleToolbarExpand}
-                    onAnimationChange={handleAnimationChange}
-                    onStickerAnimationChange={handleStickerAnimationChange}
-                    editingId={editingId}
-                    handleTextChange={handleTextChange}
-                    onAddSticker={addSticker}
-                    onMagicCaption={generateMagicCaption}
-                    isMagicGenerating={isMagicGenerating}
-                    onChaos={handleChaos}
-                    onExportStickers={handleExportStickers}
-                    onEditingChange={setEditingId}
-                    onStartCrop={handleStartCrop}
-                    isCropping={isCropping}
-                  />
+                  <Suspense fallback={<div className="h-full w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                    <MemeToolbar
+                      className="h-full glass-panel rounded-2xl shadow-xl"
+                      meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
+                      activeTool={activeTool}
+                      setActiveTool={setActiveTool}
+                      handleStyleChange={handleStyleChange}
+                      handleFilterChange={handleFilterChange}
+                      handleStyleCommit={handleStyleCommit}
+                      onResetFilters={resetFilters}
+                      onClearDrawings={handleClearDrawings}
+                      onDrawerExpand={handleToolbarExpand}
+                      onAnimationChange={handleAnimationChange}
+                      onStickerAnimationChange={handleStickerAnimationChange}
+                      editingId={editingId}
+                      handleTextChange={handleTextChange}
+                      onAddSticker={addSticker}
+                      onMagicCaption={generateMagicCaption}
+                      isMagicGenerating={isMagicGenerating}
+                      onChaos={handleChaos}
+                      onExportStickers={handleExportStickers}
+                      onEditingChange={setEditingId}
+                      onStartCrop={handleStartCrop}
+                      isCropping={isCropping}
+                    />
+                  </Suspense>
                 </div>
               </div>
             </div>

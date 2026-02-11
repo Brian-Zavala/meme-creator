@@ -118,6 +118,10 @@ export async function searchUnsplash(query, page = 1, perPage = 30, signal) {
   const isEditorial = !query?.trim();
   const endpoint = isEditorial ? "https://api.unsplash.com/photos" : "https://api.unsplash.com/search/photos";
 
+  const cacheKey = `${query || "POPULAR"}-${page}-${perPage}`;
+  const cached = unsplashCache.get(cacheKey);
+  if (cached) return cached;
+
   const params = new URLSearchParams({
     page: String(page),
     per_page: String(perPage),
@@ -133,7 +137,7 @@ export async function searchUnsplash(query, page = 1, perPage = 30, signal) {
 
   try {
     const res = await fetch(
-      `https://api.unsplash.com/search/photos?${params}`,
+      `${endpoint}?${params}`,
       { signal }
     );
 
@@ -229,6 +233,10 @@ function mapPexelsResult(photo) {
 export async function searchPexels(query, page = 1, perPage = 30, signal) {
   // If query is empty, use curated endpoint
   const isCurated = !query?.trim();
+  const cacheKey = `${query || "CURATED"}-${page}-${perPage}`;
+
+  const cached = pexelsCache.get(cacheKey);
+  if (cached) return cached;
 
   const params = new URLSearchParams({
     page: String(page),

@@ -3285,9 +3285,13 @@ export default function Main() {
 
     const { stickersOnly = false } = options;
     const isDeepFrying = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
-    const loadingMsg = stickersOnly ? "Exporting stickers..." : (isDeepFrying ? "Deep frying frames... (this takes longer) 🍟" : "Encoding GIF...");
+    const hasVideo = meme.panels.some(p => p.isVideo);
 
-    const toastId = toast.loading(loadingMsg);
+    let loadingMsg = stickersOnly ? "Exporting stickers..." : "Encoding GIF...";
+    if (hasVideo) loadingMsg = "Converting Video to GIF... (this may take a minute) 🎥";
+    else if (isDeepFrying) loadingMsg = "Deep frying frames... (computing heavily) 🍟";
+
+    const toastId = toast.loading(loadingMsg, { duration: Infinity }); // Ensure it stays up
 
     try {
       const exportMeme = { ...meme, stickersOnly };
@@ -4004,7 +4008,7 @@ export default function Main() {
                           {/* Reuse MemeDropdownGrid for Pexels Videos - INLINE (No Portal) */}
                           {/* Render immediately if suggestion state is true */}
                           {showPexelsVideoSuggestions && (
-                            <div className="absolute top-full left-0 z-50 w-full mt-2" ref={pexelsVideoContainerRef}>
+                            <div className="absolute top-full left-0 z-[9999] w-full mt-2" ref={pexelsVideoContainerRef}>
                               {/* Add Skeleton Fallback for Pexels Video Search */}
                               <Suspense fallback={
                                  <div className="card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden p-3">

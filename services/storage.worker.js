@@ -33,11 +33,11 @@ async function saveState(fullHistory) {
     try {
         // Support both legacy (single state) and new (full history) formats transparently
         const isFullHistory = fullHistory && 'present' in fullHistory && Array.isArray(fullHistory.past);
-        
+
         // Helper to process a single state object
         const processSingleState = async (state) => {
             const optimizedState = { ...state };
-            
+
             const processItem = async (item) => {
                 // ZERO-BLOCK PATH: Main thread passed us a Blob directly
                 if (item.sourceBlob && (item.sourceBlob instanceof Blob || (item.sourceBlob.type && item.sourceBlob.size))) {
@@ -45,7 +45,7 @@ async function saveState(fullHistory) {
                    delete newItem.sourceBlob; // Cleanup temporary transport property
                    return newItem;
                 }
-    
+
                 // LEGACY PATH: Client passed a Data URL string
                 if (item.url && typeof item.url === 'string' && item.url.startsWith('data:')) {
                     try {
@@ -59,7 +59,7 @@ async function saveState(fullHistory) {
                 }
                 return item;
             };
-    
+
             if (optimizedState.panels) {
                 optimizedState.panels = await Promise.all(optimizedState.panels.map(processItem));
             }
@@ -96,7 +96,7 @@ async function saveState(fullHistory) {
             request.onerror = () => reject(request.error);
         });
     } catch (err) {
-        if (err.name === 'QuotaExceededError' || err.code === 22) { 
+        if (err.name === 'QuotaExceededError' || err.code === 22) {
              console.warn('Worker: Storage Quota Exceeded. Failed to save state.', err);
         } else {
             console.error('Worker: Failed to save state:', err);
@@ -109,7 +109,7 @@ async function saveState(fullHistory) {
 async function loadState() {
     try {
         const db = await openDB();
-        return new Promise((resolve, reject) => {
+        const rawState = await new Promise((resolve, reject) => {
             const transaction = db.transaction(STORE_NAME, 'readonly');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.get(KEY);
@@ -117,6 +117,49 @@ async function loadState() {
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
+
+        if (!rawState) return null;
+
+        // SANITIZATION: Check for poisoned data (legacy huge Data URLs)
+        // If we try to postMessage a 50MB object, the worker crashes.
+        // We must clean it locally first.
+
+        const isTooLarge = (JSON.stringify(rawState).length > 10_000_000); // >10MB check (rough)
+
+        if (isTooLarge && rawState.past) {
+            console.warn('Worker: State is massive, trimming history to prevent OOM crash');
+
+            // Helper to strip data URLs from history items
+            const stripHeavy = (item) => {
+                const clean = { ...item };
+                // Strip data URLs
+                if (clean.url && typeof clean.url === 'string' && clean.url.startsWith('data:')) {
+                    clean.url = null;
+                }
+                // Strip processed cache
+                delete clean.processedImage;
+                delete clean.sourceBlob; // Strip sourceBlob from history to verify safely (keeping it in present)
+                return clean;
+            };
+
+            // Aggressive cleaning for history
+             const cleanPast = (Array.isArray(rawState.past) ? rawState.past : [])
+                .map(entry => {
+                    const cleanEntry = { ...entry };
+                    if (cleanEntry.panels) cleanEntry.panels = cleanEntry.panels.map(stripHeavy);
+                    if (cleanEntry.stickers) cleanEntry.stickers = cleanEntry.stickers.map(stripHeavy);
+                    return cleanEntry;
+                })
+                .slice(-3); // Only keep last 3
+
+            return {
+                ...rawState,
+                past: cleanPast,
+                future: [] // Drop future
+            };
+        }
+
+        return rawState;
     } catch (err) {
         console.error('Worker: Failed to load state:', err);
         return null;

@@ -375,31 +375,48 @@ export async function saveState(state) {
 export async function loadState() {
     // Strategy: Worker (attempt 1) -> Worker retry (attempt 2) -> Main-thread fallback
     // The worker itself responds in ~50ms, but the callback can be delayed 10s+
-    // if the main thread is blocked by heavy libraries (e.g. Lottie).
-    for (let attempt = 0; attempt < 2; attempt++) {
-        if (!useWorker || !worker) break;
-        try {
-            const state = await sendRequest('LOAD_STATE');
-            if (!state) return null;
-            return processState(state);
-        } catch (err) {
-            if (attempt === 0) {
-                console.warn('Storage worker attempt 1 failed, retrying...', err.message);
-            } else {
-                console.warn('Storage worker attempt 2 failed, falling back to main thread', err.message);
-                useWorker = false;
+    // if the main thread is blocked.
+    try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            if (!useWorker || !worker) break;
+            try {
+                // Short timeout for load - if it takes 5s it's probably stuck/huge
+                const state = await Promise.race([
+                    sendRequest('LOAD_STATE'),
+                    new Promise((_, r) => setTimeout(() => r(new Error('Load timeout')), 5000))
+                ]);
+                if (!state) return null;
+                return processState(state);
+            } catch (err) {
+                if (attempt === 0) {
+                    console.warn(`Storage worker load attempt ${attempt + 1} failed:`, err.message);
+                } else {
+                    console.warn(`Storage worker load attempt ${attempt + 1} failed, falling back`, err.message);
+                    useWorker = false;
+                }
             }
         }
-    }
 
-    // Main-thread fallback -- always works but blocks the thread briefly
-    try {
+        // Main-thread fallback
         const state = await loadStateFallback();
         if (!state) return null;
         return processState(state);
-    } catch (fallbackErr) {
-        console.error('All storage load attempts failed:', fallbackErr);
-        return null;
+    } catch (finalErr) {
+        console.error('CRITICAL: All storage load attempts failed. Database likely corrupted/huge.', finalErr);
+        // NUCLEAR OPTION: Wipe the DB to allow the app to start
+        try {
+            console.warn('Wiping IndexedDB to recover from crash loop...');
+            await new Promise((resolve, reject) => {
+                const req = indexedDB.deleteDatabase(DB_NAME);
+                req.onsuccess = resolve;
+                req.onerror = reject;
+                req.onblocked = resolve; // Just proceed if blocked
+            });
+            console.log('Database wiped. App should recover on reload.');
+        } catch (wipeErr) {
+            console.error('Failed to wipe DB:', wipeErr);
+        }
+        return null; // Return empty state so app starts fresh
     }
 }
 

@@ -448,7 +448,10 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
         // Base font size scaling relative to exportWidth vs 800px base
         const baseFontSize = (text.fontSize || 40);
         const fontSize = baseFontSize * (exportWidth / 800) * scale;
-        ctx.font = `900 ${fontSize}px sans-serif`;
+        // FIX: Use the selected font family! (Default to Impact/Roboto if missing)
+        // We must quote the font name in case it has spaces (e.g. "Comic Sans MS")
+        const fontFamily = text.fontFamily || meme.fontFamily || 'Impact';
+        ctx.font = `900 ${fontSize}px "${fontFamily}", sans-serif`;
         ctx.lineWidth = (text.strokeWidth || 3) * (exportWidth / 800) * scale;
         ctx.lineJoin = 'round';
         ctx.miterLimit = 2;

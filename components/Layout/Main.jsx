@@ -7,6 +7,7 @@ import { removeImageBackground } from "../../services/backgroundRemover";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
 import { searchGiphy, registerShare, getAutocomplete, getCategories } from "../../services/giphy";
+import { searchImages, trackUnsplashDownload, getRandomImage } from "../../services/imageSearch";
 // gifExporter is now lazy loaded
 import { hasAnimatedText } from "../../constants/textAnimations";
 import { deepFryImage } from "../../services/imageProcessor";
@@ -18,6 +19,7 @@ import { saveState, loadState } from "../../services/storage"; // moved up from 
 // Lazy load heavy components to reduce initial bundle size
 const MemeCanvas = lazy(() => import("../MemeEditor/MemeCanvas"));
 const MemeDropdownGrid = lazy(() => import("../MemeEditor/MemeDropdownGrid"));
+const ImageSourceTabs = lazy(() => import("../MemeEditor/ImageSourceTabs"));
 const MemeToolbar = lazy(() => import("../MemeEditor/MemeToolbar"));
 
 const LayoutSelector = lazy(() => import("../MemeEditor/LayoutSelector").then(module => ({ default: module.LayoutSelector })));
@@ -417,6 +419,14 @@ export default function Main() {
   const memeSearchRef = useRef(null);
   const memeDropdownRef = useRef(null);
 
+  // Image source state (Unsplash / Pexels / Imgflip)
+  const [imageSource, setImageSource] = useState(() => localStorage.getItem("meme_img_source") || "imgflip");
+  const [imageSearchResults, setImageSearchResults] = useState([]);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
+  const [imageSearchPage, setImageSearchPage] = useState(1);
+  const [imageSearchTotalPages, setImageSearchTotalPages] = useState(0);
+  const imageSearchControllerRef = useRef(null);
+
   // Position dropdown via direct DOM manipulation to avoid re-renders on scroll/resize
   const updateDropdownPosition = useCallback(() => {
     const el = memeDropdownRef.current;
@@ -488,6 +498,9 @@ export default function Main() {
   async function loadSelectedMeme(memeData) {
     setGenerating(true);
     try {
+      // Track Unsplash download for API compliance (fire-and-forget)
+      if (memeData.source === "unsplash") trackUnsplashDownload(memeData);
+
       // Fetch via Weserv to avoid Tainted Canvas and COEP issues
       const response = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(memeData.url)}`);
       if (!response.ok) throw new Error("Weserv failed");
@@ -505,6 +518,89 @@ export default function Main() {
       setMemeSearchQuery("");
     }
   }
+
+  // Image source switch handler — persist preference + reset state
+  const handleImageSourceChange = useCallback((source) => {
+    setImageSource(source);
+    localStorage.setItem("meme_img_source", source);
+    setImageSearchResults([]);
+    setImageSearchPage(1);
+    setImageSearchTotalPages(0);
+    setMemeSearchQuery("");
+    // Show dropdown immediately (for imgflip: browse, for API: type hint)
+    setShowMemeSuggestions(true);
+  }, []);
+
+  // Debounced API search for Unsplash/Pexels (400ms)
+  const handleImageSearch = useCallback((query, source, page = 1) => {
+    // Cancel any in-flight request
+    if (imageSearchControllerRef.current) {
+      imageSearchControllerRef.current.abort();
+    }
+
+    if (!query?.trim() || source === "imgflip") {
+      setImageSearchResults([]);
+      setImageSearchPage(1);
+      setImageSearchTotalPages(0);
+      return;
+    }
+
+    const controller = new AbortController();
+    imageSearchControllerRef.current = controller;
+
+    const doSearch = async () => {
+      setImageSearchLoading(true);
+      try {
+        const { results, totalPages } = await searchImages(source, query, page, controller.signal);
+        if (controller.signal.aborted) return;
+
+        if (page === 1) {
+          setImageSearchResults(results);
+        } else {
+          // Append for "Load More"
+          setImageSearchResults(prev => [...prev, ...results]);
+        }
+        setImageSearchPage(page);
+        setImageSearchTotalPages(totalPages);
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        console.error("Image search error:", err);
+      } finally {
+        if (!controller.signal.aborted) setImageSearchLoading(false);
+      }
+    };
+
+    // Debounce only for page 1 (new search), instant for Load More
+    if (page === 1) {
+      const timer = setTimeout(doSearch, 400);
+      // Store cleanup in controller so abort cancels the timeout too
+      const originalAbort = controller.abort.bind(controller);
+      controller.abort = () => {
+        clearTimeout(timer);
+        originalAbort();
+      };
+    } else {
+      doSearch();
+    }
+  }, []);
+
+  // Random Image Handler for Unsplash/Pexels
+  const handleRandomImage = async () => {
+    setGenerating(true);
+    try {
+      const result = await getRandomImage(imageSource);
+      if (result) {
+        await loadSelectedMeme(result);
+      } else {
+        toast.error(`Failed to get random ${imageSource} image`);
+      }
+    } catch (e) {
+      console.error("Random image error:", e);
+      toast.error("Error fetching random image");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const updateSelectedPanel = (url, memeData, blob) => {
     updateState((prev) => {
@@ -3742,42 +3838,77 @@ export default function Main() {
                   </Suspense>
                 )}
 
-                {/* CASE 2: IMAGE MODE (New Imgflip Search) */}
+                {/* CASE 2: IMAGE MODE (Multi-Source Search) */}
                 {meme.mode === "image" && (
-                  <div className="relative p-3 border-b border-[#2f3336]" ref={memeSearchRef}>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand transition-colors">
-                        <Search className="w-5 h-5" />
+                  <div className="relative border-b border-[#2f3336]" ref={memeSearchRef}>
+                    {/* Source Tabs */}
+                    <div className="px-3 pt-3 pb-2">
+                      <Suspense fallback={<div className="h-9 bg-[#111]/60 rounded-xl animate-pulse" />}>
+                        <ImageSourceTabs
+                          activeSource={imageSource}
+                          onSourceChange={handleImageSourceChange}
+                        />
+                      </Suspense>
+                    </div>
+
+                    {/* Search Input */}
+                    <div className="px-3 pb-3">
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand transition-colors">
+                          <Search className="w-5 h-5" />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder={
+                            imageSource === "imgflip" ? "Search memes..."
+                            : imageSource === "unsplash" ? "Search Unsplash photos..."
+                            : "Search Pexels photos..."
+                          }
+                          value={memeSearchQuery}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setMemeSearchQuery(val);
+                            setShowMemeSuggestions(true);
+                            // Trigger API search for Unsplash/Pexels
+                            if (imageSource !== "imgflip") {
+                              handleImageSearch(val, imageSource, 1);
+                            }
+                          }}
+                          onFocus={() => setShowMemeSuggestions(true)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && imageSource !== "imgflip" && memeSearchQuery.trim()) {
+                              handleImageSearch(memeSearchQuery, imageSource, 1);
+                            }
+                          }}
+                          className="w-full input-field pl-10 pr-10 py-3 placeholder:text-xs md:placeholder:text-sm"
+                        />
+                        {memeSearchQuery && (
+                          <button
+                            onClick={() => {
+                              setMemeSearchQuery("");
+                              setImageSearchResults([]);
+                              setImageSearchPage(1);
+                            }}
+                            className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                      <input
-                        type="text"
-                        placeholder={isMobileScreen ? "Search images..." : "Search images..."}
-                        value={memeSearchQuery}
-                        onChange={(e) => {
-                          setMemeSearchQuery(e.target.value);
-                          setShowMemeSuggestions(true);
-                        }}
-                        onFocus={() => setShowMemeSuggestions(true)}
-                        className="w-full input-field pl-10 pr-10 py-3 placeholder:text-xs md:placeholder:text-sm"
-                      />
-                      {memeSearchQuery && (
-                        <button
-                          onClick={() => setMemeSearchQuery("")}
-                          className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
 
                     {/* Dropdown Results - Portaled to document.body */}
                     {showMemeSuggestions && createPortal(
                       <Suspense fallback={null}>
                         <MemeDropdownGrid
-                          filteredMemes={filteredMemes}
+                          filteredMemes={imageSource === "imgflip" ? filteredMemes : imageSearchResults}
                           memeSearchQuery={memeSearchQuery}
                           onSelectMeme={loadSelectedMeme}
                           dropdownRef={memeDropdownRef}
+                          source={imageSource}
+                          isLoading={imageSearchLoading}
+                          hasMore={imageSource !== "imgflip" && imageSearchPage < imageSearchTotalPages}
+                          onLoadMore={() => handleImageSearch(memeSearchQuery, imageSource, imageSearchPage + 1)}
                         />
                       </Suspense>,
                       document.body
@@ -3789,7 +3920,12 @@ export default function Main() {
                   onClick={() => {
                     if (navigator.vibrate) navigator.vibrate(30);
                     setPingKey(Date.now());
-                    getMemeImage();
+
+                    if (imageSource === "imgflip") {
+                      getMemeImage();
+                    } else {
+                      handleRandomImage();
+                    }
                   }}
                   disabled={loading || generating}
                   className={`relative z-20 w-full text-white font-bold py-3 flex items-center justify-center gap-2 group border-y border-[#2f3336] bg-brand hover:bg-brand-dark transition-all active:scale-[0.98] ${generating ? "animate-pulse-ring" : ""}`}

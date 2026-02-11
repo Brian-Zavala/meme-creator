@@ -1,6 +1,6 @@
 
 // Storage service using Dexie.js for robust, main-thread async storage
-// Replaces the crash-prone Worker implementation.
+// Normalized Architecture: Assets (Blobs) are stored separately from AppState to prevent OOM.
 
 import { db } from './db';
 
@@ -12,44 +12,26 @@ const KEY = 'meme-generator-state';
 
 /**
  * Sanitizes state object to ensure it is structured cloneable (serializable)
- * Removes functions, DOM elements, and circular references
  */
 function sanitizeState(data) {
     if (data === null || data === undefined) return data;
-
-    // Pass through primitives
     if (typeof data !== 'object') {
-        // Filter out functions and symbols
         if (typeof data === 'function' || typeof data === 'symbol') return undefined;
         return data;
     }
-
-    // Pass through valid binary types
     if (data instanceof Blob || data instanceof File || data instanceof ArrayBuffer) {
         return data;
     }
-
-    // Handle Arrays
     if (Array.isArray(data)) {
         return data.map(sanitizeState);
     }
-
-    // Handle Objects
     const sanitized = {};
     for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
-             // Skip internal React keys or hidden properties often starting with _ or $
              if (key.startsWith('_') || key.startsWith('$')) continue;
-
              const value = data[key];
-
-             // Detect and skip DOM nodes (common cause of clone errors)
              if (value instanceof Element || value instanceof Node) continue;
-
-             // Recursively sanitize
              const cleanValue = sanitizeState(value);
-
-             // Only keep defined values
              if (cleanValue !== undefined) {
                  sanitized[key] = cleanValue;
              }
@@ -62,78 +44,7 @@ function sanitizeState(data) {
 let pendingSaveTimer = null;
 let pendingSaveState = null;
 
-/**
- * Estimate rough byte size of a value for clone guard.
- * Not exact, but catches the multi-MB data URL case.
- */
-function estimateSize(val, depth = 0) {
-    if (depth > 5) return 100; // Prevent deep recursion
-    if (val === null || val === undefined) return 0;
-    if (typeof val === 'string') return val.length * 2; // UTF-16
-    if (typeof val === 'number' || typeof val === 'boolean') return 8;
-    if (val instanceof Blob) return val.size;
-    if (Array.isArray(val)) {
-        let size = 0;
-        for (const item of val) {
-            size += estimateSize(item, depth + 1);
-            if (size > 50_000_000) return size; // Early exit
-        }
-        return size;
-    }
-    if (typeof val === 'object') {
-        let size = 0;
-        for (const key in val) {
-            if (Object.prototype.hasOwnProperty.call(val, key)) {
-                size += key.length * 2 + estimateSize(val[key], depth + 1);
-                if (size > 50_000_000) return size;
-            }
-        }
-        return size;
-    }
-    return 0;
-}
-
-/**
- * Strip heavy fields from a history entry (past/future).
- * - Removes sourceBlob (not serializable across sessions)
- * - Removes processedImage (temporary blob URL)
- * - Converts data URLs to a placeholder (they're multi-MB base64 strings
- *   that cause DataCloneError OOM when multiplied across history entries)
- */
-function stripHeavyFields(entry) {
-    if (!entry) return entry;
-    const result = { ...entry };
-
-    if (result.panels) {
-        result.panels = result.panels.map(p => {
-            // Keep sourceBlob for undo history!
-            // Only strip derived/cached data
-            const { processedImage, processedDeepFryLevel, ...rest } = p;
-
-            // Strip data URLs (strings) - they are the memory killers.
-            // Blobs are fine (handled by reference/disk).
-            if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
-                rest.url = null;
-            }
-            return rest;
-        });
-    }
-
-    if (result.stickers) {
-        result.stickers = result.stickers.map(s => {
-            const { processedImage, ...rest } = s;
-            if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
-                rest.url = null;
-            }
-            return rest;
-        });
-    }
-
-    return result;
-}
-
 export async function saveState(state) {
-    // Coalesce: if a save is already pending, just update the state to save
     pendingSaveState = state;
     if (pendingSaveTimer) return;
 
@@ -143,24 +54,23 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            // Clean present state:
-            // 1. Keep sourceBlob (CRITICAL: used to restore image on reload since blob: URLs expire)
-            // 2. Strip processedImage (temporary cache, can be regenerated)
-            // 3. Strip deepFry level (reset on reload)
+            // 1. Prepare clean minimal state
+            const cleanPresent = sanitizeState(stateToSave.present);
 
-            // Helper to safely process items: Convert Data/Blob URL to Blob if sourceBlob is missing
-            const processItemSafe = async (item) => {
+            // 2. Normalize Assets: Extract Blobs to separate store
+            const assetsToSave = [];
+
+            // Helper to process items: Extract Blob -> Asset Store reference
+            const processItemExtractAssets = async (item) => {
                 const { processedImage, processedDeepFryLevel, ...rest } = item;
 
-                // Handle Data URLs AND Blob URLs (which expire!)
-                // If we have a URL string but NO sourceBlob, we must generate one.
+                // A. Ensure we have a Blob (Recover from Data/Blob URL if needed)
                 const isDataUrl = rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:');
                 const isBlobUrl = rest.url && typeof rest.url === 'string' && rest.url.startsWith('blob:');
 
                 if (isDataUrl || isBlobUrl) {
                     if (!rest.sourceBlob) {
                          try {
-                             // Fetch the resource (works for blob: URLs too if valid)
                              const res = await fetch(rest.url);
                              const blob = await res.blob();
                              rest.sourceBlob = blob;
@@ -168,113 +78,160 @@ export async function saveState(state) {
                              console.warn("Failed to convert URL to Blob for save:", e);
                          }
                     }
-                    // Now it is safe to strip the heavy/expired string
-                    // We WANT to strip blob: URLs because they are invalid on reload anyway
-                    rest.url = null;
+                    rest.url = null; // Strip string
                 }
+
+                // B. If we have a sourceBlob, extract it!
+                if (rest.sourceBlob instanceof Blob) {
+                    // Use item.id as assetId if available, or generate one (though item.id should be unique)
+                    // We suffix with '-asset' to avoid confusion if IDs are reused contextually,
+                    // but usually 1:1 mapping is fine. Let's use item.id for simplicity + 'v1' salt if needed?
+                    // Actually, multiple panels could technically overwrite if they share ID? No, IDs are UUIDs.
+                    const assetId = rest.id;
+
+                    assetsToSave.push({ id: assetId, blob: rest.sourceBlob });
+
+                    // Replace Blob with lightweight reference
+                    rest.assetId = assetId;
+                    delete rest.sourceBlob; // Remove heavy blob from main object
+                }
+
                 return rest;
             };
 
-            const cleanPresent = sanitizeState(stateToSave.present);
-
             if (cleanPresent?.panels) {
-                // Use Promise.all to handle async blob conversion
-                cleanPresent.panels = await Promise.all(cleanPresent.panels.map(processItemSafe));
+                cleanPresent.panels = await Promise.all(cleanPresent.panels.map(processItemExtractAssets));
             }
             if (cleanPresent?.stickers) {
-                cleanPresent.stickers = await Promise.all(cleanPresent.stickers.map(processItemSafe));
+                cleanPresent.stickers = await Promise.all(cleanPresent.stickers.map(processItemExtractAssets));
             }
 
-            // OOM Prevention: We do NOT persist undo/redo history to disk.
-            // The serialization cost of cloning 8+ massive image states causes DataCloneError on mobile.
-            // Users reload to current state, but lose undo stack (standard PWA tradeoff).
+            // 3. Save Assets to 'assets' store
+            // We use bulkPut for performance
+            if (assetsToSave.length > 0) {
+                await db.assets.bulkPut(assetsToSave);
+            }
+
+            // 4. Save Lightweight State to 'appState'
             const cleanState = {
                 ...stateToSave,
                 present: cleanPresent,
-                past: [],   // Drop history to save memory
-                future: [], // Drop future to save memory
+                past: [],   // No history persistence
+                future: [],
+                version: 2
             };
 
-            // Save via Dexie
             await db.appState.put(cleanState, KEY);
 
         } catch (err) {
             console.error(`Failed to save state via Dexie:`, err.message);
-            // Non-fatal, just log. Most likely quota or corrupt object.
         }
     }, 100);
 }
 
 export async function loadState() {
     try {
-        // Load via Dexie
+        // 1. Load Lightweight State
         const state = await db.appState.get(KEY);
         if (!state) return null;
-        return processState(state);
+
+        // 2. Denormalize: Fetch Assets and Rehydrate
+        return await hydrateState(state);
+
     } catch (err) {
         console.error('CRITICAL: Failed to load storage via Dexie.', err);
-        // Fallback: Wipe DB if corrupted beyond repair
-        try {
-            console.warn('Wiping Dexie DB to recover from corruption...');
-            await db.delete();
-            await db.open(); // Re-open fresh
-        } catch (wipeErr) {
-            console.error('Failed to wipe DB:', wipeErr);
-        }
         return null;
     }
 }
 
-// Helper to inflate Blobs to Object URLs (shared logic)
-function processState(state) {
+async function hydrateState(state) {
     if (!state) return null;
 
-    const processItem = (item) => {
-        // Recover URL from sourceBlob if missing (stripped due to size) OR if it is a stale 'blob:' string
-        if (item.sourceBlob instanceof Blob) {
-            const isMissing = !item.url;
-            const isStaleBlobString = typeof item.url === 'string' && item.url.startsWith('blob:');
-            // If item.url is a Blob object, it's weird but valid-ish (converted by Dexie sometimes?)
-            // But usually we want an ObjectURL string for <img> tags.
+    // Collect all asset IDs needed
+    const assetIds = new Set();
+    const collectIds = (list) => {
+        if (!list) return;
+        list.forEach(item => {
+            if (item.assetId) assetIds.add(item.assetId);
+        });
+    };
 
-            if (isMissing || isStaleBlobString || item.url instanceof Blob) {
-                return {
-                    ...item,
-                    url: URL.createObjectURL(item.sourceBlob),
-                    sourceBlob: item.sourceBlob
-                };
-            }
+    if (state.present) {
+        collectIds(state.present.panels);
+        collectIds(state.present.stickers);
+    }
+    // Handle legacy V1 structure just in case (though we migrate)
+    collectIds(state.panels);
+    collectIds(state.stickers);
+
+    // Bulk fetch assets
+    const assetsMap = new Map();
+    if (assetIds.size > 0) {
+        try {
+            const idsArray = Array.from(assetIds);
+            const assets = await db.assets.bulkGet(idsArray);
+
+            assets.forEach((asset, index) => {
+                if (asset && asset.blob) {
+                    assetsMap.set(idsArray[index], asset.blob);
+                }
+            });
+        } catch (e) {
+            console.warn("Failed to load some assets:", e);
         }
+    }
+
+    // Helper to inject Blobs back into items
+    const rehydrateItem = (item) => {
+        let blob = null;
+
+        // Strategy 1: Fetch from separate asset store (Normalization V2)
+        if (item.assetId && assetsMap.has(item.assetId)) {
+            blob = assetsMap.get(item.assetId);
+        }
+        // Strategy 2: Legacy fallback (Embedded Blob)
+        else if (item.sourceBlob instanceof Blob) {
+            blob = item.sourceBlob;
+        }
+
+        if (blob) {
+            return {
+                ...item,
+                sourceBlob: blob,
+                url: URL.createObjectURL(blob) // Regenerate fresh URL
+            };
+        }
+
+        // Handling missing assets / strings
+        // If url is a string, check if it's a stale blob: URL.
+        const isStaleBlobString = typeof item.url === 'string' && item.url.startsWith('blob:');
+        if (isStaleBlobString) {
+             // Broken link (no blob found). Return as is (will probably show broken img)
+             // or could replace with placeholder?
+             // For now, return item; UI handles broken images.
+             return item;
+        }
+
         return item;
     };
 
     const processSingleState = (s) => {
-        if (!s) return s; // Safety check
-        const next = { ...s }; // Shallow copy to avoid mutation if possible, mainly for safer iteration
-
-        if (next.panels) {
-            next.panels = next.panels.map(processItem);
-        }
-        if (next.stickers) {
-            next.stickers = next.stickers.map(processItem);
-        }
+        if (!s) return s;
+        const next = { ...s };
+        if (next.panels) next.panels = next.panels.map(rehydrateItem);
+        if (next.stickers) next.stickers = next.stickers.map(rehydrateItem);
         return next;
     };
 
-    // Check if version 2 history
-    if (state.version === 2) {
-        // Only process present — lazily process past/future on undo/redo access
-        // to avoid creating unused Object URLs that pin blobs in memory
+    if (state.version === 2 && state.present) {
         const present = processSingleState(state.present);
-
         return {
             ...state,
-            past: Array.isArray(state.past) ? state.past : [],
+            past: [],
             present,
-            future: Array.isArray(state.future) ? state.future : []
+            future: []
         };
     }
 
-    // Legacy V1 (single state)
     return processSingleState(state);
 }

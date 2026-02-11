@@ -7,6 +7,8 @@ export const db = new Dexie('MemeCreatorDB');
 // In Dexie, we define stores. For a store without a primary key (used as key-value mostly),
 // we can define it with an empty string or just the name if we want to add indexes later.
 // However, since we use .put(val, key), simply defining it exists is enough.
-db.version(1).stores({
-  appState: '' // No primary key defined in schema, allowing out-of-line keys
+// Version 2: Add 'assets' store for detached Blobs to fix OOM
+db.version(2).stores({
+  appState: '', // Main state object (lightweight)
+  assets: 'id'  // Separate store for heavy Blobs (keyed by UUID)
 });

@@ -191,8 +191,87 @@ function sanitizeState(data) {
 // Coalesce rapid saves - only the latest one runs
 let pendingSaveTimer = null;
 let pendingSaveState = null;
+// Circuit breaker: stop retrying after consecutive OOM failures
+let consecutiveFailures = 0;
+const MAX_CONSECUTIVE_FAILURES = 3;
+const FAILURE_COOLDOWN_MS = 30000; // 30s cooldown after max failures
+let cooldownUntil = 0;
+
+/**
+ * Estimate rough byte size of a value for clone guard.
+ * Not exact, but catches the multi-MB data URL case.
+ */
+function estimateSize(val, depth = 0) {
+    if (depth > 5) return 100; // Prevent deep recursion
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'string') return val.length * 2; // UTF-16
+    if (typeof val === 'number' || typeof val === 'boolean') return 8;
+    if (val instanceof Blob) return val.size;
+    if (Array.isArray(val)) {
+        let size = 0;
+        for (const item of val) {
+            size += estimateSize(item, depth + 1);
+            if (size > 50_000_000) return size; // Early exit
+        }
+        return size;
+    }
+    if (typeof val === 'object') {
+        let size = 0;
+        for (const key in val) {
+            if (Object.prototype.hasOwnProperty.call(val, key)) {
+                size += key.length * 2 + estimateSize(val[key], depth + 1);
+                if (size > 50_000_000) return size;
+            }
+        }
+        return size;
+    }
+    return 0;
+}
+
+/**
+ * Strip heavy fields from a history entry (past/future).
+ * - Removes sourceBlob (not serializable across sessions)
+ * - Removes processedImage (temporary blob URL)
+ * - Converts data URLs to a placeholder (they're multi-MB base64 strings
+ *   that cause DataCloneError OOM when multiplied across history entries)
+ */
+function stripHeavyFields(entry) {
+    if (!entry) return entry;
+    const result = { ...entry };
+
+    if (result.panels) {
+        result.panels = result.panels.map(p => {
+            const { sourceBlob, processedImage, processedDeepFryLevel, ...rest } = p;
+            // Strip data URLs from past/future -- they're multi-MB base64 strings.
+            // Remote URLs (https://) and blob: URLs (small reference) are fine.
+            if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
+                rest.url = null; // Will show default image on undo
+            }
+            return rest;
+        });
+    }
+
+    if (result.stickers) {
+        result.stickers = result.stickers.map(s => {
+            const { sourceBlob, ...rest } = s;
+            if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
+                rest.url = null;
+            }
+            return rest;
+        });
+    }
+
+    return result;
+}
 
 export async function saveState(state) {
+    // Circuit breaker: skip saves during cooldown after repeated OOM failures
+    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        if (Date.now() < cooldownUntil) return;
+        // Cooldown expired, reset and try again
+        consecutiveFailures = 0;
+    }
+
     // Coalesce: if a save is already pending, just update the state to save
     pendingSaveState = state;
     if (pendingSaveTimer) return;
@@ -203,48 +282,86 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            // Helper to strip sourceBlob from a state entry (lightweight, doesn't deep-clone)
-            const stripSourceBlobs = (entry) => {
-                if (!entry) return entry;
-                const result = { ...entry };
-                if (result.panels) {
-                    result.panels = result.panels.map(p => {
-                        if (p.sourceBlob === undefined) return p;
-                        const { sourceBlob, ...rest } = p;
-                        return rest;
-                    });
-                }
-                if (result.stickers) {
-                    result.stickers = result.stickers.map(s => {
-                        if (s.sourceBlob === undefined) return s;
-                        const { sourceBlob, ...rest } = s;
-                        return rest;
-                    });
-                }
-                return result;
-            };
+            // Strip heavy fields from ALL history entries (past/present/future)
+            // Present gets lighter treatment (keep URLs, strip blobs)
+            const cleanPresent = sanitizeState(stateToSave.present);
+            if (cleanPresent?.panels) {
+                cleanPresent.panels = cleanPresent.panels.map(p => {
+                    const { sourceBlob, processedImage, processedDeepFryLevel, ...rest } = p;
+                    return rest;
+                });
+            }
+            if (cleanPresent?.stickers) {
+                cleanPresent.stickers = cleanPresent.stickers.map(s => {
+                    const { sourceBlob, ...rest } = s;
+                    return rest;
+                });
+            }
 
-            // Sanitize present fully, strip sourceBlobs from past/future to prevent memory explosion
+            // Past/future get aggressive stripping (remove data URLs too)
             const cleanState = {
                 ...stateToSave,
-                present: sanitizeState(stateToSave.present),
-                past: (stateToSave.past || []).map(stripSourceBlobs),
-                future: (stateToSave.future || []).map(stripSourceBlobs),
+                present: cleanPresent,
+                past: (stateToSave.past || []).map(stripHeavyFields),
+                future: (stateToSave.future || []).map(stripHeavyFields),
             };
+
+            // Size guard: estimate total size before attempting clone.
+            // DataCloneError OOM happens when total exceeds ~50-100MB.
+            const estimatedBytes = estimateSize(cleanState);
+            if (estimatedBytes > 50_000_000) {
+                console.warn(`State too large to save (~${(estimatedBytes / 1_000_000).toFixed(1)}MB), skipping`);
+                // Trim history to reduce size and try once more
+                cleanState.past = cleanState.past.slice(-3); // Keep only last 3
+                cleanState.future = [];
+                const reducedSize = estimateSize(cleanState);
+                if (reducedSize > 50_000_000) {
+                    console.warn('State still too large after trimming, aborting save');
+                    return;
+                }
+            }
 
             if (useWorker && worker) {
                 await sendRequest('SAVE_STATE', cleanState);
             } else {
                 await saveStateFallback(cleanState);
             }
+
+            // Success: reset circuit breaker
+            consecutiveFailures = 0;
         } catch (err) {
-            console.error('Failed to save state:', err);
+            consecutiveFailures++;
+            console.error(`Failed to save state (attempt ${consecutiveFailures}):`, err.message);
+
+            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                cooldownUntil = Date.now() + FAILURE_COOLDOWN_MS;
+                console.warn(`Save failed ${MAX_CONSECUTIVE_FAILURES} times, cooling down for ${FAILURE_COOLDOWN_MS / 1000}s`);
+                return;
+            }
+
+            // Fallback: try main-thread save with even more aggressive trimming
             if (useWorker) {
                 useWorker = false;
                 try {
-                    await saveStateFallback(stateToSave);
+                    // Use the ALREADY SANITIZED state, not the raw one
+                    const minimalState = {
+                        ...stateToSave,
+                        version: stateToSave.version || 2,
+                        present: sanitizeState(stateToSave.present),
+                        past: [],   // Drop history entirely for the emergency save
+                        future: [],
+                    };
+                    // Strip blobs from present too
+                    if (minimalState.present?.panels) {
+                        minimalState.present.panels = minimalState.present.panels.map(p => {
+                            const { sourceBlob, processedImage, processedDeepFryLevel, ...rest } = p;
+                            return rest;
+                        });
+                    }
+                    await saveStateFallback(minimalState);
+                    consecutiveFailures = 0; // Fallback succeeded
                 } catch (fallbackErr) {
-                    console.error('Fallback save also failed:', fallbackErr);
+                    console.error('Fallback save also failed:', fallbackErr.message);
                 }
             }
         }

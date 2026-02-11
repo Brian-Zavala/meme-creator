@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useDebugValue } from "react";
  * Maximum number of history states to keep
  * Prevents unbounded memory growth during long editing sessions
  */
-const MAX_HISTORY_SIZE = 15;
+const MAX_HISTORY_SIZE = 8;
 
 /**
  * Minimum time between history saves (ms)
@@ -83,7 +83,7 @@ export default function useHistory(initialState, initialHistory = null) {
   const [history, setHistory] = useState(() => {
     // Robust initialization: Ensure generic arrays exist even if initialHistory is malformed
     const base = initialHistory || {};
-    
+
     // Resolve initialState if it's a lazy initializer function
     let resolvedState = initialState;
     if (typeof initialState === 'function') {

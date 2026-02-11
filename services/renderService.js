@@ -94,7 +94,11 @@ export async function createGifProcessor(url) {
                 // If we skipped or looped, we might need to reset or seek.
                 // For simple looping (0 -> 1 -> ... -> N -> 0), we handle the wrap properly.
 
-                if (frameIndex === 0 && currentFrameIndex !== -1) {
+                // DETECT LOOP: If we go backwards (e.g. frame 15 -> 2), we looped.
+                // We used to check `frameIndex === 0`, but if export framerate mismatches GIF framerate,
+                // we might skip frame 0 (e.g. 14 -> 1). This caused the decoder to NOT reset,
+                // attempting to draw frame 1 on top of frame 14 without clearing, or just failing.
+                if (currentFrameIndex !== -1 && frameIndex < currentFrameIndex) {
                     // Reset state for loop
                     // MOBILE FIX: Use fillRect with transparent before clear to ensure
                     // canvas is in a known state on all platforms (iOS Safari fix)

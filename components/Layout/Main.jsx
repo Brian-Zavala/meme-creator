@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useTransition, Suspense, useCallback, lazy, useDeferredValue, useMemo, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { RefreshCcw, Loader2, Video, Undo2, Redo2, HelpCircle, Search, X, Eraser, Sparkles, ImagePlus } from "lucide-react";
+import toast from "react-hot-toast";
 // Services - Imported dynamically when needed
 import { removeImageBackground } from "../../services/backgroundRemover";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";

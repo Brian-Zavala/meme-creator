@@ -61,10 +61,12 @@ function inflateBlobUrls(state) {
         changed = true;
         return { ...item, url: URL.createObjectURL(item.url), sourceBlob: item.url };
       }
-      // Case 2: URL is a revoked/dead blob: string, but sourceBlob is preserved
-      if (item.sourceBlob && item.sourceBlob instanceof Blob && typeof item.url === 'string') {
-        changed = true;
-        return { ...item, url: URL.createObjectURL(item.sourceBlob) };
+      // Case 2: URL is a revoked/dead blob or NULL (stripped): check sourceBlob
+      if (item.sourceBlob && item.sourceBlob instanceof Blob) {
+        if (!item.url || typeof item.url === 'string') {
+           changed = true;
+           return { ...item, url: URL.createObjectURL(item.sourceBlob) };
+        }
       }
       return item;
     });

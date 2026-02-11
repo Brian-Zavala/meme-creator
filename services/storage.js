@@ -294,12 +294,20 @@ export async function saveState(state) {
                 cleanPresent.panels = cleanPresent.panels.map(p => {
                     // KEEP sourceBlob!
                     const { processedImage, processedDeepFryLevel, ...rest } = p;
+                    // STRIP Data URLs from present state too - they cause OOM
+                    // We rely on sourceBlob or sourceUrl for restoration
+                    if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
+                        rest.url = null;
+                    }
                     return rest;
                 });
             }
             if (cleanPresent?.stickers) {
                 cleanPresent.stickers = cleanPresent.stickers.map(s => {
                     const { processedImage, ...rest } = s;
+                    if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
+                        rest.url = null;
+                    }
                     return rest;
                 });
             }
@@ -425,6 +433,17 @@ function processState(state) {
     if (!state) return null;
 
     const processItem = (item) => {
+        // Recover URL from sourceBlob if missing (stripped due to size)
+        if (item.sourceBlob instanceof Blob) {
+            if (!item.url || item.url instanceof Blob) {
+                return {
+                    ...item,
+                    url: URL.createObjectURL(item.sourceBlob),
+                    sourceBlob: item.sourceBlob
+                };
+            }
+        }
+
         if (item.url && item.url instanceof Blob) {
             return {
                 ...item,

@@ -190,8 +190,6 @@ export async function createVideoProcessor(url) {
             console.log(`Initialized Video Processor: ${width}x${height}, ${duration}s cap, ${numFrames} frames`);
 
 
-            const fps = 30; // Standard export FPS
-            const numFrames = Math.ceil(duration * fps);
 
             // NEW: Use a persistent canvas for the last successful frame to prevent black flicker
             // if the video isn't ready or seeking fails/times out.

@@ -201,13 +201,33 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            // Only sanitize present — past/future are already clean from prior saves
-            // Sanitizing all 15 history entries blocks the main thread on mobile
+            // Helper to strip sourceBlob from a state entry (lightweight, doesn't deep-clone)
+            const stripSourceBlobs = (entry) => {
+                if (!entry) return entry;
+                const result = { ...entry };
+                if (result.panels) {
+                    result.panels = result.panels.map(p => {
+                        if (p.sourceBlob === undefined) return p;
+                        const { sourceBlob, ...rest } = p;
+                        return rest;
+                    });
+                }
+                if (result.stickers) {
+                    result.stickers = result.stickers.map(s => {
+                        if (s.sourceBlob === undefined) return s;
+                        const { sourceBlob, ...rest } = s;
+                        return rest;
+                    });
+                }
+                return result;
+            };
+
+            // Sanitize present fully, strip sourceBlobs from past/future to prevent memory explosion
             const cleanState = {
                 ...stateToSave,
                 present: sanitizeState(stateToSave.present),
-                past: stateToSave.past || [],
-                future: stateToSave.future || [],
+                past: (stateToSave.past || []).map(stripSourceBlobs),
+                future: (stateToSave.future || []).map(stripSourceBlobs),
             };
 
             if (useWorker && worker) {

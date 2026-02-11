@@ -485,8 +485,25 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
         // FIX: Use the selected font family! (Default to Impact/Roboto if missing)
         // We must quote the font name in case it has spaces (e.g. "Comic Sans MS")
         const fontFamily = text.fontFamily || meme.fontFamily || 'Impact';
-        // FIX: Ensure fontWeight 900 (Black) to match "Impact" look
-        ctx.font = `900 ${fontSize}px "${fontFamily}", "Impact", sans-serif`;
+
+        // FIX: Dynamic Font Weight based on what's available/looks best for that font
+        // Most meme fonts are Heavy/Black (900) or Bold (700). Scripts are usually Regular (400).
+        const getFontWeight = (fontName) => {
+            const f = fontName.toLowerCase();
+            // Heavy/Black (900)
+            if (['impact', 'archivo black', 'lato', 'montserrat', 'logo'].includes(f)) return 900;
+            // Bold (700) - Default for most display fonts
+            if (['anton', 'bangers', 'bebas neue', 'black ops one', 'bungee', 'carter one', 'cinzel',
+                 'comic neue', 'fredoka', 'luckiest guy', 'oswald', 'righteous', 'roboto',
+                 'rubik mono one', 'russo one', 'press start 2p'].includes(f)) return 700;
+            // Regular (400) - Scripts / Hand-drawn that don't have bold variants
+            if (['caveat', 'creepster', 'pacifico', 'permanent marker', 'shadows into light', 'special elite'].includes(f)) return 400;
+
+            return 900; // Default to heavy for unknown fonts (Meme standard)
+        };
+
+        const fontWeight = getFontWeight(fontFamily);
+        ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}", "Impact", sans-serif`;
 
         ctx.lineJoin = 'round';
         ctx.miterLimit = 2;

@@ -129,7 +129,7 @@ export default function MemeDropdownGrid({
           <div className="flex items-center gap-2">
             {config.headerIcon}
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              {filteredMemes.length > 0 ? "Popular Videos" : config.headerLabel}
+              {filteredMemes.length > 0 && source === "pexels_video" ? "Popular Videos" : config.headerLabel}
             </span>
           </div>
           <div className="flex items-center gap-3">

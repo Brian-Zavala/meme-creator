@@ -54,63 +54,95 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            // 1. Prepare clean minimal state
+            // 1. Prepare clean minimal state (primitives)
             const cleanPresent = sanitizeState(stateToSave.present);
 
-            // 2. Normalize Assets: Extract Blobs to separate store
-            const assetsToSave = [];
+            // 2. Normalize Assets: Stream-to-DB to minimize memory usage
+            // We process items sequentially and save to DB immediately to avoid
+            // holding multiple heavy Blobs in memory at once (which Promise.all does).
 
-            // Helper to process items: Extract Blob -> Asset Store reference
-            const processItemExtractAssets = async (item) => {
-                const { processedImage, processedDeepFryLevel, ...rest } = item;
+            const cleanPanels = [];
+            if (stateToSave.present && stateToSave.present.panels) {
+                for (const item of stateToSave.present.panels) {
+                    // Clone item to modify
+                    const cleanItem = { ...item };
+                    const { processedImage, processedDeepFryLevel, ...rest } = cleanItem;
 
-                // A. Ensure we have a Blob (Recover from Data/Blob URL if needed)
-                const isDataUrl = rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:');
-                const isBlobUrl = rest.url && typeof rest.url === 'string' && rest.url.startsWith('blob:');
+                    // A. Ensure we have a Blob (Recover from Data/Blob URL if needed)
+                    // Note: accessing item.url directly as it might not be in 'rest' if destructured
+                    const urlToCheck = cleanItem.url;
+                    const isDataUrl = urlToCheck && typeof urlToCheck === 'string' && urlToCheck.startsWith('data:');
+                    const isBlobUrl = urlToCheck && typeof urlToCheck === 'string' && urlToCheck.startsWith('blob:');
 
-                if (isDataUrl || isBlobUrl) {
-                    if (!rest.sourceBlob) {
-                         try {
-                             const res = await fetch(rest.url);
-                             const blob = await res.blob();
-                             rest.sourceBlob = blob;
-                         } catch (e) {
-                             console.warn("Failed to convert URL to Blob for save:", e);
+                    if (isDataUrl || isBlobUrl) {
+                         if (!cleanItem.sourceBlob) {
+                             try {
+                                 const res = await fetch(urlToCheck);
+                                 const blob = await res.blob();
+                                 cleanItem.sourceBlob = blob;
+                             } catch (e) {
+                                 console.warn("Failed to convert URL to Blob for save:", e);
+                             }
                          }
+                         cleanItem.url = null; // Strip string
                     }
-                    rest.url = null; // Strip string
+
+                    // B. If we have a sourceBlob, save immediately and detach!
+                    if (cleanItem.sourceBlob instanceof Blob) {
+                        const assetId = cleanItem.id;
+                        // IMMEDIATE SAVE: Write to DB now
+                        await db.assets.put({ id: assetId, blob: cleanItem.sourceBlob });
+
+                        // Replace Blob with lightweight reference
+                        cleanItem.assetId = assetId;
+                        delete cleanItem.sourceBlob; // Free memory!
+                    }
+
+                    // Remove cached fields from the object going into appState
+                    delete cleanItem.processedImage;
+                    delete cleanItem.processedDeepFryLevel;
+
+                    cleanPanels.push(cleanItem);
                 }
+            }
+            if (cleanPresent) cleanPresent.panels = cleanPanels;
 
-                // B. If we have a sourceBlob, extract it!
-                if (rest.sourceBlob instanceof Blob) {
-                    // Use item.id as assetId if available, or generate one (though item.id should be unique)
-                    // We suffix with '-asset' to avoid confusion if IDs are reused contextually,
-                    // but usually 1:1 mapping is fine. Let's use item.id for simplicity + 'v1' salt if needed?
-                    // Actually, multiple panels could technically overwrite if they share ID? No, IDs are UUIDs.
-                    const assetId = rest.id;
+            const cleanStickers = [];
+            if (stateToSave.present && stateToSave.present.stickers) {
+                for (const item of stateToSave.present.stickers) {
+                     const cleanItem = { ...item };
+                     const { processedImage, ...rest } = cleanItem;
 
-                    assetsToSave.push({ id: assetId, blob: rest.sourceBlob });
+                     const urlToCheck = cleanItem.url;
+                     const isDataUrl = urlToCheck && typeof urlToCheck === 'string' && urlToCheck.startsWith('data:');
+                     const isBlobUrl = urlToCheck && typeof urlToCheck === 'string' && urlToCheck.startsWith('blob:');
 
-                    // Replace Blob with lightweight reference
-                    rest.assetId = assetId;
-                    delete rest.sourceBlob; // Remove heavy blob from main object
+                     if (isDataUrl || isBlobUrl) {
+                          if (!cleanItem.sourceBlob) {
+                              try {
+                                  const res = await fetch(urlToCheck);
+                                  const blob = await res.blob();
+                                  cleanItem.sourceBlob = blob;
+                              } catch (e) {
+                                  console.warn("Failed to convert URL to Blob for save:", e);
+                              }
+                          }
+                          cleanItem.url = null;
+                     }
+
+                     if (cleanItem.sourceBlob instanceof Blob) {
+                         const assetId = cleanItem.id;
+                         await db.assets.put({ id: assetId, blob: cleanItem.sourceBlob });
+                         cleanItem.assetId = assetId;
+                         delete cleanItem.sourceBlob;
+                     }
+
+                     delete cleanItem.processedImage;
+                     cleanStickers.push(cleanItem);
                 }
-
-                return rest;
-            };
-
-            if (cleanPresent?.panels) {
-                cleanPresent.panels = await Promise.all(cleanPresent.panels.map(processItemExtractAssets));
             }
-            if (cleanPresent?.stickers) {
-                cleanPresent.stickers = await Promise.all(cleanPresent.stickers.map(processItemExtractAssets));
-            }
+            if (cleanPresent) cleanPresent.stickers = cleanStickers;
 
-            // 3. Save Assets to 'assets' store
-            // We use bulkPut for performance
-            if (assetsToSave.length > 0) {
-                await db.assets.bulkPut(assetsToSave);
-            }
 
             // 4. Save Lightweight State to 'appState'
             const cleanState = {

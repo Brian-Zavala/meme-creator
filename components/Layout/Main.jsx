@@ -172,7 +172,7 @@ export default function Main() {
         // Apply migration logic similar to before, but now async
         try {
           // If we have a full history stack (v2), hydrate it directly
-          if (saved.version === 2 && saved.present) {
+          if (saved.version >= 2 && saved.present) {
              // Validate arrays before passing to hook
              const validHistory = {
                past: Array.isArray(saved.past) ? saved.past : [],

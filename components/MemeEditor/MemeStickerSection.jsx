@@ -36,13 +36,22 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
       };
 
       updatePosition();
-      // Update on scroll/resize to keep attached
-      window.addEventListener('scroll', updatePosition, true);
-      window.addEventListener('resize', updatePosition);
+      // Update on scroll/resize to keep attached (rAF-gated to prevent layout thrashing)
+      let rafId = null;
+      const onUpdate = () => {
+        if (rafId) return;
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          updatePosition();
+        });
+      };
+      window.addEventListener('scroll', onUpdate, true);
+      window.addEventListener('resize', onUpdate);
 
       return () => {
-        window.removeEventListener('scroll', updatePosition, true);
-        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', onUpdate, true);
+        window.removeEventListener('resize', onUpdate);
+        if (rafId) cancelAnimationFrame(rafId);
       };
     }
   }, [isOpen]);

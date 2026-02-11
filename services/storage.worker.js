@@ -71,20 +71,15 @@ async function saveState(fullHistory) {
 
         let dataToStore;
         if (isFullHistory) {
-            // Process all history entries — normalize sourceBlob → url: Blob for IndexedDB
+            // Only process present — past/future are already processed from prior saves
+            // Processing all 15 history entries causes worker timeouts on mobile (>5000ms)
             const processedPresent = await processSingleState(fullHistory.present);
-            const processedPast = await Promise.all(
-                (fullHistory.past || []).map(processSingleState)
-            );
-            const processedFuture = await Promise.all(
-                (fullHistory.future || []).map(processSingleState)
-            );
 
             dataToStore = {
                 version: 2,
                 present: processedPresent,
-                past: processedPast,
-                future: processedFuture
+                past: fullHistory.past || [],
+                future: fullHistory.future || []
             };
         } else {
             // Legacy single state mode

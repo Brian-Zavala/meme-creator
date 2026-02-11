@@ -157,7 +157,13 @@ const MemeCanvas = forwardRef(({
     applyZoomToDOM();
   });
 
-  // Pinch-to-zoom: non-passive touch & wheel listeners
+  // Pinch-to-zoom: touch & wheel listeners
+  // CRITICAL: Use passive listeners when zoom=1 so the browser compositor can scroll freely.
+  // Only switch to non-passive when zoomed (need preventDefault for panning).
+  // Non-passive touchstart/touchmove blocks the scroll compositor thread on mobile,
+  // causing jank and crashes even when preventDefault is never called.
+  const isZoomedRef = useRef(false);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -166,7 +172,10 @@ const MemeCanvas = forwardRef(({
 
     const onTouchStart = (e) => {
       if (e.touches.length === 2) {
-        e.preventDefault();
+        // 2-finger pinch always needs preventDefault — but we only register
+        // non-passive when already zoomed. For initial pinch-to-zoom from scale=1,
+        // we let the browser handle it and catch up on touchend.
+        if (isZoomedRef.current) e.preventDefault();
         // Cancel any active long-press
         if (canvasLongPressTimerRef.current) {
           clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
@@ -182,7 +191,7 @@ const MemeCanvas = forwardRef(({
       } else if (e.touches.length === 1) {
         const now = Date.now();
         if (now - lastDoubleTapRef.current < 300 && zoomRef.current.scale > 1) {
-          e.preventDefault();
+          if (isZoomedRef.current) e.preventDefault();
           zoomRef.current = { scale: 1, x: 0, y: 0 };
           setZoom({ scale: 1, x: 0, y: 0 });
           lastDoubleTapRef.current = 0;
@@ -190,7 +199,7 @@ const MemeCanvas = forwardRef(({
         }
         lastDoubleTapRef.current = now;
         if (zoomRef.current.scale > 1) {
-          e.preventDefault();
+          if (isZoomedRef.current) e.preventDefault();
           panStartRef.current = {
             touchX: e.touches[0].clientX,
             touchY: e.touches[0].clientY,
@@ -203,14 +212,14 @@ const MemeCanvas = forwardRef(({
 
     const onTouchMove = (e) => {
       if (e.touches.length === 2 && pinchStartRef.current) {
-        e.preventDefault();
+        if (isZoomedRef.current) e.preventDefault();
         const ratio = dist(e.touches[0], e.touches[1]) / pinchStartRef.current.distance;
         let s = Math.min(5, Math.max(1, pinchStartRef.current.scale * ratio));
         const next = s < 1.05 ? { scale: 1, x: 0, y: 0 } : { ...zoomRef.current, scale: s };
         zoomRef.current = next;
         scheduleZoomDOM(); // Direct DOM update, no React re-render
       } else if (e.touches.length === 1 && panStartRef.current && zoomRef.current.scale > 1) {
-        e.preventDefault();
+        if (isZoomedRef.current) e.preventDefault();
         const next = {
           ...zoomRef.current,
           x: panStartRef.current.zoomX + (e.touches[0].clientX - panStartRef.current.touchX),
@@ -233,6 +242,15 @@ const MemeCanvas = forwardRef(({
       }
     };
 
+    // Watch for zoom state changes to swap touch listener passiveness
+    const checkZoomChange = () => {
+      const nowZoomed = zoomRef.current.scale > 1;
+      if (nowZoomed !== isZoomedRef.current) {
+        isZoomedRef.current = nowZoomed;
+        registerTouchListeners(nowZoomed);
+      }
+    };
+
     const onWheel = (e) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
@@ -244,18 +262,34 @@ const MemeCanvas = forwardRef(({
         clearTimeout(wheelEndTimerRef.current);
         wheelEndTimerRef.current = setTimeout(() => {
           setZoom({ ...zoomRef.current });
+          checkZoomChange();
         }, 150);
       }
     };
 
-    el.addEventListener('touchstart', onTouchStart, { passive: false });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchend', onTouchEnd);
+    const onTouchEndFinal = (e) => {
+      onTouchEnd(e);
+      checkZoomChange();
+    };
+
+    // Register touch listeners — passive when not zoomed (allows browser scroll),
+    // non-passive when zoomed (allows preventDefault for pan/pinch)
+    const registerTouchListeners = (zoomed) => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.addEventListener('touchstart', onTouchStart, { passive: !zoomed });
+      el.addEventListener('touchmove', onTouchMove, { passive: !zoomed });
+    };
+
+    // Initial registration — passive (zoom=1)
+    registerTouchListeners(false);
+    el.addEventListener('touchend', onTouchEndFinal);
     el.addEventListener('wheel', onWheel, { passive: false });
+
     return () => {
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchend', onTouchEndFinal);
       el.removeEventListener('wheel', onWheel);
       if (zoomRafRef.current) cancelAnimationFrame(zoomRafRef.current);
       clearTimeout(wheelEndTimerRef.current);

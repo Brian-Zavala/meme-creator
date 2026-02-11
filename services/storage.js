@@ -201,12 +201,13 @@ export async function saveState(state) {
         pendingSaveState = null;
 
         try {
-            // Sanitize all history entries for structured clone safety
+            // Only sanitize present — past/future are already clean from prior saves
+            // Sanitizing all 15 history entries blocks the main thread on mobile
             const cleanState = {
                 ...stateToSave,
                 present: sanitizeState(stateToSave.present),
-                past: (stateToSave.past || []).map(sanitizeState),
-                future: (stateToSave.future || []).map(sanitizeState),
+                past: stateToSave.past || [],
+                future: stateToSave.future || [],
             };
 
             if (useWorker && worker) {

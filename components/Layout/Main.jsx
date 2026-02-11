@@ -440,23 +440,35 @@ export default function Main() {
   const [showPexelsVideoSuggestions, setShowPexelsVideoSuggestions] = useState(false);
   const pexelsVideoContainerRef = useRef(null);
 
-  // Magic Caption Statedropdown via direct DOM manipulation to avoid re-renders on scroll/resize
-  const updateDropdownPosition = useCallback(() => {
-    const el = memeDropdownRef.current;
+  // Dropdown Positioning with Callback Ref to handle Suspense swaps
+  const positionDropdown = useCallback((node) => {
+    if (!node || !memeSearchRef.current) return;
     const input = memeSearchRef.current;
-    if (!el || !input) return;
     const rect = input.getBoundingClientRect();
-    el.style.position = 'fixed';
-    el.style.top = `${rect.bottom + 8}px`;
-    el.style.left = `${rect.left + 12}px`;
-    el.style.width = `${rect.width - 24}px`;
-    el.style.zIndex = '9999';
+    node.style.position = 'fixed';
+    node.style.top = `${rect.bottom + 8}px`;
+    node.style.left = `${rect.left + 12}px`;
+    node.style.width = `${rect.width - 24}px`;
+    node.style.zIndex = '9999';
+
+    // Update ref for other usages
+    memeDropdownRef.current = node;
   }, []);
+
+  // Also keep the effect for scroll/resize
+  const updateDropdownPosition = useCallback(() => {
+    positionDropdown(memeDropdownRef.current);
+  }, [positionDropdown]);
 
   // Calculate Image mode dropdown position based on input container
   useLayoutEffect(() => {
-    if (showMemeSuggestions) updateDropdownPosition();
+    if (showMemeSuggestions && memeDropdownRef.current) {
+        updateDropdownPosition();
+    }
   }, [showMemeSuggestions, updateDropdownPosition]);
+
+  // ... (keep scroll/resize listeners)
+
 
   // Update position on scroll/resize for Image mode dropdown (throttled)
   useEffect(() => {
@@ -4097,16 +4109,10 @@ export default function Main() {
                       /* Add Skeleton Fallback for Image Search */
                       <Suspense fallback={
                         <div
-                          ref={memeDropdownRef}
+                          ref={positionDropdown}
                           data-meme-dropdown-portal
-                          style={{
-                            position: 'fixed',
-                            top: memeDropdownRef.current?.style.top,
-                            left: memeDropdownRef.current?.style.left,
-                            width: memeDropdownRef.current?.style.width,
-                            zIndex: 9999
-                          }}
                           className="card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden p-3"
+                          style={{ zIndex: 9999 }} // Ensure visibility even before position calc
                         >
                            <div className="grid grid-cols-3 gap-3">
                               {Array.from({ length: 9 }).map((_, i) => (
@@ -4119,7 +4125,7 @@ export default function Main() {
                           filteredMemes={imageSource === "imgflip" ? filteredMemes : imageSearchResults}
                           memeSearchQuery={memeSearchQuery}
                           onSelectMeme={loadSelectedMeme}
-                          dropdownRef={memeDropdownRef}
+                          dropdownRef={positionDropdown}
                           source={imageSource}
                           isLoading={imageSearchLoading}
                           hasMore={imageSource !== "imgflip" && imageSearchPage < imageSearchTotalPages}

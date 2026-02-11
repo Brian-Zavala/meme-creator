@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useEffect, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 
 // Use DotLottieWorkerReact -- offloads ALL animation rendering to a Web Worker.
 // This completely eliminates main thread blocking from Lottie animations.
@@ -37,7 +37,17 @@ function toAbsoluteUrl(src) {
  * - IntersectionObserver-based lazy mounting (only loads when visible)
  * - Converts relative URLs to absolute for Worker compatibility
  */
-const LottieAnimation = ({
+/**
+ * LottieAnimation Component
+ *
+ * Renders Lottie animations via Web Worker (off main thread).
+ * - Uses DotLottieWorkerReact to prevent main thread blocking
+ * - Shared workerId groups animations into a single worker
+ * - freezeOnOffscreen pauses animations when not in viewport
+ * - IntersectionObserver-based lazy mounting (only loads when visible)
+ * - Converts relative URLs to absolute for Worker compatibility
+ */
+const LottieAnimation = React.memo(({
     src,
     loop = true,
     autoplay = true,
@@ -84,6 +94,19 @@ const LottieAnimation = ({
         ? (window.innerWidth >= 1024 ? Math.max(window.devicePixelRatio || 2, 2) : 1)
         : 1;
 
+    // Memoize renderConfig to prevent unnecessary re-initialization of worker
+    // which causes "InvalidStateError: Cannot transfer control from a canvas for more than one time"
+    const renderConfig = useMemo(() => ({
+        devicePixelRatio: dpr,
+        freezeOnOffscreen: true,
+    }), [dpr]);
+
+    // Memoize the style object passed to the worker component
+    const workerStyle = useMemo(() => ({
+        width: '100%',
+        height: '100%'
+    }), []);
+
     return (
         <div ref={containerRef} className={className} style={{ width, height, ...style }}>
             {isVisible && (
@@ -93,17 +116,14 @@ const LottieAnimation = ({
                         loop={loop}
                         autoplay={autoplay}
                         workerId={workerId}
-                        renderConfig={{
-                            devicePixelRatio: dpr,
-                            freezeOnOffscreen: true,
-                        }}
-                        style={{ width: '100%', height: '100%' }}
+                        renderConfig={renderConfig}
+                        style={workerStyle}
                         {...props}
                     />
                 </Suspense>
             )}
         </div>
     );
-};
+});
 
 export default LottieAnimation;

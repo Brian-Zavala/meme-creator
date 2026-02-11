@@ -2803,10 +2803,29 @@ export default function Main() {
     });
   }
 
-  function addSticker(urlOrEmoji, type = "emoji", isAnimated = false) {
+  function addSticker(content, type = "emoji", isAnimated = false, sourceBlob = null) {
+    let url = content;
+    let finalSourceBlob = sourceBlob;
+
+    // Handle case where content IS the blob (e.g. from clipboard or dragdrop)
+    if (content instanceof Blob || content instanceof File) {
+        url = URL.createObjectURL(content);
+        finalSourceBlob = content;
+    }
+
     updateState((prev) => ({
       ...prev,
-      stickers: [...prev.stickers, { id: crypto.randomUUID(), url: urlOrEmoji, type, x: 50, y: 50, scale: 1, isAnimated, animation: null }],
+      stickers: [...prev.stickers, {
+          id: crypto.randomUUID(),
+          url,
+          type,
+          x: 50,
+          y: 50,
+          scale: 1,
+          isAnimated,
+          animation: null,
+          sourceBlob: finalSourceBlob
+      }],
     }));
   }
 

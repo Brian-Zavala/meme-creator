@@ -21,10 +21,10 @@ function VirtualizedEmojiGrid({ stickers, onAddSticker, onClose, columns = 5, ro
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    
+
     const updateHeight = () => setContainerHeight(container.clientHeight);
     updateHeight();
-    
+
     const observer = new ResizeObserver(updateHeight);
     observer.observe(container);
     return () => observer.disconnect();
@@ -95,7 +95,7 @@ function VirtualizedEmojiCategories({ categories, onAddSticker, onClose }) {
     if (!container) return;
 
     const categoryNames = Object.keys(categories);
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
@@ -126,7 +126,7 @@ function VirtualizedEmojiCategories({ categories, onAddSticker, onClose }) {
   const categoryEntries = Object.entries(categories);
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="space-y-4 overflow-y-auto scrollbar-thin"
       style={{ maxHeight: '300px', WebkitOverflowScrolling: 'touch' }}
@@ -152,7 +152,7 @@ function VirtualizedEmojiCategories({ categories, onAddSticker, onClose }) {
             </div>
           ) : (
             // Placeholder to maintain scroll height
-            <div 
+            <div
               className="grid grid-cols-5 gap-1"
               style={{ height: Math.ceil(stickers.length / 5) * 40 }}
             >
@@ -325,33 +325,15 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
               const toastId = toast.loading("Removing background...", { style: { minWidth: '250px' } });
               try {
                 const blob = await removeImageBackground(file);
-
-                // Convert Blob to Base64 for persistence (Blob URLs die on reload!)
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  const base64data = reader.result;
-                  onAddSticker(base64data, 'image', false);
-                  toast.success("Background removed!", { id: toastId });
-                };
-                reader.onerror = () => {
-                  console.error("Failed to convert blob to base64");
-                  toast.error("Failed to save sticker", { id: toastId });
-                };
-                reader.readAsDataURL(blob);
+                // Pass Blob directly! Main.jsx handles ObjectURL + sourceBlob storage
+                onAddSticker(blob, 'image', false, blob);
+                toast.success("Background removed!", { id: toastId });
 
               } catch (err) {
                 console.error(err);
                 toast.error("Failed. Using original.", { id: toastId });
-                // Helper to read original file as base64 too if desired,
-                // but for now strict URL fallback is okay IF it's a remote URL.
-                // But `file` is a File object, so `URL.createObjectURL(file)` is ALSO temporary.
-                // We should convert the ORIGINAL file to base64 too if persistence is needed for raw uploads.
-
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onloadend = () => {
-                  onAddSticker(reader.result, 'image', isGif);
-                };
+                // Fallback to original file
+                onAddSticker(file, 'image', isGif, file);
               }
             }}
             className="flex-1 bg-brand text-white px-3 py-2 rounded-lg text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-colors"
@@ -361,12 +343,8 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
           <button
             onClick={() => {
               toast.dismiss(t.id);
-              // Convert to Base64
-              const reader = new FileReader();
-              reader.readAsDataURL(file);
-              reader.onloadend = () => {
-                onAddSticker(reader.result, 'image', isGif);
-              };
+              // Pass original file directly
+              onAddSticker(file, 'image', isGif, file);
             }}
             className="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-slate-600 transition-colors"
           >
@@ -470,10 +448,10 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
 
         {/* EMOJI TAB - Virtualized for performance (600+ emojis) */}
         {activeTab === "emoji" && (
-          <VirtualizedEmojiCategories 
-            categories={STICKER_CATEGORIES} 
-            onAddSticker={onAddSticker} 
-            onClose={onClose} 
+          <VirtualizedEmojiCategories
+            categories={STICKER_CATEGORIES}
+            onAddSticker={onAddSticker}
+            onClose={onClose}
           />
         )}
 

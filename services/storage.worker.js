@@ -124,38 +124,38 @@ async function loadState() {
         // If we try to postMessage a 50MB object, the worker crashes.
         // We must clean it locally first.
 
-        const isTooLarge = (JSON.stringify(rawState).length > 10_000_000); // >10MB check (rough)
+        // SANITIZATION: Check for poisoned data (legacy huge Data URLs)
+        // We SKIP the JSON.stringify check because it causes RangeError on large states!
+        // Instead, we ALWAYS conservatively trim and clean history on load to ensure stability.
 
-        if (isTooLarge && rawState.past) {
-            console.warn('Worker: State is massive, trimming history to prevent OOM crash');
-
+        if (rawState.past && Array.isArray(rawState.past)) {
             // Helper to strip data URLs from history items
             const stripHeavy = (item) => {
                 const clean = { ...item };
-                // Strip data URLs
+                // Strip data URLs to prevent OOM during postMessage
                 if (clean.url && typeof clean.url === 'string' && clean.url.startsWith('data:')) {
                     clean.url = null;
                 }
                 // Strip processed cache
                 delete clean.processedImage;
-                delete clean.sourceBlob; // Strip sourceBlob from history to verify safely (keeping it in present)
+                // Keep sourceBlob if it exists (it's a Blob, so it's cheap to transfer)
                 return clean;
             };
 
-            // Aggressive cleaning for history
-             const cleanPast = (Array.isArray(rawState.past) ? rawState.past : [])
+            // Clean history
+             const cleanPast = rawState.past
                 .map(entry => {
                     const cleanEntry = { ...entry };
                     if (cleanEntry.panels) cleanEntry.panels = cleanEntry.panels.map(stripHeavy);
                     if (cleanEntry.stickers) cleanEntry.stickers = cleanEntry.stickers.map(stripHeavy);
                     return cleanEntry;
                 })
-                .slice(-3); // Only keep last 3
+                .slice(-5); // Keep last 5 (increased from 3)
 
             return {
                 ...rawState,
                 past: cleanPast,
-                future: [] // Drop future
+                future: [] // Drop future to be safe
             };
         }
 

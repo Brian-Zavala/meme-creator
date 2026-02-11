@@ -289,27 +289,36 @@ export async function saveState(state) {
             // 1. Keep sourceBlob (CRITICAL: used to restore image on reload since blob: URLs expire)
             // 2. Strip processedImage (temporary cache, can be regenerated)
             // 3. Strip deepFry level (reset on reload)
-            const cleanPresent = sanitizeState(stateToSave.present);
-            if (cleanPresent?.panels) {
-                cleanPresent.panels = cleanPresent.panels.map(p => {
-                    // KEEP sourceBlob!
-                    const { processedImage, processedDeepFryLevel, ...rest } = p;
-                    // STRIP Data URLs from present state too - they cause OOM
-                    // We rely on sourceBlob or sourceUrl for restoration
-                    if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
-                        rest.url = null;
+            // Helper to safely process items: Convert Data URL to Blob if sourceBlob is missing
+            const processItemSafe = async (item) => {
+                const { processedImage, processedDeepFryLevel, ...rest } = item;
+
+                // If we have a Data URL string but NO sourceBlob, we must generate one
+                // before we strip the URL, otherwise the image is lost forever.
+                if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
+                    if (!rest.sourceBlob) {
+                         try {
+                             const res = await fetch(rest.url);
+                             const blob = await res.blob();
+                             rest.sourceBlob = blob;
+                         } catch (e) {
+                             console.warn("Failed to convert Data URL to Blob for save:", e);
+                         }
                     }
-                    return rest;
-                });
+                    // Now it is safe to strip the heavy string
+                    rest.url = null;
+                }
+                return rest;
+            };
+
+            const cleanPresent = sanitizeState(stateToSave.present);
+
+            if (cleanPresent?.panels) {
+                // Use Promise.all to handle async blob conversion
+                cleanPresent.panels = await Promise.all(cleanPresent.panels.map(processItemSafe));
             }
             if (cleanPresent?.stickers) {
-                cleanPresent.stickers = cleanPresent.stickers.map(s => {
-                    const { processedImage, ...rest } = s;
-                    if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
-                        rest.url = null;
-                    }
-                    return rest;
-                });
+                cleanPresent.stickers = await Promise.all(cleanPresent.stickers.map(processItemSafe));
             }
 
             // Past/future: Strip heavy fields but TRY to keep sourceBlob if possible?

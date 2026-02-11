@@ -219,7 +219,17 @@ export async function createVideoProcessor(url) {
 
                     return { canvas, delay: Math.round(1000/fps/10) };
                 },
-                cleanup
+                cleanup,
+                // NEW: Time-based frame retrieval for accurate export sync
+                getFrameAtTime: (timeMs) => {
+                    // timeMs is in milliseconds. video.currentTime is in seconds.
+                    // We want the frame index corresponding to this time.
+                    // fps is 30.
+                    // frameIndex = floor( (timeMs / 1000) * fps )
+                    // We must clamp to numFrames - 1
+                    const rawIndex = Math.floor((timeMs / 1000) * fps);
+                    return Math.min(rawIndex, numFrames - 1);
+                }
             });
 
         };
@@ -710,7 +720,12 @@ export async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, as
                 isPreFried = true;
             } else if (gifProcessors[panel.id]) {
                 const proc = gifProcessors[panel.id];
-                const frameIdx = frameIndex % proc.numFrames;
+                // TIME-BASED SAMPLING FIX:
+                // Instead of simple frame indexing (which causes slow motion if export FPS != source FPS),
+                // we ask the processor for the frame at the specific export timestamp.
+                // This ensures sync regardless of frame rates.
+                const frameIdx = proc.getFrameAtTime ? proc.getFrameAtTime(effectiveTimeMs) : frameIndex % proc.numFrames;
+
                 // ASYNC AWAIT: Needed for Video Processor (GIF processor is sync but this works for both)
                 const result = await proc.renderFrame(frameIdx);
                 sourceCanvas = result.canvas;

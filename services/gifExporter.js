@@ -75,46 +75,86 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
 
     if (onProgress) onProgress(30, "Rendering frames...");
 
-    // 4. Frame Logic
-    // We need to determine the Loop Length (LCM of all GIFs)
+    // 4. Frame Logic & TIMING
     const { gifProcessors, staticImages } = assets;
 
-    // Default FPS = 10 (100ms delay) - Standard for memes
-    const delay = 100;
+    // STEP 1: Determine Optimal Frame Delay (Framerate)
+    // We want to match the source GIF speeds if possible, but cap at ~20-30FPS for smoothness.
+    // Default to 50ms (20FPS) which is much smoother than 100ms (10FPS)
+    // We scan all animated assets to find their native delays.
+    let minDelay = 100;
+    let hasAnimatedAssets = false;
 
-    // Detect if we have specific delays or frame counts from source GIFs
-    // We want the LCM (Least Common Multiple) of durations ideally, or a cap.
-    // Cap at 50 frames (5 seconds) to prevent massive generation times.
-    const MAX_FRAMES = 50;
+    const allProcessors = [
+        ...Object.values(gifProcessors),
+        ...Object.values(assets.stickerProcessors)
+    ];
 
-    // Calculate loop duration based on text animations and GIF sources
-    let totalFrames = 30; // Default 3s
-
-    // Check textual animations
-    if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
-         const durationMs = calculateGifLoopDuration(texts, stickers);
-         // Round to nearest frame count
-         totalFrames = Math.max(totalFrames, Math.ceil(durationMs / delay));
+    if (allProcessors.length > 0) {
+        hasAnimatedAssets = true;
+        // Find minimum delay across all assets to capture fast movement
+        allProcessors.forEach(p => {
+             if (p.getDelay) {
+                 // GIF reader returns delay in 1/100s. We want ms.
+                 // Some GIFs report 0 delay, which usually means 100ms default.
+                 let d = p.getDelay(0) * 10;
+                 if (d < 20) d = 100; // Sanity check for bad headers
+                 if (d > 0) minDelay = Math.min(minDelay, d);
+             }
+        });
+        // CLAMP: Don't go faster than 33ms (30FPS) to keep generation time reasonable
+        // 20ms (50FPS) is overkill for memes and bloats file size.
+        minDelay = Math.max(30, minDelay);
+    } else if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
+        // Text-only animation: Use 50ms (20FPS) for smooth text effects (Wave, etc)
+        minDelay = 50;
+    } else {
+        // Static image (shouldn't really be here for GIF export, but fallback)
+        minDelay = 100;
     }
 
-    // Check GIF/Video panels
-    Object.values(gifProcessors).forEach(p => {
-        if (p.numFrames > 1) {
-            // Simple Logic: Take the longest GIF if reasonable, or 30 frames
-             totalFrames = Math.max(totalFrames, Math.min(p.numFrames, MAX_FRAMES));
-        }
-    });
-    // Check GIF Stickers
-     Object.values(assets.stickerProcessors).forEach(p => {
-        if (p.numFrames > 1) {
-             totalFrames = Math.max(totalFrames, Math.min(p.numFrames, MAX_FRAMES));
-        }
-    });
+    // Align delay to nearest 10ms for GIF spec compliance
+    const delay = Math.round(minDelay / 10) * 10;
 
-    // Hard Cap
-    totalFrames = Math.min(totalFrames, MAX_FRAMES);
 
-    console.log(`Exporting GIF: ${totalFrames} frames`);
+    // STEP 2: Calculate Total Loop Duration
+    // We want a seamless loop. Ideally LCM of durations, but capped.
+    // We gather the duration of all animated elements.
+    let maxDuration = 3000; // Default 3s
+
+    if (hasAnimatedAssets) {
+        // Find longest asset duration
+        // We might want LCM, but for mixed content, simply covering the longest video/GIF often works best
+        // combined with a hard cap.
+        allProcessors.forEach(p => {
+            let duration = 0;
+            if (p.getDuration) {
+                duration = p.getDuration();
+            } else if (p.numFrames && p.getAllDelays) {
+                 duration = p.getAllDelays().reduce((a, b) => a + b, 0) * 10;
+            } else if (p.numFrames) {
+                 duration = p.numFrames * 100; // fallback guess
+            }
+
+            if (duration > 0) maxDuration = Math.max(maxDuration, duration);
+        });
+    }
+
+    if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
+         const textDuration = calculateGifLoopDuration(texts, stickers);
+         maxDuration = Math.max(maxDuration, textDuration);
+    }
+
+    // Hard Cap at 6 seconds (was 5s / 50frames).
+    // With 30-50ms delay, frame count can get high.
+    // 6000ms / 40ms = 150 frames. acceptable.
+    const MAX_DURATION_MS = 6000;
+    const finalDuration = Math.min(maxDuration, MAX_DURATION_MS);
+
+    // STEP 3: Calculate Final Frame Count
+    const totalFrames = Math.ceil(finalDuration / delay);
+
+    console.log(`Exporting GIF: ${totalFrames} frames @ ${delay}ms delay (${Math.round(1000/delay)} FPS). Duration: ${finalDuration}ms`);
 
 
     // 5. Render Loop

@@ -621,7 +621,8 @@ export default function Main() {
 
   // Pexels Video Search Handler
   const handlePexelsVideoSearch = async (query, page = 1) => {
-    if (!query.trim()) return;
+    // Allow empty query to fetch popular videos
+    // if (!query.trim()) return;
 
     // 400ms debounce
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -3955,9 +3956,16 @@ export default function Main() {
                               handlePexelsVideoSearch(val, 1);
                             }}
                             className="w-full input-field pl-10 pr-10 py-3 placeholder:text-xs md:placeholder:text-sm"
+                            onFocus={() => {
+                              // Trigger popular videos if empty
+                              if (!pexelsVideoQuery) {
+                                handlePexelsVideoSearch("", 1);
+                              }
+                            }}
                           />
                           {/* Reuse MemeDropdownGrid for Pexels Videos */}
-                          {pexelsVideoQuery && createPortal(
+                          {/* Show dropdown if we have results OR if we are loading (popular videos) */}
+                          {(pexelsVideoResults.length > 0 || pexelsVideoLoading || pexelsVideoQuery) && createPortal(
                             <Suspense fallback={null}>
                               <MemeDropdownGrid
                                 filteredMemes={pexelsVideoResults}

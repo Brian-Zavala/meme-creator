@@ -293,7 +293,7 @@ export async function searchPexelsVideos(query, page = 1) {
     query,
     page: String(page),
     per_page: "20",
-    endpoint: "search",
+    ...(query ? { endpoint: "search" } : { endpoint: "curated" }), // Use curated (popular) if no query
     type: "video",
   });
 
@@ -337,9 +337,10 @@ export async function getRandomPexelsVideo() {
 }
 
 function mapPexelsVideo(video) {
-  // Find best quality MP4 (HD preferential)
+  // Find best quality MP4 (Prefer 1080p/HD, then 720p, then SD)
   const files = video.video_files || [];
-  const bestFile = files.find(f => f.quality === "hd" && f.width <= 1280) ||
+  const bestFile = files.find(f => f.quality === "hd" && f.width <= 1920 && f.width >= 1080) || // Prefer 1080p
+                   files.find(f => f.quality === "hd" && f.width <= 1280) || // Fallback to 720p
                    files.find(f => f.quality === "sd") ||
                    files[0];
 

@@ -82,8 +82,9 @@ export default function MemeDropdownGrid({
 
   const config = sourceConfig[source] || sourceConfig.imgflip;
 
-  // For API sources, show prompt to type when no query
-  if (isAPI && !memeSearchQuery) {
+  // For API sources, show prompt to type when no query AND no results
+  // This allows showing "Popular" results when query is empty but results exist
+  if (isAPI && !memeSearchQuery && filteredMemes.length === 0 && !isLoading) {
     return (
       <div
         ref={dropdownRef}
@@ -123,7 +124,9 @@ export default function MemeDropdownGrid({
         <div className="px-4 py-3 border-b border-[#2f3336] bg-[#181818]/30 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {config.headerIcon}
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">{config.headerLabel}</span>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              {filteredMemes.length > 0 ? "Popular Videos" : config.headerLabel}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             {config.attribution}

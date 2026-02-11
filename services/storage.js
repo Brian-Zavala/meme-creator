@@ -148,23 +148,28 @@ export async function saveState(state) {
             // 2. Strip processedImage (temporary cache, can be regenerated)
             // 3. Strip deepFry level (reset on reload)
 
-            // Helper to safely process items: Convert Data URL to Blob if sourceBlob is missing
+            // Helper to safely process items: Convert Data/Blob URL to Blob if sourceBlob is missing
             const processItemSafe = async (item) => {
                 const { processedImage, processedDeepFryLevel, ...rest } = item;
 
-                // If we have a Data URL string but NO sourceBlob, we must generate one
-                // before we strip the URL, otherwise the image is lost forever.
-                if (rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:')) {
+                // Handle Data URLs AND Blob URLs (which expire!)
+                // If we have a URL string but NO sourceBlob, we must generate one.
+                const isDataUrl = rest.url && typeof rest.url === 'string' && rest.url.startsWith('data:');
+                const isBlobUrl = rest.url && typeof rest.url === 'string' && rest.url.startsWith('blob:');
+
+                if (isDataUrl || isBlobUrl) {
                     if (!rest.sourceBlob) {
                          try {
+                             // Fetch the resource (works for blob: URLs too if valid)
                              const res = await fetch(rest.url);
                              const blob = await res.blob();
                              rest.sourceBlob = blob;
                          } catch (e) {
-                             console.warn("Failed to convert Data URL to Blob for save:", e);
+                             console.warn("Failed to convert URL to Blob for save:", e);
                          }
                     }
-                    // Now it is safe to strip the heavy string
+                    // Now it is safe to strip the heavy/expired string
+                    // We WANT to strip blob: URLs because they are invalid on reload anyway
                     rest.url = null;
                 }
                 return rest;
@@ -225,23 +230,20 @@ function processState(state) {
     if (!state) return null;
 
     const processItem = (item) => {
-        // Recover URL from sourceBlob if missing (stripped due to size)
+        // Recover URL from sourceBlob if missing (stripped due to size) OR if it is a stale 'blob:' string
         if (item.sourceBlob instanceof Blob) {
-            if (!item.url || item.url instanceof Blob) {
+            const isMissing = !item.url;
+            const isStaleBlobString = typeof item.url === 'string' && item.url.startsWith('blob:');
+            // If item.url is a Blob object, it's weird but valid-ish (converted by Dexie sometimes?)
+            // But usually we want an ObjectURL string for <img> tags.
+
+            if (isMissing || isStaleBlobString || item.url instanceof Blob) {
                 return {
                     ...item,
                     url: URL.createObjectURL(item.sourceBlob),
                     sourceBlob: item.sourceBlob
                 };
             }
-        }
-
-        if (item.url && item.url instanceof Blob) {
-            return {
-                ...item,
-                url: URL.createObjectURL(item.url),
-                sourceBlob: item.url
-            };
         }
         return item;
     };

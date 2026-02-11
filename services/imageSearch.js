@@ -114,19 +114,22 @@ export async function searchUnsplash(query, page = 1, perPage = 30, signal) {
     return { results: [], totalPages: 0 };
   }
 
-  if (!query?.trim()) return { results: [], totalPages: 0 };
-
-  const cacheKey = `${query.trim().toLowerCase()}:${page}`;
-  const cached = unsplashCache.get(cacheKey);
-  if (cached) return cached;
+  // If query is empty, fetch editorial feed (popular)
+  const isEditorial = !query?.trim();
+  const endpoint = isEditorial ? "https://api.unsplash.com/photos" : "https://api.unsplash.com/search/photos";
 
   const params = new URLSearchParams({
-    query: query.trim(),
     page: String(page),
     per_page: String(perPage),
-    content_filter: "high",     // Safe content only
     client_id: UNSPLASH_ACCESS_KEY,
   });
+
+  if (!isEditorial) {
+    params.append("query", query.trim());
+    params.append("content_filter", "high");
+  } else {
+    params.append("order_by", "popular");
+  }
 
   try {
     const res = await fetch(
@@ -224,17 +227,20 @@ function mapPexelsResult(photo) {
  * @returns {Promise<{results: ImageResult[], totalPages: number}>}
  */
 export async function searchPexels(query, page = 1, perPage = 30, signal) {
-  if (!query?.trim()) return { results: [], totalPages: 0 };
-
-  const cacheKey = `${query.trim().toLowerCase()}:${page}`;
-  const cached = pexelsCache.get(cacheKey);
-  if (cached) return cached;
+  // If query is empty, use curated endpoint
+  const isCurated = !query?.trim();
 
   const params = new URLSearchParams({
-    query: query.trim(),
     page: String(page),
     per_page: String(perPage),
   });
+
+  if (isCurated) {
+    params.append("endpoint", "curated");
+  } else {
+    params.append("query", query.trim());
+    params.append("endpoint", "search");
+  }
 
   try {
     const res = await fetch(

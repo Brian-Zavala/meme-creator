@@ -83,7 +83,11 @@ export default function MemeDropdownGrid({
   const config = sourceConfig[source] || sourceConfig.imgflip;
 
   // For API sources, show prompt to type when no query AND no results
-  // This allows showing "Popular" results when query is empty but results exist
+  // BUT: If the parent says we are "isLoading", we should show skeleton (handled below), not this.
+  // Also, if we are initialized but no query, and no results, AND NOT loading...
+  // Wait, we now fetch popular on empty query. So effectively this state (empty query + no results + not loading)
+  // should only happen if the popular fetch failed or returned nothing.
+  // We keep it as a fallback, but ensure isLoading check is robust.
   if (isAPI && !memeSearchQuery && filteredMemes.length === 0 && !isLoading) {
     return (
       <div

@@ -437,6 +437,8 @@ export default function Main() {
   const [pexelsVideoPage, setPexelsVideoPage] = useState(1);
   const [pexelsVideoTotalPages, setPexelsVideoTotalPages] = useState(0);
   const [pexelsVideoLoading, setPexelsVideoLoading] = useState(false);
+  const [showPexelsVideoSuggestions, setShowPexelsVideoSuggestions] = useState(false);
+  const pexelsVideoContainerRef = useRef(null);
 
   // Magic Caption Statedropdown via direct DOM manipulation to avoid re-renders on scroll/resize
   const updateDropdownPosition = useCallback(() => {
@@ -500,6 +502,11 @@ export default function Main() {
       if (memeSearchRef.current && !memeSearchRef.current.contains(e.target) && (!portalDropdown || !portalDropdown.contains(e.target))) {
         setShowMemeSuggestions(false);
       }
+
+      // Video Mode logic (Pexels)
+      if (pexelsVideoContainerRef.current && !pexelsVideoContainerRef.current.contains(e.target)) {
+        setShowPexelsVideoSuggestions(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -536,18 +543,6 @@ export default function Main() {
     }
   }
 
-  // Image source switch handler — persist preference + reset state
-  const handleImageSourceChange = useCallback((source) => {
-    setImageSource(source);
-    localStorage.setItem("meme_img_source", source);
-    setImageSearchResults([]);
-    setImageSearchPage(1);
-    setImageSearchTotalPages(0);
-    setMemeSearchQuery("");
-    // Show dropdown immediately (for imgflip: browse, for API: type hint)
-    setShowMemeSuggestions(true);
-  }, []);
-
   // Debounced API search for Unsplash/Pexels (400ms)
   const handleImageSearch = useCallback((query, source, page = 1) => {
     // Cancel any in-flight request
@@ -555,7 +550,8 @@ export default function Main() {
       imageSearchControllerRef.current.abort();
     }
 
-    if (!query?.trim() || source === "imgflip") {
+    // Imgflip is local only
+    if (source === "imgflip") {
       setImageSearchResults([]);
       setImageSearchPage(1);
       setImageSearchTotalPages(0);
@@ -587,8 +583,10 @@ export default function Main() {
       }
     };
 
-    // Debounce only for page 1 (new search), instant for Load More
-    if (page === 1) {
+    // Debounce only for page 1 WITH NON-EMPTY QUERY.
+    // Instant for Load More OR Empty Query (Popular/Curated)
+    const isPopularFetch = !query?.trim();
+    if (page === 1 && !isPopularFetch) {
       const timer = setTimeout(doSearch, 400);
       // Store cleanup in controller so abort cancels the timeout too
       const originalAbort = controller.abort.bind(controller);
@@ -600,6 +598,27 @@ export default function Main() {
       doSearch();
     }
   }, []);
+
+  // Image source switch handler — persist preference + reset state
+  const handleImageSourceChange = useCallback((source) => {
+    setImageSource(source);
+    localStorage.setItem("meme_img_source", source);
+    setImageSearchResults([]);
+    setImageSearchPage(1);
+    setImageSearchTotalPages(0);
+    setMemeSearchQuery("");
+    // Show dropdown immediately (for imgflip: browse, for API: type hint)
+    setShowMemeSuggestions(true);
+    // Determine if we should fetch popular immediately
+    if (source !== "imgflip") {
+      // Set loading immediately to show skeleton
+      setImageSearchLoading(true);
+      // Determine if we should trigger search (we can't call handleImageSearch directly here effectively because of closure staleness if not careful,
+      // but since handleImageSearch is a callback dep, we can use it if we add it to deps, OR just set triggers)
+      // Actually, handleImageSearch is stable.
+      handleImageSearch("", source, 1);
+    }
+  }, [handleImageSearch]);
 
   // Random Image Handler for Unsplash/Pexels
   const handleRandomImage = async () => {
@@ -3953,32 +3972,52 @@ export default function Main() {
                             onChange={(e) => {
                               const val = e.target.value;
                               setPexelsVideoQuery(val);
+                               // Set loading immediately to show skeleton
+                              setPexelsVideoLoading(true);
                               handlePexelsVideoSearch(val, 1);
+                              setShowPexelsVideoSuggestions(true);
                             }}
                             className="w-full input-field pl-10 pr-10 py-3 placeholder:text-xs md:placeholder:text-sm"
                             onFocus={() => {
+                              setShowPexelsVideoSuggestions(true);
                               // Trigger popular videos if empty
                               if (!pexelsVideoQuery) {
+                                // Set loading immediately
+                                setPexelsVideoLoading(true);
                                 handlePexelsVideoSearch("", 1);
                               }
                             }}
                           />
-                          {/* Reuse MemeDropdownGrid for Pexels Videos */}
-                          {/* Show dropdown if we have results OR if we are loading (popular videos) */}
-                          {(pexelsVideoResults.length > 0 || pexelsVideoLoading || pexelsVideoQuery) && createPortal(
-                            <Suspense fallback={null}>
-                              <MemeDropdownGrid
-                                filteredMemes={pexelsVideoResults}
-                                memeSearchQuery={pexelsVideoQuery}
-                                onSelectMeme={loadSelectedMeme}
-                                dropdownRef={memeDropdownRef}
-                                source="pexels_video"
-                                isLoading={pexelsVideoLoading}
-                                hasMore={pexelsVideoPage < pexelsVideoTotalPages}
-                                onLoadMore={() => handlePexelsVideoSearch(pexelsVideoQuery, pexelsVideoPage + 1)}
-                              />
-                            </Suspense>,
-                            document.body
+
+                          {/* Reuse MemeDropdownGrid for Pexels Videos - INLINE (No Portal) */}
+                          {/* Render immediately if suggestion state is true */}
+                          {showPexelsVideoSuggestions && (
+                            <div className="absolute top-full left-0 z-50 w-full mt-2" ref={pexelsVideoContainerRef}>
+                              {/* Add Skeleton Fallback for Pexels Video Search */}
+                              <Suspense fallback={
+                                 <div className="card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden p-3">
+                                   <div className="grid grid-cols-3 gap-3">
+                                      {Array.from({ length: 9 }).map((_, i) => (
+                                        <div key={i} className="aspect-square rounded-xl bg-[#181818] animate-pulse" />
+                                      ))}
+                                   </div>
+                                 </div>
+                              }>
+                                <MemeDropdownGrid
+                                  filteredMemes={pexelsVideoResults}
+                                  memeSearchQuery={pexelsVideoQuery}
+                                  onSelectMeme={(meme) => {
+                                    loadSelectedMeme(meme);
+                                    setShowPexelsVideoSuggestions(false);
+                                  }}
+                                  dropdownRef={null} // Not using the ref for positioning anymore
+                                  source="pexels_video"
+                                  isLoading={pexelsVideoLoading}
+                                  hasMore={pexelsVideoPage < pexelsVideoTotalPages}
+                                  onLoadMore={() => handlePexelsVideoSearch(pexelsVideoQuery, pexelsVideoPage + 1)}
+                                />
+                              </Suspense>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -4019,10 +4058,17 @@ export default function Main() {
                             setShowMemeSuggestions(true);
                             // Trigger API search for Unsplash/Pexels
                             if (imageSource !== "imgflip") {
+                              setImageSearchLoading(true); // Set loading immediately
                               handleImageSearch(val, imageSource, 1);
                             }
                           }}
-                          onFocus={() => setShowMemeSuggestions(true)}
+                          onFocus={() => {
+                            setShowMemeSuggestions(true);
+                            if (imageSource !== "imgflip" && !memeSearchQuery) {
+                               setImageSearchLoading(true);
+                               handleImageSearch("", imageSource, 1);
+                            }
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && imageSource !== "imgflip" && memeSearchQuery.trim()) {
                               handleImageSearch(memeSearchQuery, imageSource, 1);
@@ -4046,8 +4092,29 @@ export default function Main() {
                     </div>
 
                     {/* Dropdown Results - Portaled to document.body */}
+                    {/* Dropdown Results - Portaled to document.body */}
                     {showMemeSuggestions && createPortal(
-                      <Suspense fallback={null}>
+                      /* Add Skeleton Fallback for Image Search */
+                      <Suspense fallback={
+                        <div
+                          ref={memeDropdownRef}
+                          data-meme-dropdown-portal
+                          style={{
+                            position: 'fixed',
+                            top: memeDropdownRef.current?.style.top,
+                            left: memeDropdownRef.current?.style.left,
+                            width: memeDropdownRef.current?.style.width,
+                            zIndex: 9999
+                          }}
+                          className="card-bg border border-[#2f3336] rounded-2xl shadow-2xl overflow-hidden p-3"
+                        >
+                           <div className="grid grid-cols-3 gap-3">
+                              {Array.from({ length: 9 }).map((_, i) => (
+                                <div key={i} className="aspect-square rounded-xl bg-[#181818] animate-pulse" />
+                              ))}
+                           </div>
+                        </div>
+                      }>
                         <MemeDropdownGrid
                           filteredMemes={imageSource === "imgflip" ? filteredMemes : imageSearchResults}
                           memeSearchQuery={memeSearchQuery}

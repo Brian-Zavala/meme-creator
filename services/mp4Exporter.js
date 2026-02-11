@@ -57,8 +57,8 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress) {
     // For MP4, we want a smoother 30FPS vs GIF's 10FPS
     const FPS = 30;
     const FRAME_DURATION_MS = 1000 / FPS;
-    const MAX_SHARING_DURATION_MS = 15000; // 15s max for good sharing size
-    const MIN_DURATION_MS = 3000; // Minimum 3s for short loops
+    const MAX_SHARING_DURATION_MS = 60000; // 60s max (1 minute) for full video support
+    const MIN_DURATION_MS = 1000; // Minimum 1s (was 3s, now allow shorter clips)
 
     let durationMs = MIN_DURATION_MS;
 

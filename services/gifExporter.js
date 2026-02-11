@@ -42,9 +42,9 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
     let { exportWidth, exportHeight } = dimensions; // Get dimensions that include padding
 
     // QUALITY/SPEED BALANCE:
-    // GIFs are huge. We cap max dimension to 1080px (formerly 600px) to ensure text readability.
-    // 1080px is now standard for high quality social sharing.
-    const MAX_GIF_DIMENSION = 1080;
+    // GIFs are huge. We cap max dimension to 600px for reasonable file sizes.
+    // Text remains readable and exports are much faster.
+    const MAX_GIF_DIMENSION = 600;
     if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
         const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
         exportWidth = Math.round(exportWidth * scale);
@@ -66,11 +66,11 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
     // 3. Setup GIF Encoder
     const gif = new GIF({
         workers: 4, // Max workers for speed (check browser limits)
-        quality: 1, // 1 is best quality (slower), 10 is default. We want crisp text.
+        quality: 5, // 10 = fast encoding, smaller files. 1 = slow/huge. Balance favors speed.
         width: exportWidth,
         height: exportHeight,
         workerScript: '/gif.worker.js', // Ensure this file exists in /public
-        dither: true // Better colors
+        dither: true // Keep dithering ON - GIFs only have 256 colors, dithering prevents banding in photos
     });
 
     if (onProgress) onProgress(30, "Rendering frames...");
@@ -102,12 +102,12 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
                  if (d > 0) minDelay = Math.min(minDelay, d);
              }
         });
-        // CLAMP: Don't go faster than 33ms (30FPS) to keep generation time reasonable
-        // 20ms (50FPS) is overkill for memes and bloats file size.
-        minDelay = Math.max(30, minDelay);
+        // CLAMP: Don't go faster than 50ms (20FPS) to keep file size reasonable
+        // while preserving native Giphy smoothness (most are 50-100ms / 10-20 FPS).
+        minDelay = Math.max(50, minDelay);
     } else if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
-        // Text-only animation: Use 50ms (20FPS) for smooth text effects (Wave, etc)
-        minDelay = 50;
+        // Text-only animation: Use 80ms (~12FPS) - smooth enough for wave/pulse, lighter than 20FPS
+        minDelay = 80;
     } else {
         // Static image (shouldn't really be here for GIF export, but fallback)
         minDelay = 100;
@@ -145,10 +145,9 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
          maxDuration = Math.max(maxDuration, textDuration);
     }
 
-    // Hard Cap at 6 seconds (was 5s / 50frames).
-    // With 30-50ms delay, frame count can get high.
-    // 6000ms / 40ms = 150 frames. acceptable.
-    const MAX_DURATION_MS = 6000;
+    // Hard Cap at 5 seconds for reasonable GIF file sizes.
+    // 5000ms / 100ms = 50 frames. Fast exports, small files.
+    const MAX_DURATION_MS = 5000;
     const finalDuration = Math.min(maxDuration, MAX_DURATION_MS);
 
     // STEP 3: Calculate Final Frame Count

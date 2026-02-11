@@ -173,10 +173,9 @@ export async function createVideoProcessor(url) {
         };
 
         video.onloadedmetadata = () => {
-             // CAP DURATION to 5 seconds max for GIF export safety
-             // For MP4 this can be relaxed later, but for consistency we keep it the same for now
-            const MAX_DURATION = 5.0; // seconds
-            const duration = Math.min(video.duration, MAX_DURATION);
+             // Use full video duration - each exporter (GIF/MP4) applies its own cap
+             // Guard against Infinity/NaN from streams or corrupt files (fallback to 5s)
+            const duration = (isFinite(video.duration) && video.duration > 0) ? video.duration : 5;
             const width = video.videoWidth;
             const height = video.videoHeight;
             const fps = 30; // MP4 can use 30FPS comfortably
@@ -202,6 +201,7 @@ export async function createVideoProcessor(url) {
                 width,
                 height,
                 numFrames,
+                getDuration: () => duration * 1000, // Return duration in milliseconds
                 getDelay: () => 1000 / fps / 10, // delay in centiseconds (1/100s)
                 renderFrame: async (frameIndex) => {
 

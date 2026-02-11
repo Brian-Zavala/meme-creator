@@ -351,6 +351,7 @@ export default function Main() {
   const canvasContainerRef = useRef(null);
   const remixClickCountRef = useRef({ chaos: 0, caption: 0, style: 0, filter: 0, vibe: 0, deepfry: 0 });
   const [activeEffects, setActiveEffects] = useState({}); // Track active toggle effects per panel { panelId: 'nuked' | 'cursed' | 'glitch' | 'timewarp' | null }
+  const [lastClickedEffect, setLastClickedEffect] = useState(null); // Track last clicked effect ID for active state display
   const vibeThrottleRef = useRef(0); // Spam protection for vibe-check button
   const chaosThrottleRef = useRef(0); // Spam protection for chaos button
   const filterThrottleRef = useRef(0); // Spam protection for filter button
@@ -1046,6 +1047,7 @@ export default function Main() {
   }
 
   async function handleChaos() {
+    setLastClickedEffect('chaos');
     // --- SPAM PROTECTION: 800ms cooldown (Heavy operations) ---
     const now = Date.now();
     if (now - chaosThrottleRef.current < 800) {
@@ -1239,6 +1241,7 @@ export default function Main() {
 
 
   function handleCaptionRemix() {
+    setLastClickedEffect('caption');
     // Generate new captions, preserve current media AND animations
     if (allCaptions.length === 0) return;
 
@@ -1274,6 +1277,7 @@ export default function Main() {
   }
 
   function handleStyleShuffle() {
+    setLastClickedEffect('style');
     // Get unique style combo from deck
     const nextStyle = getNextItem(allStyles, styleDeck, setStyleDeck);
 
@@ -1312,6 +1316,7 @@ export default function Main() {
   }
 
   function handleFilterFrenzy() {
+    setLastClickedEffect('filter');
     // --- SPAM PROTECTION: 500ms cooldown ---
     const now = Date.now();
     if (now - filterThrottleRef.current < 500) {
@@ -1570,6 +1575,7 @@ export default function Main() {
   }
 
   function handleVibeCheck() {
+    setLastClickedEffect('vibe');
     // --- SPAM PROTECTION: 500ms cooldown ---
     const now = Date.now();
     if (now - vibeThrottleRef.current < 500) {
@@ -1654,6 +1660,7 @@ export default function Main() {
   }
 
   function handleExtremeDeepFry() {
+    setLastClickedEffect('deepfry');
     startTransition(() => {
       updateState((prev) => {
         const activePanelId = prev.activePanelId;
@@ -1697,6 +1704,7 @@ export default function Main() {
   // ========== NEW REMIX HANDLERS ==========
 
   async function handleStickerfy() {
+    setLastClickedEffect('stickerfy');
     try {
       // Pick a random keyword to ensure variety
       const randomKeyword = STICKER_KEYWORDS[Math.floor(Math.random() * STICKER_KEYWORDS.length)];
@@ -1754,6 +1762,7 @@ export default function Main() {
   }
 
   function handleNuked() {
+    setLastClickedEffect('nuked');
     const panelId = meme.activePanelId;
     const isActive = activeEffects[panelId] === 'nuked';
 
@@ -1804,6 +1813,7 @@ export default function Main() {
   }
 
   function handleGlitch() {
+    setLastClickedEffect('glitch');
     const panelId = meme.activePanelId;
 
     // Curated glitch presets - cycles through distinct digital corruption effects
@@ -1878,6 +1888,7 @@ export default function Main() {
   }
 
   function handleCursed() {
+    setLastClickedEffect('cursed');
     const panelId = meme.activePanelId;
     const isActive = activeEffects[panelId] === 'cursed';
 
@@ -1938,6 +1949,7 @@ export default function Main() {
   }
 
   function handleConfettiBlast() {
+    setLastClickedEffect('confetti');
     // Trigger visual confetti celebration effect immediately
     triggerConfettiBurst();
 
@@ -1984,6 +1996,7 @@ export default function Main() {
   }
 
   function handleTimeWarp() {
+    setLastClickedEffect('timewarp');
     const panelId = meme.activePanelId;
 
     // Curated time warp presets - cycles through temporal/dreamy effects
@@ -3444,6 +3457,7 @@ export default function Main() {
               deepFryLevel={deferredDeepFry}
               isProcessing={isProcessing}
               activeEffect={activeEffects[meme.activePanelId] || null}
+              lastClickedEffect={lastClickedEffect}
             />
           </Suspense>
         );

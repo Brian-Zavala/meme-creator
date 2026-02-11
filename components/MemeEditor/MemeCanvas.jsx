@@ -97,18 +97,6 @@ const MemeCanvas = forwardRef(({
   const longPressStartPosRef = useRef(null);
   const focusOnNextReleaseRef = useRef(false); // New flag for hybrid approach
 
-  // Pinch-to-zoom state
-  // zoom state is only synced on gesture END (touchend / wheel debounce)
-  // During active gestures, zoomRef + direct DOM manipulation is used to avoid re-renders
-  const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 });
-  const zoomRef = useRef({ scale: 1, x: 0, y: 0 });
-  const canvasInnerRef = useRef(null);
-  const zoomRafRef = useRef(null);
-  const wheelEndTimerRef = useRef(null);
-  const pinchStartRef = useRef(null);
-  const panStartRef = useRef(null);
-  const lastDoubleTapRef = useRef(0);
-
   // Robustly set caret position when editing starts
   useEffect(() => {
     if (editingId) {
@@ -131,170 +119,6 @@ const MemeCanvas = forwardRef(({
       });
     }
   }, [editingId]);
-
-  // Apply zoom transform directly to DOM (bypasses React re-render cycle)
-  const applyZoomToDOM = () => {
-    const inner = canvasInnerRef.current;
-    if (!inner) return;
-    const z = zoomRef.current;
-    inner.style.transform = z.scale > 1
-      ? `translate(${z.x}px, ${z.y}px) scale(${z.scale})`
-      : '';
-  };
-
-  // Schedule a DOM-only zoom update via rAF (coalesces multiple calls per frame)
-  const scheduleZoomDOM = () => {
-    if (!zoomRafRef.current) {
-      zoomRafRef.current = requestAnimationFrame(() => {
-        zoomRafRef.current = null;
-        applyZoomToDOM();
-      });
-    }
-  };
-
-  // Keep DOM in sync after every React render (prevents style prop from overriding direct DOM)
-  useLayoutEffect(() => {
-    applyZoomToDOM();
-  });
-
-  // Pinch-to-zoom: touch & wheel listeners
-  // CRITICAL: Use passive listeners when zoom=1 so the browser compositor can scroll freely.
-  // Only switch to non-passive when zoomed (need preventDefault for panning).
-  // Non-passive touchstart/touchmove blocks the scroll compositor thread on mobile,
-  // causing jank and crashes even when preventDefault is never called.
-  const isZoomedRef = useRef(false);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const dist = (t0, t1) => Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
-
-    const onTouchStart = (e) => {
-      if (e.touches.length === 2) {
-        // 2-finger pinch always needs preventDefault — but we only register
-        // non-passive when already zoomed. For initial pinch-to-zoom from scale=1,
-        // we let the browser handle it and catch up on touchend.
-        if (isZoomedRef.current) e.preventDefault();
-        // Cancel any active long-press
-        if (canvasLongPressTimerRef.current) {
-          clearTimeout(canvasLongPressTimerRef.current.delayTimerId);
-          clearTimeout(canvasLongPressTimerRef.current.timerId);
-          clearInterval(canvasLongPressTimerRef.current.progressInterval);
-          canvasLongPressTimerRef.current = null;
-        }
-        setLongPressCursor(null);
-        pinchStartRef.current = {
-          distance: dist(e.touches[0], e.touches[1]),
-          scale: zoomRef.current.scale,
-        };
-      } else if (e.touches.length === 1) {
-        const now = Date.now();
-        if (now - lastDoubleTapRef.current < 300 && zoomRef.current.scale > 1) {
-          if (isZoomedRef.current) e.preventDefault();
-          zoomRef.current = { scale: 1, x: 0, y: 0 };
-          setZoom({ scale: 1, x: 0, y: 0 });
-          lastDoubleTapRef.current = 0;
-          return;
-        }
-        lastDoubleTapRef.current = now;
-        if (zoomRef.current.scale > 1) {
-          if (isZoomedRef.current) e.preventDefault();
-          panStartRef.current = {
-            touchX: e.touches[0].clientX,
-            touchY: e.touches[0].clientY,
-            zoomX: zoomRef.current.x,
-            zoomY: zoomRef.current.y,
-          };
-        }
-      }
-    };
-
-    const onTouchMove = (e) => {
-      if (e.touches.length === 2 && pinchStartRef.current) {
-        if (isZoomedRef.current) e.preventDefault();
-        const ratio = dist(e.touches[0], e.touches[1]) / pinchStartRef.current.distance;
-        let s = Math.min(5, Math.max(1, pinchStartRef.current.scale * ratio));
-        const next = s < 1.05 ? { scale: 1, x: 0, y: 0 } : { ...zoomRef.current, scale: s };
-        zoomRef.current = next;
-        scheduleZoomDOM(); // Direct DOM update, no React re-render
-      } else if (e.touches.length === 1 && panStartRef.current && zoomRef.current.scale > 1) {
-        if (isZoomedRef.current) e.preventDefault();
-        const next = {
-          ...zoomRef.current,
-          x: panStartRef.current.zoomX + (e.touches[0].clientX - panStartRef.current.touchX),
-          y: panStartRef.current.zoomY + (e.touches[0].clientY - panStartRef.current.touchY),
-        };
-        zoomRef.current = next;
-        scheduleZoomDOM(); // Direct DOM update, no React re-render
-      }
-    };
-
-    const onTouchEnd = (e) => {
-      if (e.touches.length < 2) pinchStartRef.current = null;
-      if (e.touches.length === 0) {
-        panStartRef.current = null;
-        if (zoomRef.current.scale > 1 && zoomRef.current.scale < 1.1) {
-          zoomRef.current = { scale: 1, x: 0, y: 0 };
-        }
-        // Sync React state on gesture end (for zoom indicator + touch-action toggle)
-        setZoom({ ...zoomRef.current });
-      }
-    };
-
-    // Watch for zoom state changes to swap touch listener passiveness
-    const checkZoomChange = () => {
-      const nowZoomed = zoomRef.current.scale > 1;
-      if (nowZoomed !== isZoomedRef.current) {
-        isZoomedRef.current = nowZoomed;
-        registerTouchListeners(nowZoomed);
-      }
-    };
-
-    const onWheel = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        let s = Math.min(5, Math.max(1, zoomRef.current.scale * (e.deltaY > 0 ? 0.92 : 1.08)));
-        const next = s < 1.05 ? { scale: 1, x: 0, y: 0 } : { ...zoomRef.current, scale: s };
-        zoomRef.current = next;
-        scheduleZoomDOM(); // Direct DOM update, no React re-render
-        // Debounce React state sync to wheel gesture end
-        clearTimeout(wheelEndTimerRef.current);
-        wheelEndTimerRef.current = setTimeout(() => {
-          setZoom({ ...zoomRef.current });
-          checkZoomChange();
-        }, 150);
-      }
-    };
-
-    const onTouchEndFinal = (e) => {
-      onTouchEnd(e);
-      checkZoomChange();
-    };
-
-    // Register touch listeners — passive when not zoomed (allows browser scroll),
-    // non-passive when zoomed (allows preventDefault for pan/pinch)
-    const registerTouchListeners = (zoomed) => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.addEventListener('touchstart', onTouchStart, { passive: !zoomed });
-      el.addEventListener('touchmove', onTouchMove, { passive: !zoomed });
-    };
-
-    // Initial registration — passive (zoom=1)
-    registerTouchListeners(false);
-    el.addEventListener('touchend', onTouchEndFinal);
-    el.addEventListener('wheel', onWheel, { passive: false });
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEndFinal);
-      el.removeEventListener('wheel', onWheel);
-      if (zoomRafRef.current) cancelAnimationFrame(zoomRafRef.current);
-      clearTimeout(wheelEndTimerRef.current);
-    };
-  }, []);
 
   // If we have an override (Deep Fry preview), it only applies to the ACTIVE panel for now visually
 
@@ -533,9 +357,8 @@ const MemeCanvas = forwardRef(({
 
   // Long-press to add text handlers
   const handleCanvasLongPressStart = (e) => {
-    // Don't trigger if drawing, if there's already a selected element, if in editing mode, or if zoomed
+    // Don't trigger if drawing, if there's already a selected element, or if in editing mode
     if (activeTool === 'pen' || activeTool === 'eraser' || selectedId || editingId) return;
-    if (zoomRef.current.scale > 1) return;
 
     // Check if we're on the canvas area using closest() to handle clicks on panels
     const canvasElement = e.target.closest('[data-meme-canvas]');
@@ -682,7 +505,7 @@ const MemeCanvas = forwardRef(({
       onPointerDown={onCanvasPointerDown}
       onContextMenu={(e) => e.preventDefault()}
       className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none rounded-none overflow-hidden"
-      style={{ touchAction: zoom.scale > 1 ? 'none' : 'pan-y' }}
+      style={{ touchAction: 'pan-y' }}
       role="img"
       aria-label={description}
     >
@@ -708,11 +531,7 @@ const MemeCanvas = forwardRef(({
       />
 
       <div
-        ref={(node) => {
-          canvasInnerRef.current = node;
-          if (typeof ref === 'function') ref(node);
-          else if (ref) ref.current = node;
-        }}
+        ref={ref}
         data-meme-canvas="true"
         onPointerDown={(e) => {
           e.stopPropagation(); // Prevent double-firing via bubble to outer container
@@ -730,9 +549,6 @@ const MemeCanvas = forwardRef(({
           height: 'auto',
           aspectRatio: containerAspect,
           maxWidth: '100%',
-          // transform is managed by direct DOM manipulation (useLayoutEffect + applyZoomToDOM)
-          // to avoid re-rendering the entire component on every pinch/wheel frame
-          transformOrigin: 'center center',
         }}
       >
         {/* Top Caption Bar */}
@@ -1253,17 +1069,6 @@ const MemeCanvas = forwardRef(({
           />
         )}
       </div>
-
-
-      {/* Zoom indicator */}
-      {zoom.scale > 1 && (
-        <div
-          data-html2canvas-ignore="true"
-          className="absolute bottom-3 right-3 bg-black/70 text-white text-xs font-mono px-2.5 py-1 rounded-full z-50 backdrop-blur-sm pointer-events-none border border-white/10"
-        >
-          {zoom.scale.toFixed(1)}x
-        </div>
-      )}
 
       {loading && (
         <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center z-50 backdrop-blur-sm gap-4">

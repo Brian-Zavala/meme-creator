@@ -33,9 +33,10 @@ export default function RemixCarousel({
     onTimeWarp,
     deepFryLevel = 0,
     isProcessing = false,
-    activeEffect = null
+    activeEffect = null,
+    lastClickedEffect = null // NEW: ID of the last clicked effect (shows active state briefly)
 }) {
-    // Map effect IDs to their toggle state
+    // Map effect IDs to their toggle state (these can be turned on/off and stay active)
     const toggleableEffects = ['nuked', 'glitch', 'cursed', 'timewarp'];
     // Buttons that can trigger deep fry processing and should be locked during processing
     const deepFryTriggerButtons = ['chaos', 'filter', 'vibe', 'deepfry', 'nuked', 'glitch', 'cursed', 'timewarp'];
@@ -136,8 +137,12 @@ export default function RemixCarousel({
             {remixModes.map(({ id, label, handler, Background, ariaLabel }) => {
                 // Lock buttons that can trigger deep fry while processing is active
                 const isLocked = isProcessing && deepFryTriggerButtons.includes(id);
-                // Check if this toggleable effect is currently active
-                const isEffectActive = toggleableEffects.includes(id) && activeEffect === id;
+                // Check if this effect is currently active:
+                // - Toggleable effects (nuked, glitch, cursed, timewarp) stay active until clicked again
+                // - Non-toggleable effects show active state if they were the last clicked
+                const isToggleActive = toggleableEffects.includes(id) && activeEffect === id;
+                const isLastClicked = lastClickedEffect === id;
+                const isEffectActive = isToggleActive || isLastClicked;
 
                 return (
                     <button
@@ -168,7 +173,7 @@ export default function RemixCarousel({
                         {/* Hover overlay */}
                         <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors duration-300 z-10" />
 
-                        {/* Label */}
+                        {/* Label with checkmark for active states */}
                         <div className="relative z-20 flex items-center justify-center py-3 px-2">
                             <span
                                 className={`font-black uppercase tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,1)] text-center leading-tight ${isEffectActive ? 'text-yellow-300' : 'text-white'}`}

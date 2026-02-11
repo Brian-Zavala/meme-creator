@@ -190,35 +190,76 @@ export async function createVideoProcessor(url) {
             console.log(`Initialized Video Processor: ${width}x${height}, ${duration}s cap, ${numFrames} frames`);
 
 
+            const fps = 30; // Standard export FPS
+            const numFrames = Math.ceil(duration * fps);
+
+            // NEW: Use a persistent canvas for the last successful frame to prevent black flicker
+            // if the video isn't ready or seeking fails/times out.
+            const lastSuccessfulFrame = document.createElement('canvas');
+            lastSuccessfulFrame.width = width;
+            lastSuccessfulFrame.height = height;
+            let hasSuccessfulFrame = false;
+
             resolve({
                 width,
                 height,
                 numFrames,
                 getDelay: () => 1000 / fps / 10, // delay in centiseconds (1/100s)
                 renderFrame: async (frameIndex) => {
-                    // ASYNC SEEK: Wait for video to actually seek before drawing
-                    const time = frameIndex / fps;
-                    video.currentTime = time;
 
-                    await new Promise(r => {
-                         // If already there (rare with floats), resolve. Else wait.
-                         // But for robustness, just setting onseeked is safest.
-                         const clean = () => {
-                             video.removeEventListener('seeked', handler);
-                             r();
-                         };
-                         const handler = () => clean();
-                         video.addEventListener('seeked', handler, { once: true });
 
-                         // Fallback in case seeked doesn't fire (browser quirk)
-                         setTimeout(clean, 500);
-                    });
+                        // ASYNC SEEK: Wait for video to actually seek before drawing
+                        const time = frameIndex / fps;
+                        video.currentTime = time;
 
-                    // Clear and Draw
-                    ctx.drawImage(video, 0, 0, width, height);
+                        try {
+                            await new Promise((resolve, reject) => {
+                                 // If already there (rare with floats), resolve. Else wait.
+                                 // But for robustness, just setting onseeked is safest.
+                                 const clean = () => {
+                                     video.removeEventListener('seeked', handler);
+                                     clearTimeout(timeout);
+                                 };
+                                 const handler = () => {
+                                     clean();
+                                     resolve();
+                                 };
+                                 const timeout = setTimeout(() => {
+                                     clean();
+                                     // Don't reject, just resolve so we can try to draw or fallback
+                                     // Rejecting would crash the whole export.
+                                     console.warn(`Video seek timeout at frame ${frameIndex} (${time}s)`);
+                                     resolve();
+                                 }, 2000); // 2s timeout for seek
 
-                    return { canvas, delay: Math.round(1000/fps/10) };
-                },
+                                 video.addEventListener('seeked', handler, { once: true });
+                            });
+                        } catch (e) {
+                            console.warn("Seek interrupted:", e);
+                        }
+
+                        // Check if video is actually ready to draw
+                        // readyState >= 2 (HAVE_CURRENT_DATA) means we have data for the current position
+                        if (video.readyState >= 2) {
+                             ctx.drawImage(video, 0, 0, width, height);
+
+                             // Update last successful frame cache
+                             const lsfCtx = lastSuccessfulFrame.getContext('2d');
+                             lsfCtx.clearRect(0,0, width, height);
+                             lsfCtx.drawImage(video, 0, 0, width, height);
+                             hasSuccessfulFrame = true;
+                        } else {
+                             console.warn(`Video not ready at frame ${frameIndex} (readyState: ${video.readyState}), using fallback.`);
+                             if (hasSuccessfulFrame) {
+                                 // Draw the last good frame instead of black/transparent
+                                 ctx.clearRect(0, 0, width, height);
+                                 ctx.drawImage(lastSuccessfulFrame, 0, 0);
+                             }
+                             // If no successful frame yet (frame 0 fail?), it stays transparent/black as initialized
+                        }
+
+                        return { canvas, delay: Math.round(1000/fps/10) };
+                    },
                 cleanup,
                 // NEW: Time-based frame retrieval for accurate export sync
                 getFrameAtTime: (timeMs) => {
@@ -538,51 +579,133 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
             }
         }
 
-        // Apply Animation Transforms
-        ctx.translate(x + xOffset, y + yOffset);
-        ctx.rotate(rotation);
+        if (text.animation === 'wave') {
+             // CHARACTER-LEVEL ANIMATION (WAVE)
+             // We need to split lines/words/chars and draw them individually
+             // to match the CSS animation which uses per-char delays.
 
-        // FIX: Add Drop Shadow to match CSS "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))"
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 2 * (exportWidth / 800); // Scale blur
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 2 * (exportWidth / 800); // Scale offset
+             // FIX: Reset block-level animation offsets to prevent double application
+             // (Since the block above calculated a "default" transform for the whole block logic)
+             xOffset = 0;
+             yOffset = 0;
+             rotation = 0;
+             scale = 1;
+             opacity = 1;
 
-        // Wrap Text
-        const maxWidth = (text.maxWidth || 90) / 100 * exportWidth;
-        const lineHeight = fontSize * 1.2;
+             const lines = text.content.split('\n');
+             let globalCharIndex = 0;
+             const lineHeight = fontSize * 1.2;
 
-        const words = text.content.split(' ');
-        let line = '';
-        let lines = [];
+             lines.forEach((lineStr, lineIdx) => {
+                 // Calculate where this line starts vertically
+                 // Center block of text around y
+                 const totalBlockHeight = lines.length * lineHeight;
+                 const lineYBase = y + (lineIdx * lineHeight) - (totalBlockHeight / 2) + (lineHeight / 2);
 
-        for (let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = ctx.measureText(testLine);
-            const testWidth = metrics.width;
-            if (testWidth > maxWidth && n > 0) {
-                lines.push(line);
-                line = words[n] + ' ';
-            } else {
-                line = testLine;
+                 // Measure total line width to center it horizontally
+                 const lineWidth = ctx.measureText(lineStr).width;
+                 let currentX = x - (lineWidth / 2); // Start X for this line
+
+                 // Iterate chars
+                 const chars = lineStr.split('');
+                 chars.forEach((char) => {
+                     const charWidth = ctx.measureText(char).width;
+
+                     // Calculate Transform for this CHAR
+                     let charXOffset = 0;
+                     let charYOffset = 0;
+                     let charRotation = 0;
+                     let charScale = 1;
+                     let charOpacity = 1;
+
+                     const anim = getAnimationById('wave');
+                     if (anim && anim.getTransform) {
+                         const currentTimeMs = (effectiveTimeMs !== undefined) ? effectiveTimeMs : 0;
+                         const animDurationMs = anim.duration || 1000;
+                         const animProgress = (currentTimeMs % animDurationMs) / animDurationMs;
+                         const virtualFrameIndex = animProgress * totalFrames;
+
+                         // PASS CHAR INDEX for phase shift
+                         const t = anim.getTransform(virtualFrameIndex, totalFrames, globalCharIndex);
+                         charXOffset = (t.offsetX || 0) * (exportWidth / 800);
+                         charYOffset = (t.offsetY || 0) * (exportWidth / 800);
+                         charRotation = (t.rotation || 0) * (Math.PI / 180);
+                         charScale = t.scale || 1;
+                         charOpacity = t.opacity ?? 1;
+                     }
+
+                     ctx.save();
+                     ctx.globalAlpha = opacity * charOpacity;
+                     ctx.translate(currentX + (charWidth/2) + xOffset + charXOffset, lineYBase + yOffset + charYOffset);
+                     ctx.rotate(rotation + charRotation);
+                     ctx.scale(scale * charScale, scale * charScale);
+
+                     // Shadow
+                     ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                     ctx.shadowBlur = 2 * (exportWidth / 800);
+                     ctx.shadowOffsetX = 0;
+                     ctx.shadowOffsetY = 2 * (exportWidth / 800);
+
+                     // Text Stroke & Fill
+                     if (ctx.lineWidth > 0) ctx.strokeText(char, 0, 0);
+                     ctx.fillText(char, 0, 0);
+
+                     ctx.restore();
+
+                     currentX += charWidth;
+                     if (char.trim() !== '') globalCharIndex++;
+                 });
+             });
+
+        } else {
+            // BLOCK-LEVEL ANIMATION (Legacy/Standard)
+            // Apply Transform to the whole block
+
+            // Apply Animation Transforms
+            ctx.translate(x + xOffset, y + yOffset);
+            ctx.rotate(rotation);
+            ctx.scale(scale, scale); // Apply scale here
+
+            // FIX: Add Drop Shadow to match CSS "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))"
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 2 * (exportWidth / 800); // Scale blur
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 2 * (exportWidth / 800); // Scale offset
+
+            // Wrap Text
+            const maxWidth = (text.maxWidth || 90) / 100 * exportWidth;
+            const lineHeight = fontSize * 1.2;
+
+            const words = text.content.split(' ');
+            let line = '';
+            let lines = [];
+
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    lines.push(line);
+                    line = words[n] + ' ';
+                } else {
+                    line = testLine;
+                }
             }
+            lines.push(line);
+
+            lines.forEach((l, i) => {
+                // Center vertically
+                const lineY = (i - (lines.length - 1) / 2) * lineHeight;
+
+                // Draw Stroke (Outline)
+                if (ctx.lineWidth > 0) {
+                     ctx.strokeText(l, 0, lineY);
+                }
+
+                // Draw Fill
+                ctx.fillText(l, 0, lineY);
+            });
         }
-        lines.push(line);
-
-        lines.forEach((l, i) => {
-            // Center vertically around the anchor point if multiple lines?
-            // Standard meme text usually grows down or up from anchor.
-            // Let's stick to simple line offsets.
-            const lineY = (i - (lines.length - 1) / 2) * lineHeight;
-
-            // Draw Stroke (Outline)
-            if (ctx.lineWidth > 0) {
-                 ctx.strokeText(l, 0, lineY);
-            }
-
-            // Draw Fill
-            ctx.fillText(l, 0, lineY);
-        });
 
         ctx.restore();
     });

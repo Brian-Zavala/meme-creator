@@ -12,7 +12,7 @@ const SOURCES = [
  */
 export default function ImageSourceTabs({ activeSource, onSourceChange }) {
   return (
-    <div className="flex gap-1 p-1 bg-[#111]/60 rounded-xl border border-[#2f3336]/60 backdrop-blur-sm">
+    <div className="flex p-1 bg-[#181818] rounded-xl border border-[#2f3336]">
       {SOURCES.map(({ id, label, Icon }) => {
         const isActive = activeSource === id;
         return (
@@ -23,19 +23,20 @@ export default function ImageSourceTabs({ activeSource, onSourceChange }) {
               onSourceChange(id);
             }}
             className={`
-              flex-1 flex items-center justify-center gap-1.5
-              px-2.5 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider
-              transition-all duration-200 ease-out
+              relative flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200
               ${isActive
-                ? "bg-brand text-white shadow-lg shadow-brand/30 scale-[1.02]"
-                : "text-slate-500 hover:text-slate-300 hover:bg-white/5 active:scale-95"
+                ? "text-white shadow-lg shadow-brand/10 bg-[#2f3336]"
+                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
               }
             `}
             aria-pressed={isActive}
           >
-            <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-white" : ""}`} />
-            <span className="hidden xs:inline">{label}</span>
-            <span className="xs:hidden">{label.slice(0, 1)}</span>
+            {isActive && (
+              <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent rounded-lg border border-brand/20" />
+            )}
+            <Icon className={`w-3.5 h-3.5 z-10 relative shrink-0 ${isActive ? "text-brand" : "currentColor"}`} />
+            <span className="relative z-10 hidden xs:inline">{label}</span>
+            <span className="relative z-10 xs:hidden">{label.slice(0, 1)}</span>
           </button>
         );
       })}

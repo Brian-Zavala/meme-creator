@@ -5,6 +5,8 @@
 import { db } from './db';
 
 const KEY = 'meme-generator-state';
+// Bump version to force global wipe and ensure fresh architecture
+const DATA_VERSION = 3;
 
 // ============================================
 // EXPORTED API
@@ -150,7 +152,7 @@ export async function saveState(state) {
                 present: cleanPresent,
                 past: [],   // No history persistence
                 future: [],
-                version: 2
+                version: DATA_VERSION
             };
 
             await db.appState.put(cleanState, KEY);
@@ -166,6 +168,14 @@ export async function loadState() {
         // 1. Load Lightweight State
         const state = await db.appState.get(KEY);
         if (!state) return null;
+
+        // VERSION CHECK: Trigger wipe if version doesn't match current
+        if (state.version !== DATA_VERSION) {
+            console.warn(`Data version mismatch (found ${state.version}, expected ${DATA_VERSION}). Wiping database...`);
+            await db.delete();
+            await db.open();
+            return null;
+        }
 
         // 2. Denormalize: Fetch Assets and Rehydrate
         return await hydrateState(state);
@@ -255,7 +265,7 @@ async function hydrateState(state) {
         return next;
     };
 
-    if (state.version === 2 && state.present) {
+    if (state.version === DATA_VERSION && state.present) {
         const present = processSingleState(state.present);
         return {
             ...state,

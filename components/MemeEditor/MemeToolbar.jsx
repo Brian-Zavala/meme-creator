@@ -279,33 +279,36 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                     </div>
 
                     {/* Top Caption Bar Button - flat left, rounded right */}
-                    <button
-                      onClick={() => {
-                        if (navigator.vibrate) navigator.vibrate(10);
-                        const isOn = meme.paddingTop > 0;
+                      <button
+                        onClick={() => {
+                          if (navigator.vibrate) navigator.vibrate(10);
+                          const isOn = meme.paddingTop > 0;
 
-                        startTransition(() => {
-                            handleStyleChange({ currentTarget: { name: 'paddingTop', value: isOn ? 0 : 15 } }, true);
+                          startTransition(() => {
+                              handleStyleChange({ currentTarget: { name: 'paddingTop', value: isOn ? 0 : 15 } }, true);
 
-                            setTimeout(() => {
-                            if (!isOn && meme.paddingBottom === 0) {
-                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
-                                handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
-                            } else if (isOn && meme.paddingBottom === 0) {
-                                handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
-                                handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
-                            }
-                            }, 50);
-                        });
-                      }}
-                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-r-xl rounded-l-none transition-all active:scale-[0.98] uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${meme.paddingTop > 0
-                        ? "bg-brand text-slate-900 border-y border-r border-brand"
-                        : "bg-[#181818] text-slate-400 border-y border-r border-[#2f3336] hover:border-[#3e4347] hover:text-white"
-                        }`}
-                      style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
-                    >
-                      <span className="whitespace-nowrap">Top {meme.paddingTop > 0 ? "On" : "Off"}</span>
-                    </button>
+                              setTimeout(() => {
+                              if (!isOn && meme.paddingBottom === 0) {
+                                  handleStyleChange({ currentTarget: { name: 'textColor', value: '#000000' } }, true);
+                                  handleStyleChange({ currentTarget: { name: 'textShadow', value: 'transparent' } }, true);
+                              } else if (isOn && meme.paddingBottom === 0) {
+                                  handleStyleChange({ currentTarget: { name: 'textColor', value: '#ffffff' } }, true);
+                                  handleStyleChange({ currentTarget: { name: 'textShadow', value: '#000000' } }, true);
+                              }
+                              }, 50);
+                          });
+                        }}
+                        className={`relative flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-r-xl rounded-l-none transition-all active:scale-[0.98] uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${meme.paddingTop > 0
+                          ? "text-white shadow-lg shadow-brand/10 bg-[#2f3336] border-y border-r border-[#2f3336]"
+                          : "bg-[#181818] text-slate-400 border-y border-r border-[#2f3336] hover:border-[#3e4347] hover:text-white"
+                          }`}
+                        style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
+                      >
+                        {meme.paddingTop > 0 && (
+                          <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent border-r border-y border-brand/20 rounded-r-xl pointer-events-none" />
+                        )}
+                        <span className="relative z-10 whitespace-nowrap">Top {meme.paddingTop > 0 ? "On" : "Off"}</span>
+                      </button>
                   </div>
 
                   {/* Pair 2: Bottom Bar Control (Toggle + Color on RIGHT) - Interlocked, mirrored */}
@@ -330,13 +333,16 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             }, 50);
                         });
                       }}
-                      className={`flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-l-xl rounded-r-none transition-all active:scale-[0.98] uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${(meme.paddingBottom || 0) > 0
-                        ? "bg-brand text-slate-900 border-y border-l border-brand"
+                      className={`relative flex flex-1 items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-l-xl rounded-r-none transition-all active:scale-[0.98] uppercase font-bold tracking-wider touch-target overflow-hidden min-w-0 ${(meme.paddingBottom || 0) > 0
+                        ? "text-white shadow-lg shadow-brand/10 bg-[#2f3336] border-y border-l border-[#2f3336]"
                         : "bg-[#181818] text-slate-400 border-y border-l border-[#2f3336] hover:border-[#3e4347] hover:text-white"
                         }`}
                       style={{ fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)' }}
                     >
-                      <span className="whitespace-nowrap">Bottom {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
+                      {(meme.paddingBottom || 0) > 0 && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent border-l border-y border-brand/20 rounded-l-xl pointer-events-none" />
+                      )}
+                      <span className="relative z-10 whitespace-nowrap">Bottom {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
                     </button>
 
                     {/* Bottom Bar Color Picker with Icon - flat left, rounded right */}

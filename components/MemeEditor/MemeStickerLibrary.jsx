@@ -361,17 +361,31 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
       <div className="p-3 border-b border-white/5 flex gap-2 shrink-0">
         <button
           onClick={() => setActiveTab("tenor")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "tenor" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-[#222222] text-slate-400"
-            }`}
+          className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all overflow-hidden ${activeTab === "tenor"
+            ? "text-white shadow-lg shadow-brand/10 bg-[#2f3336] border border-[#2f3336]"
+            : "hover:bg-[#222222] text-slate-400 border border-transparent"
+          }`}
         >
-          <ImageIcon className="w-4 h-4" /> Giphy
+          {activeTab === "tenor" && (
+            <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent border border-brand/20 rounded-lg pointer-events-none" />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <ImageIcon className={`w-4 h-4 ${activeTab === "tenor" ? "text-brand" : "currentColor"}`} /> Giphy
+          </span>
         </button>
         <button
           onClick={() => setActiveTab("emoji")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "emoji" ? "bg-brand text-white shadow-lg shadow-brand/20" : "hover:bg-[#222222] text-slate-400"
-            }`}
+          className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all overflow-hidden ${activeTab === "emoji"
+            ? "text-white shadow-lg shadow-brand/10 bg-[#2f3336] border border-[#2f3336]"
+            : "hover:bg-[#222222] text-slate-400 border border-transparent"
+          }`}
         >
-          <Smile className="w-4 h-4" /> Emojis
+          {activeTab === "emoji" && (
+            <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent border border-brand/20 rounded-lg pointer-events-none" />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <Smile className={`w-4 h-4 ${activeTab === "emoji" ? "text-brand" : "currentColor"}`} /> Emojis
+          </span>
         </button>
       </div>
 

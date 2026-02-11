@@ -117,11 +117,17 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
             return (
               <div
                 key={textItem.id}
-                className={`relative group ${isNew ? 'animate-text-entry' : ''} ${isActive ? 'ring-2 ring-brand rounded-xl' : ''}`}
+                className={`relative group ${isNew ? 'animate-text-entry' : ''}`}
               >
                 <label htmlFor={`text-input-${textItem.id}`} className="sr-only">
                   {index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text line ${index + 1}`}
                 </label>
+
+                {/* Premium Gradient Overlay for Active State */}
+                {isActive && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand/10 to-transparent rounded-xl pointer-events-none z-0" aria-hidden="true" />
+                )}
+
                 <input
                   id={`text-input-${textItem.id}`}
                   ref={(el) => (inputRefs.current[textItem.id] = el)}
@@ -132,7 +138,11 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
                   enterKeyHint="done"
                   placeholder={isActive && !textItem.content ? "Type here..." : index === 0 ? "Top Text" : index === 1 ? "Bottom Text" : `Text #${index + 1}`}
                   aria-label={index === 0 ? "Top Text Input" : index === 1 ? "Bottom Text Input" : `Text Input ${index + 1}`}
-                  className={`w-full bg-[#181818] text-white border border-[#2f3336] rounded-xl px-4 py-3 text-lg transition-all placeholder:text-slate-500 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 ${isActive ? 'bg-brand/10 !border-brand/50 placeholder:text-brand/70' : ''}`}
+                  className={`w-full relative z-10 bg-[#181818] text-white border rounded-xl px-4 py-3 text-lg transition-all placeholder:text-slate-500 focus:outline-none ${
+                    isActive
+                      ? 'border-brand shadow-[0_0_15px_rgba(255,153,0,0.1)] placeholder:text-slate-400'
+                      : 'border-[#2f3336] hover:border-[#3e4347]'
+                  }`}
                   onChange={(e) => handleTextChange(textItem.id, e.target.value)}
                   onFocus={() => {
                     // Always set editingId when focusing an input - this keeps drawer collapsed
@@ -144,7 +154,14 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
                   }}
                   value={textItem.content}
                 />
-                <div className="absolute right-3 top-3.5 text-slate-500 pointer-events-none text-xs bg-[#0f0f0f] px-2 py-0.5 rounded uppercase" aria-hidden="true">
+                <div
+                  className={`absolute right-3 top-3.5 pointer-events-none text-xs px-2 py-0.5 rounded uppercase font-bold transition-colors z-20 ${
+                    isActive
+                      ? 'bg-brand/20 text-brand border border-brand/20'
+                      : 'bg-[#0f0f0f] text-slate-500 border border-transparent'
+                  }`}
+                  aria-hidden="true"
+                >
                   {isActive ? "NEW" : index === 0 ? "TOP" : index === 1 ? "BOTTOM" : `#${index + 1}`}
                 </div>
               </div>

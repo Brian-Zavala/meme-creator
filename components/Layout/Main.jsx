@@ -421,6 +421,8 @@ export default function Main() {
   const memeDropdownRef = useRef(null);
 
   // Image Search State
+  const imageSearchControllerRef = useRef(null);
+  const abortControllerRef = useRef(null); // For Pexels video search cancellation
   const [imageSource, setImageSource] = useState("imgflip");
   const [imageSearchResults, setImageSearchResults] = useState([]);
   const [imageSearchQuery, setImageSearchQuery] = useState("");

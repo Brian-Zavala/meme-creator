@@ -3540,14 +3540,20 @@ export default function Main() {
 
       if (isAnimated) {
         // DETECT VIDEO CONTENT VS GIF CONTENT
-        // Strategy: If it's a Pexels video (usually high quality) or explicitly video mode, we definitely want MP4.
-        const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
-        const isPexels = meme.panels.some(p => p.url && (p.url.includes('pexels.com') || p.url.includes('pexels')));
+        // Strategy: Use PERSISTED 'source' property if available, otherwise heuristic.
+        // Pexels Video = 'pexels_video'
+        // Tenor GIF = 'tenor' (or p.url includes tenor)
+        // User Upload = 'upload' (could be gif or mp4, we check p.isVideo)
 
-        // Pexels videos OR explicitly "video" mode should be MP4.
-        // Tenor GIFs (p.isVideo=true but sourceUrl is tenor) should remain GIFs unless user wants otherwise.
-        // We'll trust the checked logic: if it's Pexels, assume MP4 is desired for quality/audio.
-        if (isPexels) {
+        const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
+
+        // Accurate Detection:
+        const isPexelsVideo = meme.panels.some(p => p.source === 'pexels_video');
+        const isUserVideo = meme.panels.some(p => p.source === 'upload' && p.isVideo && !p.url.includes('tenor') && !p.url.includes('giphy'));
+
+        // If it's a Pexels video OR a user-uploaded MP4 (not a GIF), export as MP4.
+        // Tenor GIFs (source='tenor' or url matches) will default to GIF.
+        if (isPexelsVideo || isUserVideo) {
             isMp4 = true;
         }
 
@@ -3616,14 +3622,18 @@ export default function Main() {
               // Need to convert to DL link: .../org/dl/...
               if (uploadJson && uploadJson.data && uploadJson.data.url) {
                 publicUrl = uploadJson.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                console.log("Upload success:", publicUrl);
               } else {
                 console.warn("Upload response missing url:", uploadJson);
+                throw new Error("Invalid upload response");
               }
             } else {
               console.warn("Upload failed:", uploadRes.status, uploadRes.statusText);
+              throw new Error(`Upload failed: ${uploadRes.status}`);
             }
           } catch (uploadErr) {
-            console.warn("Upload network error:", uploadErr);
+            console.error("Upload network error:", uploadErr);
+            toast.error("Upload failed, checking clipboard...");
           }
 
           // C. Construct Clipboard Items
@@ -3652,12 +3662,13 @@ export default function Main() {
                   <div className="flex flex-col gap-1">
                     <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
                     <span className="text-xs opacity-80 font-normal">
-                      {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
+                      {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs"}
                     </span>
                   </div>
                 ), { id: toastId, duration: 4000 });
               } catch (autoCopyErr) {
-                 throw autoCopyErr; // Fallback to manual button or download
+                 // Fallback to manual button if auto-write fails
+                 throw autoCopyErr;
               }
           } else {
              // MP4: Just copy the link if we have it

@@ -733,6 +733,7 @@ export default function Main() {
             ...p,
             url: url,
             isVideo: memeData.isVideo || false,
+            source: memeData.source || 'upload', // PERSIST SOURCE for export logic
             sourceBlob: blob,
             objectFit: "cover",
             posX: 50,

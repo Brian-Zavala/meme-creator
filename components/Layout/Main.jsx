@@ -3536,10 +3536,41 @@ export default function Main() {
 
       let blob, file;
       if (isAnimated) {
-        toast.loading("Encoding GIF...", { id: toastId });
-        const { exportGif } = await import("../../services/gifExporter");
-        blob = await exportGif(meme, meme.texts, meme.stickers);
-        file = new File([blob], `meme.gif`, { type: "image/gif" });
+        // DETECT VIDEO CONTENT VS GIF CONTENT
+        // If we have an actual video element (mp4/webm) or we are in a mode that prefers valid video export
+        // Note: p.isVideo is true for both Tenor GIFs (which play as video) and Pexels videos.
+        // We need to differentiate or just prefer MP4 for all "video-like" content which provides better quality/audio.
+        // However, user specifically mentioned Pexels videos.
+
+        // Let's check for "video" source type or specifically Pexels URL patterns if needed,
+        // but generally MP4 is better for sharing than GIF for anything long or high quality.
+        // The previous behavior forced GIF for everything.
+
+        // Strategy: If it's a Pexels video (usually high quality), we definitely want MP4.
+        const header = "Encoding Video...";
+        const isPexels = meme.panels.some(p => p.url && (p.url.includes('pexels.com') || p.url.includes('pexels')));
+
+        // If it looks like a real video (Pexels) or user has explicitly enabled video mode content?
+        // Actually, let's just use MP4 export if `hasVideoPanel` is true AND it's not just a tiny GIF sticker on a static image.
+        // But to be safe and stick to the request: "shares a inaccurate giphy GIF instead of correct pexel video"
+
+        if (hasVideoPanel) {
+           toast.loading("Encoding Video...", { id: toastId });
+           const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
+
+           const onProgress = (pct, msg) => {
+             toast.loading(`${msg} (${pct}%)`, { id: toastId });
+           };
+
+           blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress);
+           file = new File([blob], `meme.mp4`, { type: "video/mp4" });
+        } else {
+           // Fallback to GIF for simple animated text/stickers on static background
+           toast.loading("Encoding GIF...", { id: toastId });
+           const { exportGif } = await import("../../services/gifExporter");
+           blob = await exportGif(meme, meme.texts, meme.stickers);
+           file = new File([blob], `meme.gif`, { type: "image/gif" });
+        }
       } else {
         const { exportImageAsPng } = await import("../../services/gifExporter");
         blob = await exportImageAsPng(meme, meme.texts, meme.stickers);

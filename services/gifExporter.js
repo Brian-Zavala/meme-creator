@@ -107,8 +107,7 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
         minDelay = Math.max(50, minDelay);
     } else if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
         // Text-only animation: Use 80ms (~12FPS) - smooth enough for wave/pulse, lighter than 20FPS
-        minDelay = 80;
-    } else {
+        minDelay = 80;    } else {
         // Static image (shouldn't really be here for GIF export, but fallback)
         minDelay = 100;
     }

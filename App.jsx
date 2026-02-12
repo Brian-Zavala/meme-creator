@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { preload } from "react-dom";
 import toast, { Toaster, useToasterStore } from "react-hot-toast";
+import { ExportRecoveryManager } from './components/ExportRecoveryManager';
 import Header from "./components/Layout/Header";
 import Main from "./components/Layout/Main";
 import { WelcomeModal } from "./components/Modals/WelcomeModal";
@@ -119,6 +120,8 @@ export default function App() {
         gutter={8}
       />
       <ToastLimiter />
+      <ExportRecoveryManager />
+
       <Header onOpenInstructions={openInstructions} />
       <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
         <Main />

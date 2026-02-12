@@ -7,205 +7,258 @@ import { loadMemeAssets, renderMemeFrame, calculateDimensions, applyDeepFry } fr
  * Exports a meme as an animated GIF
  * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
  */
-export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
-    // 1. Load all assets (GIFs, Videos, Images)
-    if (onProgress) onProgress(10, "Loading assets...");
-    const assets = await loadMemeAssets(meme, stickers);
+/**
+ * Exports a meme as an animated GIF
+ * Supports Multi-Panel, Per-Panel Filters, Deep Fry, and Background Persistence
+ */
+import { db } from './db';
 
-    // 1b. Optimize Deep Fry: Pre-calculate fried versions of STATIC images
-    // This provides a HUGE speed boost (10x+) as we only deep fry once per image, instead of every frame
-    assets.friedImages = {};
-
-    for (const panel of meme.panels) {
-       // Only process static images that requested deep fry
-       if (assets.staticImages[panel.id] && (panel.filters?.deepFry || 0) > 0) {
-           const imgSrc = assets.staticImages[panel.id];
-           const canvas = document.createElement('canvas');
-           canvas.width = imgSrc.width;
-           canvas.height = imgSrc.height;
-           const ctx = canvas.getContext('2d');
-           ctx.drawImage(imgSrc, 0, 0);
-
-           // Apply Deep Fry ONCE
-           applyDeepFry(ctx, 0, 0, canvas.width, canvas.height, panel.filters.deepFry);
-
-           // Store the fried version for the renderer to use directly
-           assets.friedImages[panel.id] = canvas;
-       }
-    }
-
-
-    if (onProgress) onProgress(20, "Analyzing dimensions...");
-
-    // 2. Calculate Dimensions
-    let dimensions = calculateDimensions(meme, assets);
-    let { exportWidth, exportHeight } = dimensions; // Get dimensions that include padding
-
-    // QUALITY/SPEED BALANCE:
-    // GIFs are huge. We cap max dimension to 600px for reasonable file sizes.
-    // Text remains readable and exports are much faster.
-    const MAX_GIF_DIMENSION = 600;
-    if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
-        const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
-        exportWidth = Math.round(exportWidth * scale);
-        exportHeight = Math.round(exportHeight * scale);
-
-        // Update dimensions object for renderMemeFrame
-        dimensions = {
-            ...dimensions,
-            exportWidth,
-            exportHeight,
-            contentHeight: Math.round(dimensions.contentHeight * scale),
-            contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
-            contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
+// Helper: Create a "Tick Worker" to bypass background tab throttling
+// Browsers throttle setTimeout/setInterval to 1s in background tabs.
+// Web Workers run in a separate thread and are NOT throttled (mostly).
+function createTickWorker() {
+    const blob = new Blob([`
+        self.onmessage = function(e) {
+            if (e.data === 'tick') {
+                // Determine next tick (immediate or slight delay?)
+                // Just posting back immediately is fine for "setTimeout(0)" behavior
+                self.postMessage('tock');
+            }
         };
-        console.log(`Scaled GIF export dimensions to ${exportWidth}x${exportHeight}`);
-    }
+    `], { type: 'application/javascript' });
+    return new Worker(URL.createObjectURL(blob));
+}
 
+export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
+    const exportId = crypto.randomUUID();
+    let wakeLock = null;
+    let tickWorker = null;
 
-    // 3. Setup GIF Encoder
-    const gif = new GIF({
-        workers: 4, // Max workers for speed (check browser limits)
-        quality: 5, // 10 = fast encoding, smaller files. 1 = slow/huge. Balance favors speed.
-        width: exportWidth,
-        height: exportHeight,
-        workerScript: '/gif.worker.js', // Ensure this file exists in /public
-        dither: true // Keep dithering ON - GIFs only have 256 colors, dithering prevents banding in photos
-    });
+    try {
+        // 0. INITIALIZE PERSISTENCE & WAKE LOCK
+        // ---------------------------------------------------------
 
-    if (onProgress) onProgress(30, "Rendering frames...");
+        // A. Request Wake Lock (prevents screen dimming/locking on mobile)
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake Lock active for export');
+            } catch (err) {
+                console.warn('Wake Lock failed:', err);
+            }
+        }
 
-    // 4. Frame Logic & TIMING
-    const { gifProcessors, staticImages } = assets;
-
-    // STEP 1: Determine Optimal Frame Delay (Framerate)
-    // We want to match the source GIF speeds if possible, but cap at ~20-30FPS for smoothness.
-    // Default to 50ms (20FPS) which is much smoother than 100ms (10FPS)
-    // We scan all animated assets to find their native delays.
-    let minDelay = 100;
-    let hasAnimatedAssets = false;
-
-    const allProcessors = [
-        ...Object.values(gifProcessors),
-        ...Object.values(assets.stickerProcessors)
-    ];
-
-    if (allProcessors.length > 0) {
-        hasAnimatedAssets = true;
-        // Find minimum delay across all assets to capture fast movement
-        allProcessors.forEach(p => {
-             if (p.getDelay) {
-                 // GIF reader returns delay in 1/100s. We want ms.
-                 // Some GIFs report 0 delay, which usually means 100ms default.
-                 let d = p.getDelay(0) * 10;
-                 if (d < 20) d = 100; // Sanity check for bad headers
-                 if (d > 0) minDelay = Math.min(minDelay, d);
-             }
+        // B. Persist Job Start to DB (for recovery on refresh)
+        // We only save minimum needed to restart: the meme config
+        await db.activeExports.put({
+            id: exportId,
+            timestamp: Date.now(),
+            status: 'starting',
+            progress: 0,
+            type: 'gif',
+            data: { meme, texts, stickers } // Full config to restart
         });
-        // CLAMP: Don't go faster than 50ms (20FPS) to keep file size reasonable
-        // while preserving native Giphy smoothness (most are 50-100ms / 10-20 FPS).
-        minDelay = Math.max(50, minDelay);
-    } else if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
-        // Text-only animation: Use 80ms (~12FPS) - smooth enough for wave/pulse, lighter than 20FPS
-        minDelay = 80;    } else {
-        // Static image (shouldn't really be here for GIF export, but fallback)
-        minDelay = 100;
-    }
 
-    // Align delay to nearest 10ms for GIF spec compliance
-    const delay = Math.round(minDelay / 10) * 10;
+        // 1. Load all assets (GIFs, Videos, Images)
+        if (onProgress) onProgress(10, "Loading assets...");
+        const assets = await loadMemeAssets(meme, stickers);
 
+        // 1b. Optimize Deep Fry: Pre-calculate fried versions of STATIC images
+        assets.friedImages = {};
 
-    // STEP 2: Calculate Total Loop Duration
-    // We want a seamless loop. Ideally LCM of durations, but capped.
-    // We gather the duration of all animated elements.
-    let maxDuration = 3000; // Default 3s
+        for (const panel of meme.panels) {
+           if (assets.staticImages[panel.id] && (panel.filters?.deepFry || 0) > 0) {
+               const imgSrc = assets.staticImages[panel.id];
+               const canvas = document.createElement('canvas');
+               canvas.width = imgSrc.width;
+               canvas.height = imgSrc.height;
+               const ctx = canvas.getContext('2d');
+               ctx.drawImage(imgSrc, 0, 0);
 
-    if (hasAnimatedAssets) {
-        // Find longest asset duration
-        // We might want LCM, but for mixed content, simply covering the longest video/GIF often works best
-        // combined with a hard cap.
-        allProcessors.forEach(p => {
-            let duration = 0;
-            if (p.getDuration) {
-                duration = p.getDuration();
-            } else if (p.numFrames && p.getAllDelays) {
-                 duration = p.getAllDelays().reduce((a, b) => a + b, 0) * 10;
-            } else if (p.numFrames) {
-                 duration = p.numFrames * 100; // fallback guess
+               applyDeepFry(ctx, 0, 0, canvas.width, canvas.height, panel.filters.deepFry);
+               assets.friedImages[panel.id] = canvas;
+           }
+        }
+
+        if (onProgress) onProgress(20, "Analyzing dimensions...");
+
+        // 2. Calculate Dimensions
+        let dimensions = calculateDimensions(meme, assets);
+        let { exportWidth, exportHeight } = dimensions;
+
+        // QUALITY/SPEED BALANCE:
+        const MAX_GIF_DIMENSION = 600;
+        if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
+            const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
+            exportWidth = Math.round(exportWidth * scale);
+            exportHeight = Math.round(exportHeight * scale);
+
+            dimensions = {
+                ...dimensions,
+                exportWidth,
+                exportHeight,
+                contentHeight: Math.round(dimensions.contentHeight * scale),
+                contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
+                contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
+            };
+            console.log(`Scaled GIF export dimensions to ${exportWidth}x${exportHeight}`);
+        }
+
+        // 3. Setup GIF Encoder
+        const gif = new GIF({
+            workers: 4,
+            quality: 5,
+            width: exportWidth,
+            height: exportHeight,
+            workerScript: '/gif.worker.js',
+            dither: true
+        });
+
+        if (onProgress) onProgress(30, "Rendering frames...");
+
+        // 4. Frame Logic & TIMING
+        const { gifProcessors, staticImages } = assets;
+
+        // STEP 1: Determine Optimal Frame Delay
+        let minDelay = 100;
+        let hasAnimatedAssets = false;
+
+        const allProcessors = [
+            ...Object.values(gifProcessors),
+            ...Object.values(assets.stickerProcessors)
+        ];
+
+        if (allProcessors.length > 0) {
+            hasAnimatedAssets = true;
+            allProcessors.forEach(p => {
+                 if (p.getDelay) {
+                     let d = p.getDelay(0) * 10;
+                     if (d < 20) d = 100;
+                     if (d > 0) minDelay = Math.min(minDelay, d);
+                 }
+            });
+            minDelay = Math.max(50, minDelay);
+        } else if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
+            minDelay = 80;
+        } else {
+            minDelay = 100;
+        }
+
+        const delay = Math.round(minDelay / 10) * 10;
+
+        // STEP 2: Calculate Total Loop Duration
+        let maxDuration = 3000;
+
+        if (hasAnimatedAssets) {
+            allProcessors.forEach(p => {
+                let duration = 0;
+                if (p.getDuration) {
+                    duration = p.getDuration();
+                } else if (p.numFrames && p.getAllDelays) {
+                     duration = p.getAllDelays().reduce((a, b) => a + b, 0) * 10;
+                } else if (p.numFrames) {
+                     duration = p.numFrames * 100;
+                }
+                if (duration > 0) maxDuration = Math.max(maxDuration, duration);
+            });
+        }
+
+        if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
+             const textDuration = calculateGifLoopDuration(texts, stickers);
+             maxDuration = Math.max(maxDuration, textDuration);
+        }
+
+        const MAX_DURATION_MS = 5000;
+        const finalDuration = Math.min(maxDuration, MAX_DURATION_MS);
+
+        // STEP 3: Calculate Final Frame Count
+        const totalFrames = Math.ceil(finalDuration / delay);
+
+        console.log(`Exporting GIF: ${totalFrames} frames @ ${delay}ms delay (${Math.round(1000/delay)} FPS). Duration: ${finalDuration}ms`);
+
+        // 5. Render Loop with TICK WORKER protection
+        const canvas = document.createElement('canvas');
+        canvas.width = exportWidth;
+        canvas.height = exportHeight;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // Start Tick Worker
+        tickWorker = createTickWorker();
+
+        for (let i = 0; i < totalFrames; i++) {
+            await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
+                 stickersOnly: false,
+                 totalFrames,
+                 exportDelayMs: delay
+            });
+
+            gif.addFrame(ctx, { copy: true, delay });
+
+            if (onProgress) {
+                const pct = 30 + Math.round((i / totalFrames) * 40);
+                onProgress(pct, `Rendering Frame ${i + 1}/${totalFrames}`);
+
+                // Update DB progress occasionally (every 5 frames or so)
+                if (i % 5 === 0) {
+                     db.activeExports.update(exportId, { progress: pct, status: 'rendering' }).catch(() => {});
+                }
             }
 
-            if (duration > 0) maxDuration = Math.max(maxDuration, duration);
-        });
-    }
-
-    if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
-         const textDuration = calculateGifLoopDuration(texts, stickers);
-         maxDuration = Math.max(maxDuration, textDuration);
-    }
-
-    // Hard Cap at 5 seconds for reasonable GIF file sizes.
-    // 5000ms / 100ms = 50 frames. Fast exports, small files.
-    const MAX_DURATION_MS = 5000;
-    const finalDuration = Math.min(maxDuration, MAX_DURATION_MS);
-
-    // STEP 3: Calculate Final Frame Count
-    const totalFrames = Math.ceil(finalDuration / delay);
-
-    console.log(`Exporting GIF: ${totalFrames} frames @ ${delay}ms delay (${Math.round(1000/delay)} FPS). Duration: ${finalDuration}ms`);
-
-
-    // 5. Render Loop
-    const canvas = document.createElement('canvas');
-    canvas.width = exportWidth;
-    canvas.height = exportHeight;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-    for (let i = 0; i < totalFrames; i++) {
-        // Render FRAME i
-        await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
-             stickersOnly: false,
-             totalFrames,
-             exportDelayMs: delay
-        });
-
-        // Add to GIF
-        gif.addFrame(ctx, { copy: true, delay }); // standard 100ms delay
-
-        // Progress Update
-        if (onProgress) {
-            const pct = 30 + Math.round((i / totalFrames) * 40); // 30% -> 70%
-            onProgress(pct, `Rendering Frame ${i + 1}/${totalFrames}`);
+            // Yield using Tick Worker to bypass background throttling
+            await new Promise(resolve => {
+                const handler = () => {
+                    tickWorker.removeEventListener('message', handler);
+                    resolve();
+                };
+                tickWorker.addEventListener('message', handler);
+                tickWorker.postMessage('tick');
+            });
         }
 
-        // Yield to main thread briefly so UI doesn't freeze
-        await new Promise(r => setTimeout(r, 0));
+        // Terminate worker when loop done
+        if (tickWorker) tickWorker.terminate();
+
+        if (onProgress) onProgress(75, "Encoding GIF...");
+        await db.activeExports.update(exportId, { progress: 75, status: 'encoding' });
+
+        // 6. Finalize
+        return new Promise((resolve, reject) => {
+            gif.on('finished', async (blob) => {
+                if (onProgress) onProgress(100, "Done!");
+
+                // CLEANUP: Remove from active exports
+                await db.activeExports.delete(exportId);
+                if (wakeLock) await wakeLock.release().catch(() => {});
+
+                resolve(blob);
+            });
+
+            gif.on('progress', (p) => {
+                 if (onProgress) {
+                    const pct = 75 + Math.round(p * 24);
+                    onProgress(pct, "Encoding pixels...");
+                 }
+            });
+
+            try {
+                gif.render();
+            } catch (e) {
+                reject(e);
+            }
+        });
+
+    } catch (err) {
+        // ERROR HANDLING
+        console.error("Export Failed:", err);
+        // Mark as failed in DB so recovery manager knows (or just delete?)
+        // Deleting is safer to avoid recover-loops for broken memes.
+        await db.activeExports.delete(exportId).catch(() => {});
+
+        if (wakeLock) await wakeLock.release().catch(() => {});
+        if (tickWorker) tickWorker.terminate();
+
+        throw err;
     }
-
-    if (onProgress) onProgress(75, "Encoding GIF...");
-
-    // 6. Finalize
-    return new Promise((resolve, reject) => {
-        gif.on('finished', (blob) => {
-            if (onProgress) onProgress(100, "Done!");
-            resolve(blob);
-        });
-
-        // Progress from the worker
-        gif.on('progress', (p) => {
-             if (onProgress) {
-                // Map p (0-1) to 75-99%
-                const pct = 75 + Math.round(p * 24);
-                onProgress(pct, "Encoding pixels...");
-             }
-        });
-
-        try {
-            gif.render();
-        } catch (e) {
-            reject(e);
-        }
-    });
 }
 
 

@@ -3534,27 +3534,23 @@ export default function Main() {
       const hasAnimatedTextContent = hasAnimatedText(meme.texts);
       const isAnimated = hasVideoPanel || hasGifSticker || hasAnimatedTextContent;
 
-      let blob, file;
+      let blob, file, filename;
+      let isMp4 = false;
+
       if (isAnimated) {
         // DETECT VIDEO CONTENT VS GIF CONTENT
-        // If we have an actual video element (mp4/webm) or we are in a mode that prefers valid video export
-        // Note: p.isVideo is true for both Tenor GIFs (which play as video) and Pexels videos.
-        // We need to differentiate or just prefer MP4 for all "video-like" content which provides better quality/audio.
-        // However, user specifically mentioned Pexels videos.
-
-        // Let's check for "video" source type or specifically Pexels URL patterns if needed,
-        // but generally MP4 is better for sharing than GIF for anything long or high quality.
-        // The previous behavior forced GIF for everything.
-
-        // Strategy: If it's a Pexels video (usually high quality), we definitely want MP4.
-        const header = "Encoding Video...";
+        // Strategy: If it's a Pexels video (usually high quality) or explicitly video mode, we definitely want MP4.
+        const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
         const isPexels = meme.panels.some(p => p.url && (p.url.includes('pexels.com') || p.url.includes('pexels')));
 
-        // If it looks like a real video (Pexels) or user has explicitly enabled video mode content?
-        // Actually, let's just use MP4 export if `hasVideoPanel` is true AND it's not just a tiny GIF sticker on a static image.
-        // But to be safe and stick to the request: "shares a inaccurate giphy GIF instead of correct pexel video"
+        // Pexels videos OR explicitly "video" mode should be MP4.
+        // Tenor GIFs (p.isVideo=true but sourceUrl is tenor) should remain GIFs unless user wants otherwise.
+        // We'll trust the checked logic: if it's Pexels, assume MP4 is desired for quality/audio.
+        if (isPexels) {
+            isMp4 = true;
+        }
 
-        if (hasVideoPanel) {
+        if (isMp4) {
            toast.loading("Encoding Video...", { id: toastId });
            const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
 
@@ -3563,18 +3559,21 @@ export default function Main() {
            };
 
            blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress);
-           file = new File([blob], `meme.mp4`, { type: "video/mp4" });
+           filename = `meme-${Date.now()}.mp4`;
+           file = new File([blob], filename, { type: "video/mp4" });
         } else {
-           // Fallback to GIF for simple animated text/stickers on static background
+           // Fallback to GIF for Tenor/Stickers/Text
            toast.loading("Encoding GIF...", { id: toastId });
            const { exportGif } = await import("../../services/gifExporter");
            blob = await exportGif(meme, meme.texts, meme.stickers);
-           file = new File([blob], `meme.gif`, { type: "image/gif" });
+           filename = `meme-${Date.now()}.gif`;
+           file = new File([blob], filename, { type: "image/gif" });
         }
       } else {
         const { exportImageAsPng } = await import("../../services/gifExporter");
         blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
-        file = new File([blob], `meme.png`, { type: "image/png" });
+        filename = `meme-${Date.now()}.png`;
+        file = new File([blob], filename, { type: "image/png" });
       }
 
       // Try Web Share API first (works on mobile and some desktop browsers)
@@ -3594,47 +3593,12 @@ export default function Main() {
 
       // Desktop fallback: Clipboard Loophole or Download
       if (isAnimated) {
-        // GIF CLIPBOARD LOOPHOLE (Smart Hybrid):
-        // Upload to Cloud -> Get URL -> Write URL (plain) + DataURI (html)
-
+        // GIF/MP4 Upload & Clipboard Logic
         try {
-          // A. Convert to Data URI (For HTML Paste - Gmail/Docs)
-          const reader = new FileReader();
-          const base64Data = await new Promise((resolve) => {
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-          });
-
           // B. Upload to Cloud (For Chat Paste - Signal/Discord)
           let publicUrl = null;
           try {
             toast.loading("Generating sharable link...", { id: toastId });
-
-            // Try to get original filename for better "Paradigm" / recognition
-            let filename = `meme-${Date.now()}.gif`; // Default Safe Fallback
-
-            const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
-            if (activePanel?.sourceUrl) {
-              try {
-                // Extract filename from URL (e.g. .../AAA/Cat-Spin.gif)
-                const urlParts = activePanel.sourceUrl.split('/');
-                const lastPart = urlParts[urlParts.length - 1];
-                // Remove query params
-                const potentialName = lastPart.split('?')[0];
-
-                // Only use it if it looks like a normal filename
-                if (potentialName && /^[a-zA-Z0-9\-_]+(\.gif)?$/i.test(potentialName)) {
-                   // Ensure it ends in .gif
-                   const baseName = potentialName.replace(/\.gif$/i, '');
-                   filename = `${baseName}-remix.gif`;
-                }
-              } catch (e) {
-                console.warn("Could not extract filename", e);
-              }
-            } else {
-               // User upload or no source URL - use a nice generic name
-               filename = `meme-${Date.now()}.gif`;
-            }
 
             const formData = new FormData();
             formData.append('file', blob, filename);
@@ -3662,67 +3626,65 @@ export default function Main() {
           }
 
           // C. Construct Clipboard Items
-          const htmlContent = `<img src="${base64Data}" alt="Meme GIF" />`;
-          const textContent = publicUrl || "";
+          // For MP4, we can't really do the HTML image paste trick easily.
+          // For GIF, we can.
 
-          // Attempt Auto-Copy (Might fail if focus lost during upload)
-          try {
-            const clipboardItem = new ClipboardItem({
-              "text/html": new Blob([htmlContent], { type: "text/html" }),
-              "text/plain": new Blob([textContent], { type: "text/plain" })
-            });
-            await navigator.clipboard.write([clipboardItem]);
-            toast.success((
-              <div className="flex flex-col gap-1">
-                <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
-                <span className="text-xs opacity-80 font-normal">
-                  {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
-                </span>
-              </div>
-            ), { id: toastId, duration: 4000 });
-          } catch (autoCopyErr) {
-            // Fallback: Show Button for User Gesture
-            console.warn("Auto-copy failed, requesting user gesture", autoCopyErr);
-            toast((t) => (
-              <div className="flex flex-col items-start gap-2">
-                <span className="font-semibold">Link Ready!</span>
-                <button
-                  className="bg-black text-white px-3 py-1.5 rounded text-sm font-bold active:scale-95 transition-transform cursor-pointer shadow-sm border border-white/20"
-                  onClick={() => {
-                    const item = new ClipboardItem({
-                      "text/html": new Blob([htmlContent], { type: "text/html" }),
-                      "text/plain": new Blob([textContent], { type: "text/plain" })
-                    });
-                    navigator.clipboard.write([item]);
-                    toast.success("Link Copied!", { id: t.id });
-                  }}
-                >
-                  Tap to Copy
-                </button>
-              </div>
-            ), { id: toastId, duration: 8000 });
+          if (!isMp4) {
+              // GIF: Attempt HTML Paste + Text Link
+              const reader = new FileReader();
+              const base64Data = await new Promise((resolve) => {
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+              });
+
+              const htmlContent = `<img src="${base64Data}" alt="Meme GIF" />`;
+              const textContent = publicUrl || "";
+
+              try {
+                const clipboardItem = new ClipboardItem({
+                  "text/html": new Blob([htmlContent], { type: "text/html" }),
+                  "text/plain": new Blob([textContent], { type: "text/plain" })
+                });
+                await navigator.clipboard.write([clipboardItem]);
+
+                toast.success((
+                  <div className="flex flex-col gap-1">
+                    <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
+                    <span className="text-xs opacity-80 font-normal">
+                      {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
+                    </span>
+                  </div>
+                ), { id: toastId, duration: 4000 });
+              } catch (autoCopyErr) {
+                 throw autoCopyErr; // Fallback to manual button or download
+              }
+          } else {
+             // MP4: Just copy the link if we have it
+             if (publicUrl) {
+                 await navigator.clipboard.writeText(publicUrl);
+                 toast.success((
+                  <div className="flex flex-col gap-1">
+                    <span>Video Link Copied!</span>
+                    <span className="text-xs opacity-80 font-normal">Paste in Discord/Signal</span>
+                  </div>
+                ), { id: toastId, duration: 4000 });
+             } else {
+                 // No link (upload failed) -> Must download
+                 throw new Error("Upload failed, falling back to download");
+             }
           }
 
-          toast.success((
-            <div className="flex flex-col gap-1">
-              <span>{publicUrl ? "Link Copied!" : "Copied to clipboard!"}</span>
-              <span className="text-xs opacity-80 font-normal">
-                {publicUrl ? "Ready to paste." : "Paste in Gmail/Docs (Upload failed)"}
-              </span>
-            </div>
-          ), { id: toastId, duration: 4000 });
-
         } catch (clipboardErr) {
-          // If HTML write fails (browser block or not focused), Fallback to Download
-          console.warn("GIF Clipboard trick failed:", clipboardErr);
+          // Fallback to Download
+          console.warn("Clipboard/Upload failed:", clipboardErr);
 
-          await triggerDownload(blob, `meme-${Date.now()}.gif`);
+          await triggerDownload(blob, filename);
 
           // Inform user why it downloaded
           toast.success((
             <div className="flex flex-col gap-1">
-              <span>GIF downloaded!</span>
-              <span className="text-xs opacity-80 font-normal">Apps prevented clipboard copy.</span>
+              <span>{isMp4 ? "Video downloaded!" : "GIF downloaded!"}</span>
+              <span className="text-xs opacity-80 font-normal">{isMp4 ? "Upload failed." : "Apps prevented clipboard copy."}</span>
             </div>
           ), { id: toastId, duration: 4000 });
         }

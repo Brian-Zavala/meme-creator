@@ -8,7 +8,9 @@ export const db = new Dexie('MemeCreatorDB');
 // we can define it with an empty string or just the name if we want to add indexes later.
 // However, since we use .put(val, key), simply defining it exists is enough.
 // Version 2: Add 'assets' store for detached Blobs to fix OOM
-db.version(2).stores({
-  appState: '', // Main state object (lightweight)
-  assets: 'id'  // Separate store for heavy Blobs (keyed by UUID)
+// Version 3: Add 'activeExports' for background persistence
+db.version(3).stores({
+  appState: '',
+  assets: 'id',
+  activeExports: 'id, timestamp' // Index by ID and Time for cleanup
 });

@@ -188,14 +188,15 @@ export async function createVideoProcessor(url) {
 
             console.log(`Initialized Video Processor: ${width}x${height}, ${duration}s cap, ${numFrames} frames`);
 
-
-
-            // NEW: Use a persistent canvas for the last successful frame to prevent black flicker
+            // Persistent canvas for the last successful frame to prevent black flicker
             // if the video isn't ready or seeking fails/times out.
             const lastSuccessfulFrame = document.createElement('canvas');
             lastSuccessfulFrame.width = width;
             lastSuccessfulFrame.height = height;
+            const lsfCtx = lastSuccessfulFrame.getContext('2d');
             let hasSuccessfulFrame = false;
+            let lastSeekedTime = -1; // Track last seek position to skip redundant seeks
+            let lastFrameIndex = -1; // Track for sequential access detection
 
             resolve({
                 width,
@@ -204,56 +205,67 @@ export async function createVideoProcessor(url) {
                 getDuration: () => duration * 1000, // Return duration in milliseconds
                 getDelay: () => 1000 / fps / 10, // delay in centiseconds (1/100s)
                 renderFrame: async (frameIndex) => {
-
-
-                        // ASYNC SEEK: Wait for video to actually seek before drawing
                         const time = frameIndex / fps;
-                        video.currentTime = time;
 
-                        try {
-                            await new Promise((resolve, reject) => {
-                                 // If already there (rare with floats), resolve. Else wait.
-                                 // But for robustness, just setting onseeked is safest.
-                                 const clean = () => {
-                                     video.removeEventListener('seeked', handler);
-                                     clearTimeout(timeout);
-                                 };
-                                 const handler = () => {
-                                     clean();
-                                     resolve();
-                                 };
-                                 const timeout = setTimeout(() => {
-                                     clean();
-                                     // Don't reject, just resolve so we can try to draw or fallback
-                                     // Rejecting would crash the whole export.
-                                     console.warn(`Video seek timeout at frame ${frameIndex} (${time}s)`);
-                                     resolve();
-                                 }, 2000); // 2s timeout for seek
+                        // Skip seek if we're already at this time (consecutive frames mapping to same position)
+                        const needsSeek = Math.abs(time - lastSeekedTime) > 0.001;
 
-                                 video.addEventListener('seeked', handler, { once: true });
-                            });
-                        } catch (e) {
-                            console.warn("Seek interrupted:", e);
+                        if (needsSeek) {
+                            // Sequential access (frame N → N+1) uses shorter timeout since
+                            // the browser's decoder should already have the next frame buffered
+                            const isSequential = frameIndex === lastFrameIndex + 1;
+                            const seekTimeoutMs = isSequential ? 100 : 500;
+
+                            video.currentTime = time;
+
+                            try {
+                                await new Promise((resolve) => {
+                                     const clean = () => {
+                                         video.removeEventListener('seeked', handler);
+                                         clearTimeout(timeout);
+                                     };
+                                     const handler = () => {
+                                         clean();
+                                         resolve();
+                                     };
+                                     const timeout = setTimeout(() => {
+                                         clean();
+                                         if (!isSequential) {
+                                             console.warn(`Video seek timeout at frame ${frameIndex} (${time.toFixed(3)}s)`);
+                                         }
+                                         resolve();
+                                     }, seekTimeoutMs);
+
+                                     video.addEventListener('seeked', handler, { once: true });
+                                });
+                            } catch (e) {
+                                console.warn("Seek interrupted:", e);
+                            }
+                            lastSeekedTime = time;
                         }
+                        lastFrameIndex = frameIndex;
 
-                        // Check if video is actually ready to draw
-                        // readyState >= 2 (HAVE_CURRENT_DATA) means we have data for the current position
-                        if (video.readyState >= 2) {
+                        // readyState >= 3 (HAVE_FUTURE_DATA) ensures frame is fully decoded
+                        // (>= 2 only guarantees current position has data, not that it's ready to draw)
+                        if (video.readyState >= 3) {
                              ctx.drawImage(video, 0, 0, width, height);
 
                              // Update last successful frame cache
-                             const lsfCtx = lastSuccessfulFrame.getContext('2d');
-                             lsfCtx.clearRect(0,0, width, height);
+                             lsfCtx.clearRect(0, 0, width, height);
+                             lsfCtx.drawImage(video, 0, 0, width, height);
+                             hasSuccessfulFrame = true;
+                        } else if (video.readyState >= 2) {
+                             // Fallback: HAVE_CURRENT_DATA - frame may not be perfect but usable
+                             ctx.drawImage(video, 0, 0, width, height);
+                             lsfCtx.clearRect(0, 0, width, height);
                              lsfCtx.drawImage(video, 0, 0, width, height);
                              hasSuccessfulFrame = true;
                         } else {
                              console.warn(`Video not ready at frame ${frameIndex} (readyState: ${video.readyState}), using fallback.`);
                              if (hasSuccessfulFrame) {
-                                 // Draw the last good frame instead of black/transparent
                                  ctx.clearRect(0, 0, width, height);
                                  ctx.drawImage(lastSuccessfulFrame, 0, 0);
                              }
-                             // If no successful frame yet (frame 0 fail?), it stays transparent/black as initialized
                         }
 
                         return { canvas, delay: Math.round(1000/fps/10) };
@@ -874,18 +886,16 @@ export async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, as
                 ctx.fillRect(px, py, pw, ph);
 
                 const f = panel.filters || {};
-                const filterStr = `
-                    contrast(${f.contrast ?? 100}%)
-                    brightness(${f.brightness ?? 100}%)
-                    blur(${f.blur ?? 0}px)
-                    grayscale(${f.grayscale ?? 0}%)
-                    sepia(${f.sepia ?? 0}%)
-                    hue-rotate(${f.hueRotate ?? 0}deg)
-                    saturate(${f.saturate ?? 100}%)
-                    invert(${f.invert ?? 0}%)
-                `.replace(/\s+/g, ' ').trim();
 
-                if (filterStr !== 'none') ctx.filter = filterStr;
+                // Only apply ctx.filter if any value deviates from defaults
+                // (avoids unnecessary filter processing per frame which can cause rendering jitter)
+                const hasActiveFilters = (f.contrast ?? 100) !== 100 || (f.brightness ?? 100) !== 100 ||
+                    (f.blur ?? 0) !== 0 || (f.grayscale ?? 0) !== 0 || (f.sepia ?? 0) !== 0 ||
+                    (f.hueRotate ?? 0) !== 0 || (f.saturate ?? 100) !== 100 || (f.invert ?? 0) !== 0;
+
+                if (hasActiveFilters) {
+                    ctx.filter = `contrast(${f.contrast ?? 100}%) brightness(${f.brightness ?? 100}%) blur(${f.blur ?? 0}px) grayscale(${f.grayscale ?? 0}%) sepia(${f.sepia ?? 0}%) hue-rotate(${f.hueRotate ?? 0}deg) saturate(${f.saturate ?? 100}%) invert(${f.invert ?? 0}%)`;
+                }
 
                 const ratioW = pw / srcW;
                 const ratioH = ph / srcH;

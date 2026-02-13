@@ -135,10 +135,8 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
     const canvas = document.createElement('canvas');
     canvas.width = exportWidth;
     canvas.height = exportHeight;
-    const ctx = canvas.getContext('2d', {
-        willReadFrequently: true,
-        alpha: false
-    });
+    // GPU-accelerated canvas (no willReadFrequently - deep fry panels are pre-calculated)
+    const ctx = canvas.getContext('2d', { alpha: false });
 
     // Mobile Fix for black frames: Fill black initially
     ctx.fillStyle = "#000000";
@@ -151,47 +149,55 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
                 throw new Error("VideoEncoder closed unexpectedly");
             }
 
-            // Calculate precise time in MS for this frame
-            const currentTimeMs = i * FRAME_DURATION_MS;
-            const timestampMicroseconds = i * (1_000_000 / FPS);
+            // Calculate precise time in MS for this frame (integer to avoid float accumulation)
+            const currentTimeMs = Math.round(i * 1000 / FPS);
+            const timestampMicroseconds = Math.round(i * 1_000_000 / FPS);
 
             // Render Frame
             await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
                 stickersOnly: false,
                 totalFrames,
-                exportDelayMs: FRAME_DURATION_MS, // Not strictly used if currentTimeMs is passed, but good for fallback
+                exportDelayMs: FRAME_DURATION_MS,
                 currentTimeMs: currentTimeMs
             });
 
             // Encode Frame
-            // We must draw to a VideoFrame.
             let frame = null;
             try {
                 frame = new VideoFrame(canvas, {
                     timestamp: timestampMicroseconds,
-                    duration: 1_000_000 / FPS
+                    duration: Math.round(1_000_000 / FPS)
                 });
 
-                // Keyframe every 2 seconds (2 * 30 = 60 frames)
-                const keyFrame = i % 60 === 0;
+                // Keyframe every 0.5 seconds (15 frames) - more frequent keyframes
+                // prevent compression artifacts on sticker/text overlays
+                const keyFrame = i % 15 === 0;
 
                 videoEncoder.encode(frame, { keyFrame });
             } finally {
                 if (frame) frame.close();
             }
 
-            // Progress Update
-            if (onProgress) {
-                const pct = 30 + Math.round((i / totalFrames) * 60); // 30% -> 90%
-                onProgress(pct, `Encoding Frame ${i + 1}/${totalFrames}`);
+            // Smart yielding: only yield when encoder queue is backed up or periodically
+            // Avoids the 4ms setTimeout floor penalty on every frame (~3.6s waste for 900 frames)
+            if (videoEncoder.encodeQueueSize > 10) {
+                // Encoder is behind - yield to let it catch up
+                await new Promise(r => setTimeout(r, 1));
+            } else if (i % 10 === 0) {
+                // Periodic yield every 10 frames to keep UI responsive
+                await new Promise(r => setTimeout(r, 0));
             }
 
-            // Yield to prevent UI freeze
-            await new Promise(r => setTimeout(r, 0));
+            // Batch progress updates (every 30 frames ≈ 1s of video)
+            // Reduces 900 React toast re-renders to ~30
+            if (onProgress && (i % 30 === 0 || i === totalFrames - 1)) {
+                const pct = 30 + Math.round((i / totalFrames) * 60);
+                onProgress(pct, `Encoding ${i + 1}/${totalFrames}`);
+            }
         }
     } catch (e) {
         console.error("Encoding Loop Error:", e);
-        throw e; // Re-throw to be caught by caller
+        throw e;
     }
 
     if (onProgress) onProgress(95, "Finalizing MP4...");

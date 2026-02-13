@@ -478,10 +478,10 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
     texts.forEach((text, index) => {
         if (!text.content) return;
 
-        // Apply animations if present
+        // Apply base user rotation + animations
         let xOffset = 0;
         let yOffset = 0;
-        let rotation = 0;
+        let rotation = (text.rotation || 0) * (Math.PI / 180);
         let scale = 1;
         let opacity = 1;
 
@@ -498,7 +498,7 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
                 const t = anim.getTransform(virtualFrameIndex, totalFrames);
                 xOffset = (t.offsetX || 0) * (exportWidth / 800);
                 yOffset = (t.offsetY || 0) * (exportWidth / 800);
-                rotation = (t.rotation || 0) * (Math.PI / 180);
+                rotation += (t.rotation || 0) * (Math.PI / 180);
                 scale = t.scale || 1;
                 opacity = t.opacity ?? 1;
             }
@@ -549,25 +549,9 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
         ctx.lineJoin = 'round';
         ctx.miterLimit = 2;
 
-        let x, y;
-        if (text.isFloating) {
-            x = (text.x / 100) * exportWidth;
-            y = (text.y / 100) * exportHeight;
-        } else {
-            // Standard Top/Bottom layout logic
-            x = exportWidth / 2;
-             // Adjust y for top/bottom text to account for padding
-             // Top text stays at top (offset by padding)
-             // Bottom text stays at bottom (offset by padding)
-             // We need to check index to know if it's top (0) or bottom (1) standard text
-            if (index === 0 && !text.isFloating) {
-                 y = (text.y / 100) * exportHeight; // Usually top
-            } else if (index === 1 && !text.isFloating) {
-                 y = (text.y / 100) * exportHeight; // Usually bottom
-            } else {
-                y = (text.y / 100) * exportHeight;
-            }
-        }
+        // Convert percentage position to pixel coordinates (matches MemeCanvas CSS positioning)
+        const x = ((text.x ?? 50) / 100) * exportWidth;
+        const y = ((text.y ?? 50) / 100) * exportHeight;
 
         // DOUBLE DRAW TECHNIQUE:
         // 1. Draw Shadow Pass (Offset + Blurred + Dark)

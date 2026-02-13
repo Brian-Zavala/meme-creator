@@ -25,7 +25,7 @@ self.onmessage = async function (e) {
     }
 };
 
-async function startExport({ meme, texts, stickers, quality, format, videoFrames = {} }) {
+async function startExport({ meme, texts, stickers, quality, format, videoProxyPort }) {
     // 1. Load Assets
     self.postMessage({ type: 'PROGRESS', payload: { progress: 10, message: "Loading assets (Worker)..." } });
 
@@ -39,7 +39,7 @@ async function startExport({ meme, texts, stickers, quality, format, videoFrames
     // Clean up meme object?
     // JSON serialization strips functions, but Blobs are preserved in structuredClone (postMessage).
 
-    const assets = await loadMemeAssets(meme, stickers);
+    const assets = await loadMemeAssets(meme, stickers, videoProxyPort);
 
     if (format === 'gif') {
         await exportGif(meme, texts, stickers, assets, quality);

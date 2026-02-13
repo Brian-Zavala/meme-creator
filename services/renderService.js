@@ -427,11 +427,22 @@ export async function loadMemeAssets(meme, stickers, videoProxyPort) {
 
                 // If it's a string URL, fetch it first
                 if (typeof source === 'string') {
+                    // console.log("[Worker] Fetching image:", source);
                     const resp = await fetch(source);
                     source = await resp.blob();
                 }
 
-                return await createImageBitmap(source);
+                try {
+                     return await createImageBitmap(source);
+                } catch (bmpErr) {
+                     console.error("[Worker] createImageBitmap failed:", bmpErr);
+                     if (source instanceof Blob) {
+                         console.error(`[Worker] Blob details: size=${source.size}, type=${source.type}`);
+                     } else {
+                         console.error(`[Worker] Source type: ${typeof source}`);
+                     }
+                     throw bmpErr;
+                }
             } catch (e) {
                 console.warn("Worker image load failed:", e);
                 return null;

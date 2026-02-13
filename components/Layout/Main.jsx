@@ -4100,6 +4100,8 @@ export default function Main() {
                              } else {
                                setPexelsVideoQuery("");
                                setPexelsVideoResults([]);
+                               // Auto-load a random Pexels video for immediate feedback
+                               handleRandomVideo();
                              }
                            }}
                          />

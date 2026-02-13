@@ -214,7 +214,6 @@ export async function createVideoProcessor(url, options = {}) {
                     }
                 }
             };
-            };
         }
 
         console.warn("createVideoProcessor called in worker without proxy - returning null", {

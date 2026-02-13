@@ -4125,6 +4125,8 @@ export default function Main() {
                              if (source === "giphy") {
                                setSearchQuery("");
                                setSuggestions([]);
+                               // Auto-load a random GIF for immediate feedback (Parity with Pexels)
+                               handleShuffle();
                              } else {
                                setPexelsVideoQuery("");
                                setPexelsVideoResults([]);

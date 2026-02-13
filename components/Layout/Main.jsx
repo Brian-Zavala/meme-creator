@@ -737,8 +737,9 @@ export default function Main() {
             ...p,
             url: url,
             isVideo: memeData.isVideo || false,
-            isGif: !memeData.isVideo, // Ensure isGif is updated (cleared if video, set if gif/image)
+            isGif: memeData.isGif || false, // Fix: Don't assume non-video is GIF. Only set if explicitly true.
             source: memeData.source || 'upload', // PERSIST SOURCE for export logic
+            sourceUrl: memeData.shareUrl || memeData.sourceUrl || null, // Fix: Clear stale sourceUrl from previous GIFs
             sourceBlob: blob,
             objectFit: "cover",
             posX: 50,

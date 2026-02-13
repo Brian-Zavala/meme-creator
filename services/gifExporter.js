@@ -35,7 +35,14 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
     let tickWorker = null;
 
     try {
-        // ... (rest of init) ...
+        if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+        tickWorker = createTickWorker();
+
+        // 1. Calculate Dimensions
+        const { width: exportWidth, height: exportHeight, scale } = calculateDimensions(meme.panels, 1.0); // No max width constraint for now
+
+        // 2. Load Assets
+        const assets = await loadMemeAssets(meme, texts, stickers);
 
         // 3. Setup GIF Encoder
         const gif = new GIF({

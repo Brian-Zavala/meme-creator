@@ -3399,6 +3399,17 @@ export default function Main() {
 
 
 
+  // Helper: Sanitize Filename
+  const getSafeFilename = (name) => {
+    return (name || 'meme')
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50)
+      || 'meme';
+  };
+
   // Helper: Execute GIF export
   const doGifExport = useCallback(async (options = {}) => {
     if (!memeRef.current) return;
@@ -3424,13 +3435,7 @@ export default function Main() {
       const blob = await exportGif(exportMeme, meme.texts, meme.stickers, onProgress);
       if (meme.id) registerShare(meme.id, searchQuery);
 
-      const safeName = (meme.name || 'meme')
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .substring(0, 50)
-        || 'meme';
+      const safeName = getSafeFilename(meme.name);
 
       const filename = `${safeName}-${stickersOnly ? 'stickers' : ''}-${Date.now()}.gif`;
       await triggerDownload(blob, filename);
@@ -3468,13 +3473,7 @@ export default function Main() {
 
       if (meme.id) registerShare(meme.id, searchQuery);
 
-      const safeName = (meme.name || 'meme')
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .substring(0, 50)
-        || 'meme';
+      const safeName = getSafeFilename(meme.name);
 
       const filename = `${safeName}-${Date.now()}.mp4`;
       await triggerDownload(blob, filename);
@@ -3529,13 +3528,7 @@ export default function Main() {
       const { exportImageAsPng } = await safeImport(() => import("../../services/gifExporter"));
       const blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
 
-      const safeName = (meme.name || 'meme')
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .substring(0, 50)
-        || 'meme';
+      const safeName = getSafeFilename(meme.name);
 
       const filename = `${safeName}-${Date.now()}.png`;
       await triggerDownload(blob, filename);
@@ -3717,7 +3710,7 @@ export default function Main() {
                const res = await fetch(activePanel.url);
                if (!res.ok) throw new Error("Failed to fetch video");
                blob = await res.blob();
-               filename = `meme-${Date.now()}.mp4`;
+               filename = `${getSafeFilename(meme.name)}-${Date.now()}.mp4`;
                file = new File([blob], filename, { type: "video/mp4" });
              } catch (err) { console.warn("Pass-through failed", err); }
            }
@@ -3734,7 +3727,7 @@ export default function Main() {
              toast.loading("Encoding Video...", { id: toastId });
              const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
              blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality);
-             filename = `meme-${Date.now()}.mp4`;
+             filename = `${getSafeFilename(meme.name)}-${Date.now()}.mp4`;
              file = new File([blob], filename, { type: "video/mp4" });
            }
         } else {
@@ -3744,14 +3737,14 @@ export default function Main() {
                 toast.loading("Fetching GIF...", { id: toastId });
                 const res = await fetch(existingPublicUrl);
                 blob = await res.blob();
-                filename = `meme-${Date.now()}.gif`;
+                filename = `${getSafeFilename(meme.name)}-${Date.now()}.gif`;
                 file = new File([blob], filename, { type: "image/gif" });
            } else {
                 // Encode GIF
                 toast.loading("Encoding GIF...", { id: toastId });
                 const { exportMemeAsGif } = await safeImport(() => import("../../services/gifExporter"));
                 blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
-                filename = `meme-${Date.now()}.gif`;
+                filename = `${getSafeFilename(meme.name)}-${Date.now()}.gif`;
                 file = new File([blob], filename, { type: "image/gif" });
            }
         }
@@ -3759,7 +3752,7 @@ export default function Main() {
         // Static PNG
         const { exportImageAsPng } = await import("../../services/gifExporter");
         blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
-        filename = `meme-${Date.now()}.png`;
+        filename = `${getSafeFilename(meme.name)}-${Date.now()}.png`;
         file = new File([blob], filename, { type: "image/png" });
       }
 

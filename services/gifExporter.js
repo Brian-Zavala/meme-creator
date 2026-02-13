@@ -107,7 +107,7 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
         // 3. Setup GIF Encoder
         const gif = new GIF({
             workers: 4,
-            quality: 5,
+            quality: 10,
             width: exportWidth,
             height: exportHeight,
             workerScript: '/gif.worker.js',

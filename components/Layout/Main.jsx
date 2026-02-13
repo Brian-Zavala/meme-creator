@@ -3520,7 +3520,7 @@ export default function Main() {
         activePanel.filters.invert !== 0 ||
         activePanel.filters.deepFry !== 0
       );
-      const isTenorGif = activePanel?.sourceUrl && activePanel.isVideo;
+      const isTenorGif = activePanel?.sourceUrl && activePanel.isVideo && activePanel.source !== 'pexels_video';
       const isUnmodified = !hasTextContent && !hasStickers && !hasDrawings && !hasFilterChanges;
 
       // For unmodified Tenor GIFs, copy the URL directly (instant, works everywhere)

@@ -3556,6 +3556,10 @@ export default function Main() {
             isMp4 = true;
         }
 
+        const onProgress = (pct, msg) => {
+          toast.loading(`${msg} (${pct}%)`, { id: toastId });
+        };
+
         if (isMp4) {
            // Show quality picker and wait for user selection
            const quality = await new Promise((resolve) => {
@@ -3574,18 +3578,14 @@ export default function Main() {
            toast.loading("Encoding Video...", { id: toastId });
            const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
 
-           const onProgress = (pct, msg) => {
-             toast.loading(`${msg} (${pct}%)`, { id: toastId });
-           };
-
            blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality);
            filename = `meme-${Date.now()}.mp4`;
            file = new File([blob], filename, { type: "video/mp4" });
         } else {
            // GIF export for Giphy/Tenor GIFs, animated stickers, animated text
            toast.loading("Encoding GIF...", { id: toastId });
-           const { exportGif } = await import("../../services/gifExporter");
-           blob = await exportGif(meme, meme.texts, meme.stickers);
+           const { exportMemeAsGif } = await import("../../services/gifExporter");
+           blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress);
            filename = `meme-${Date.now()}.gif`;
            file = new File([blob], filename, { type: "image/gif" });
         }

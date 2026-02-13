@@ -1290,43 +1290,144 @@ export default function Main() {
     }
     chaosThrottleRef.current = now;
 
-    // Safety check for memes
+    // Safety check for memes (Imgflip fallback)
     if (!allMemes || allMemes.length === 0) {
       toast.error("Memes are still loading...");
       return;
     }
 
     try {
-      // 1. DECIDE: Static Image or GIF? (40% chance of GIF)
-      const isGifChaos = Math.random() > 0.6;
+      // 1. DECIDE SOURCE: Equal probability (25% each)
+      // Sources: 'imgflip', 'giphy', 'unsplash', 'pexels'
+      const sources = ['imgflip', 'giphy', 'unsplash', 'pexels'];
+      const selectedSource = sources[Math.floor(Math.random() * sources.length)];
 
       let selectedMedia = null;
       let isVideo = false;
       let sourceUrl = null;
+      let finalSource = selectedSource;
+      let activeSourceBlob = null; // For Pexels/Unsplash if we fetch separately
 
-      if (isGifChaos) {
-        // Fetch a random GIF from expanded chaos keywords
+      // HELPER: Random Chaos Keyword
+      const getChaosKeyword = () => {
         const chaosKeywords = [
           "funny", "cat", "fail", "chaos", "reaction", "coding",
           "meme", "bruh", "shocked", "rage", "crying", "dance",
-          "explosion", "fire", "based", "sus", "cursed", "skibidi"
+          "explosion", "fire", "based", "sus", "cursed", "skibidi",
+          "dog", "animal", "wtf", "weird", "clown", "party"
         ];
-        const keyword = chaosKeywords[Math.floor(Math.random() * chaosKeywords.length)];
-        const results = await searchGiphy(keyword);
+        return chaosKeywords[Math.floor(Math.random() * chaosKeywords.length)];
+      };
+
+      // --- SOURCE LOGIC ---
+      if (selectedSource === 'giphy') {
+        const keyword = getChaosKeyword();
+        // Use search, fallback to trending if empty result (unlikely with these keywords)
+        let results = await searchGiphy(keyword);
+
+        if (!results || results.length === 0) {
+           // Fallback to trending
+           results = await searchGiphy("");
+        }
 
         if (results && results.length > 0) {
           const randomGif = results[Math.floor(Math.random() * results.length)];
           selectedMedia = randomGif.url;
           sourceUrl = randomGif.shareUrl;
+          // Check if it's actually a video file (Giphy sometimes returns mp4s in direct urls)
           isVideo = !!selectedMedia.match(/\.(mp4|webm|mov)$/i);
+          finalSource = 'giphy';
         }
+
+      } else if (selectedSource === 'unsplash') {
+         // Random Unsplash Image
+         // We use the service function which handles tracking
+         const randomImage = await getRandomImage('unsplash');
+         if (randomImage) {
+            // Unsplash requires track download trigger
+            trackUnsplashDownload(randomImage);
+
+            // For Unsplash/Pexels images, we want to try loading via Weserv or Blob to avoid taint if possible,
+            // but `loadSelectedMeme` logic is complex to duplicate.
+            // Let's use the URL directly for now, or fetch blob if we want to be safe.
+            // Main.jsx's loadSelectedMeme does fetch blob. Let's replicate that safety.
+            try {
+              const response = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(randomImage.url)}`);
+              if (response.ok) {
+                 const blob = await response.blob();
+                 selectedMedia = URL.createObjectURL(blob);
+                 activeSourceBlob = blob;
+              } else {
+                 selectedMedia = randomImage.url;
+              }
+            } catch (e) {
+               selectedMedia = randomImage.url;
+            }
+
+            sourceUrl = randomImage.photographerUrl; // Credit photographer in source
+            isVideo = false;
+            finalSource = 'unsplash';
+         }
+
+      } else if (selectedSource === 'pexels') {
+         // 50% Photo, 50% Video
+         const isPexelsVideo = Math.random() > 0.5;
+
+         if (isPexelsVideo) {
+            const randomVideo = await getRandomPexelsVideo();
+            if (randomVideo) {
+               selectedMedia = randomVideo.url;
+               sourceUrl = randomVideo.photographerUrl;
+               isVideo = true;
+               finalSource = 'pexels_video';
+            }
+         } else {
+            const randomPhoto = await getRandomImage('pexels');
+             if (randomPhoto) {
+                // Fetch blob for safety
+                try {
+                  const response = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(randomPhoto.url)}`);
+                  if (response.ok) {
+                     const blob = await response.blob();
+                     selectedMedia = URL.createObjectURL(blob);
+                     activeSourceBlob = blob;
+                  } else {
+                     selectedMedia = randomPhoto.url;
+                  }
+                } catch (e) {
+                   selectedMedia = randomPhoto.url;
+                }
+
+                sourceUrl = randomPhoto.photographerUrl;
+                isVideo = false;
+                finalSource = 'pexels';
+             }
+         }
       }
 
-      // Fallback to Image if GIF failed or wasn't chosen
+      // --- FALLBACK: DEFAULT TO IMGFLIP ---
+      // If any of the above failed to return media, or if 'imgflip' was selected
       if (!selectedMedia) {
+        // Pick random from local meme deck
         const randomMeme = allMemes[Math.floor(Math.random() * allMemes.length)];
-        selectedMedia = randomMeme.url;
+
+        // Fetch blob for Imgflip to avoid taint (reusing existing pattern)
+        try {
+           const response = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(randomMeme.url)}`);
+           if (response.ok) {
+              const blob = await response.blob();
+              selectedMedia = URL.createObjectURL(blob);
+              activeSourceBlob = blob;
+           } else {
+              selectedMedia = randomMeme.url;
+           }
+        } catch (e) {
+           selectedMedia = randomMeme.url;
+        }
+
+        sourceUrl = null;
         isVideo = false;
+        finalSource = 'imgflip';
       }
 
       // 2. Pick Random Quote
@@ -1348,6 +1449,7 @@ export default function Main() {
       } else if (eventRoll < 0.10) {
         // RAINBOW SEIZURE
         eventName = "RAINBOW SEIZURE";
+        // Hue rotate animation is handled in CSS/Render, here we just set initial state or extreme values
         chaosFilters = { ...DEFAULT_FILTERS, hueRotate: Math.floor(Math.random() * 360), saturate: 300, contrast: 120 };
       } else if (eventRoll < 0.15) {
         // DEEP FRYER EXPLODED
@@ -1378,8 +1480,12 @@ export default function Main() {
               url: selectedMedia,
               sourceUrl: sourceUrl,
               isVideo: isVideo,
-              isGif: !isVideo && !!sourceUrl,
-              source: sourceUrl ? 'giphy' : 'imgflip',
+              // If it's a video, it's NOT a GIF unless explicitly checked.
+              // Logic check: Giphy returns isVideo=true/false based on file extension.
+              // If it's NOT video, but has sourceUrl and is from Giphy, it's likely a GIF.
+              isGif: !isVideo && finalSource === 'giphy',
+              source: finalSource,
+              sourceBlob: activeSourceBlob,
               objectFit: "cover",
               filters: chaosFilters,
               processedImage: null,
@@ -1401,7 +1507,7 @@ export default function Main() {
           animation: null,
         }));
 
-        // Add empty text input
+        // Add empty text input to ensure editor is active
         newTexts.push({
           id: crypto.randomUUID(),
           content: "",

@@ -3522,19 +3522,11 @@ export default function Main() {
         activePanel.filters.deepFry !== 0
       );
       const isTenorGif = activePanel?.sourceUrl && activePanel.isVideo && activePanel.source !== 'pexels_video';
+      const isPexelsVideo = activePanel?.source === 'pexels_video' && activePanel.isVideo;
       const isUnmodified = !hasTextContent && !hasStickers && !hasDrawings && !hasFilterChanges;
 
-      // For unmodified Tenor GIFs, copy the URL directly (instant, works everywhere)
-      if (isTenorGif && isUnmodified && meme.layout === 'single') {
-        try {
-          await navigator.clipboard.writeText(activePanel.sourceUrl);
-          toast.success("GIF link copied! Paste in Meta/Instagram to embed.", { id: toastId });
-          return;
-        } catch (clipErr) {
-          console.warn("Tenor URL copy failed, falling back to export:", clipErr);
-          // Continue to export flow below
-        }
-      }
+      // (REMOVED: Copy Link Shortcut) now we use pass-through file sharing below
+      // if (isTenorGif && isUnmodified && meme.layout === 'single') { ... }
 
       // Determine if content is animated
       const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
@@ -3563,34 +3555,70 @@ export default function Main() {
         };
 
         if (isMp4) {
-           // Show quality picker and wait for user selection
-           const quality = await new Promise((resolve) => {
-             shareQualityResolveRef.current = resolve;
-             setShowShareQualityModal(true);
-           });
-           setShowShareQualityModal(false);
-           shareQualityResolveRef.current = null;
-
-           if (!quality) {
-             // User cancelled
-             toast.dismiss(toastId);
-             return;
+           // OPTIMIZATION: Pass-through for unmodified Pexels videos (Skip re-encoding)
+           if (isPexelsVideo && isUnmodified && meme.layout === 'single') {
+             try {
+               toast.loading("Fetching video...", { id: toastId });
+               // Fetch blob directly to bypass CORS issues with some sharing targets
+               const res = await fetch(activePanel.url);
+               if (!res.ok) throw new Error("Failed to fetch video source");
+               blob = await res.blob();
+               filename = `meme-${Date.now()}.mp4`;
+               file = new File([blob], filename, { type: "video/mp4" });
+             } catch (err) {
+               console.warn("Pass-through fetch failed, falling back to encode:", err);
+               // Fallback to encoding if fetch fails
+             }
            }
 
-           toast.loading("Encoding Video...", { id: toastId });
-           const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
+           if (!blob) {
+             // Show quality picker and wait for user selection
+             const quality = await new Promise((resolve) => {
+               shareQualityResolveRef.current = resolve;
+               setShowShareQualityModal(true);
+             });
+             setShowShareQualityModal(false);
+             shareQualityResolveRef.current = null;
 
-           blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality);
-           filename = `meme-${Date.now()}.mp4`;
-           file = new File([blob], filename, { type: "video/mp4" });
+             if (!quality) {
+               // User cancelled
+               toast.dismiss(toastId);
+               return;
+             }
+
+             toast.loading("Encoding Video...", { id: toastId });
+             const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
+
+             blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality);
+             filename = `meme-${Date.now()}.mp4`;
+             file = new File([blob], filename, { type: "video/mp4" });
+           }
         } else {
-           // GIF export for Giphy/Tenor GIFs, animated stickers, animated text
-           toast.loading("Encoding GIF...", { id: toastId });
-           const { exportMemeAsGif } = await import("../../services/gifExporter");
-           // Fast export (10) for sharing
-           blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
-           filename = `meme-${Date.now()}.gif`;
-           file = new File([blob], filename, { type: "image/gif" });
+           // OPTIMIZATION: Pass-through for unmodified GIFs (Skip re-encoding)
+           if (isTenorGif && isUnmodified && meme.layout === 'single') {
+             try {
+               toast.loading("Fetching GIF...", { id: toastId });
+               // Fetch blob directly. Tenor/Giphy URLs are usually CORS-enabled.
+               // We use sourceUrl (original high-quality GIF) instead of url (which might be downscaled or MP4 preview)
+               const res = await fetch(activePanel.sourceUrl || activePanel.url);
+               if (!res.ok) throw new Error("Failed to fetch GIF source");
+               blob = await res.blob();
+               filename = `meme-${Date.now()}.gif`;
+               file = new File([blob], filename, { type: "image/gif" });
+             } catch (err) {
+               console.warn("GIF pass-through fetch failed, falling back to encode:", err);
+             }
+           }
+
+           if (!blob) {
+             // GIF export for Giphy/Tenor GIFs, animated stickers, animated text
+             toast.loading("Encoding GIF...", { id: toastId });
+             const { exportMemeAsGif } = await import("../../services/gifExporter");
+             // Fast export (10) for sharing
+             blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
+             filename = `meme-${Date.now()}.gif`;
+             file = new File([blob], filename, { type: "image/gif" });
+           }
         }
       } else {
         const { exportImageAsPng } = await import("../../services/gifExporter");

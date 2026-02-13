@@ -3609,340 +3609,297 @@ export default function Main() {
   async function handleShare() {
     if (!memeRef.current) return;
 
-    const toastId = toast.loading("Preparing to share...");
-    try {
-      // Check if this is an unmodified Tenor GIF (can use URL copy instead of export)
-      const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
-      const hasTextContent = meme.texts.some(t => t.content.trim());
-      const hasStickers = meme.stickers.length > 0;
-      const hasDrawings = meme.drawings && meme.drawings.length > 0;
-      const hasFilterChanges = activePanel?.filters && (
-        activePanel.filters.contrast !== 100 ||
-        activePanel.filters.brightness !== 100 ||
-        activePanel.filters.blur !== 0 ||
-        activePanel.filters.grayscale !== 0 ||
-        activePanel.filters.sepia !== 0 ||
-        activePanel.filters.hueRotate !== 0 ||
-        activePanel.filters.saturate !== 100 ||
-        activePanel.filters.invert !== 0 ||
-        activePanel.filters.deepFry !== 0
-      );
-      const isTenorGif = activePanel?.sourceUrl && activePanel.isVideo && activePanel.source !== 'pexels_video';
-      const isPexelsVideo = activePanel?.source === 'pexels_video' && activePanel.isVideo;
-      const isUnmodified = !hasTextContent && !hasStickers && !hasDrawings && !hasFilterChanges;
+    // 1. DETECT CONTENT TYPE & STATE
+    const activePanel = meme.panels.find(p => p.id === meme.activePanelId) || meme.panels[0];
+    const hasTextContent = meme.texts.some(t => t.content.trim());
+    const hasStickers = meme.stickers.length > 0;
+    const hasDrawings = meme.drawings && meme.drawings.length > 0;
+    const hasFilterChanges = activePanel?.filters && (
+      activePanel.filters.contrast !== 100 ||
+      activePanel.filters.brightness !== 100 ||
+      activePanel.filters.blur !== 0 ||
+      activePanel.filters.grayscale !== 0 ||
+      activePanel.filters.sepia !== 0 ||
+      activePanel.filters.hueRotate !== 0 ||
+      activePanel.filters.saturate !== 100 ||
+      activePanel.filters.invert !== 0 ||
+      activePanel.filters.deepFry !== 0
+    );
+    const isUnmodified = !hasTextContent && !hasStickers && !hasDrawings && !hasFilterChanges;
 
-      // (REMOVED: Copy Link Shortcut) now we use pass-through file sharing below
-      // if (isTenorGif && isUnmodified && meme.layout === 'single') { ... }
+    // Check if we can start with an existing public URL (Pass-through optimization)
+    const isTenorGif = activePanel?.sourceUrl && activePanel.isVideo && activePanel.source !== 'pexels_video';
+    const isGenericGif = activePanel?.url?.toLowerCase().includes('.gif') || activePanel?.sourceUrl?.toLowerCase().includes('.gif');
+    let existingPublicUrl = null;
+    if (isUnmodified && (isTenorGif || activePanel?.source === 'giphy' || (isGenericGif && activePanel?.sourceUrl?.startsWith('http')))) {
+         existingPublicUrl = activePanel.sourceUrl || activePanel.url;
+    }
 
-      // Determine if content is animated
-      const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
-      const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
-      const hasAnimatedTextContent = hasAnimatedText(meme.texts);
-      const isAnimated = hasVideoPanel || hasGifSticker || hasAnimatedTextContent;
+    // Determine Animation Status
+    const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
+    const hasGifSticker = meme.stickers.some(s => s.type === 'image' && (s.isAnimated || s.url.includes('.gif')));
+    const hasAnimatedTextContent = hasAnimatedText(meme.texts);
+    const isAnimated = hasVideoPanel || hasGifSticker || hasAnimatedTextContent;
 
-      let blob, file, filename;
-      let isMp4 = false;
-      let existingPublicUrl = null;
+    // Determine Format (MP4 vs GIF)
+    // MP4 only for: Pexels videos OR user-uploaded MP4s (NOT GIFs)
+    let isMp4 = false;
+    if (isAnimated) {
+       const hasTrueVideo = meme.panels.some(p =>
+         p.source === 'pexels_video' ||
+         (p.source === 'upload' && p.isVideo && !p.isGif)
+       );
+       if (hasTrueVideo) isMp4 = true;
+    }
 
-      if (isAnimated) {
-        // DETECT: True video (MP4) vs GIF
-        // MP4 only for: Pexels videos OR user-uploaded MP4s (NOT GIFs)
-        // Everything else animated → GIF export
-        const hasTrueVideo = meme.panels.some(p =>
-          p.source === 'pexels_video' ||
-          (p.source === 'upload' && p.isVideo && !p.isGif)
-        );
+    const isGifToExport = isAnimated && !isMp4 && !existingPublicUrl;
 
-        if (hasTrueVideo) {
-            isMp4 = true;
+    // 2. SPECULATIVE CLIPBOARD RESERVATION (Desktop/GIF only)
+    // We must do this synchronously within the user gesture (click event) BEFORE any await.
+    // We create unresolved promises that we will fulfil later with the exported blob/url.
+    let clipboardResolver = {
+        resolveHtml: null,
+        rejectHtml: null,
+        resolveText: null,
+        rejectText: null,
+        writePromise: null,
+        isReserved: false
+    };
+
+    if (isGifToExport && typeof ClipboardItem !== "undefined") {
+        try {
+            // Check if browser supports Promise-based ClipboardItem (Chrome 98+, Safari 13.1+)
+            // Firefox only added support recently (v127), so this try-catch is essential.
+            const htmlPromise = new Promise((resolve, reject) => {
+                clipboardResolver.resolveHtml = resolve;
+                clipboardResolver.rejectHtml = reject;
+            });
+            const textPromise = new Promise((resolve, reject) => {
+                clipboardResolver.resolveText = resolve;
+                clipboardResolver.rejectText = reject;
+            });
+
+            const item = new ClipboardItem({
+                "text/html": htmlPromise,
+                "text/plain": textPromise
+            });
+
+            // Fire and forget the write attempt (we'll await it later or catch its failure)
+            clipboardResolver.writePromise = navigator.clipboard.write([item]);
+            clipboardResolver.isReserved = true;
+            console.log("Clipboard gesture reserved successfully.");
+        } catch (err) {
+            console.warn("Clipboard reservation skipped (browser may not support Promise-based ClipboardItem):", err);
+            // We will fall back to manual copy or non-speculative write later
         }
+    }
 
+    const toastId = toast.loading("Preparing to share...");
+
+    try {
+      let blob, file, filename;
+
+      // 3. GENERATE / FETCH CONTENT
+      if (isAnimated) {
         const onProgress = (pct, msg) => {
           toast.loading(`${msg} (${pct}%)`, { id: toastId });
         };
 
         if (isMp4) {
-           // OPTIMIZATION: Pass-through for unmodified Pexels videos (Skip re-encoding)
-           if (isPexelsVideo && isUnmodified && meme.layout === 'single') {
+           // ... MP4 Logic (Existing) ...
+           if (activePanel?.source === 'pexels_video' && isUnmodified && meme.layout === 'single') {
              try {
                toast.loading("Fetching video...", { id: toastId });
-               // Fetch blob directly to bypass CORS issues with some sharing targets
                const res = await fetch(activePanel.url);
-               if (!res.ok) throw new Error("Failed to fetch video source");
+               if (!res.ok) throw new Error("Failed to fetch video");
                blob = await res.blob();
                filename = `meme-${Date.now()}.mp4`;
                file = new File([blob], filename, { type: "video/mp4" });
-             } catch (err) {
-               console.warn("Pass-through fetch failed, falling back to encode:", err);
-               // Fallback to encoding if fetch fails
-             }
+             } catch (err) { console.warn("Pass-through failed", err); }
            }
 
            if (!blob) {
-             // Show quality picker and wait for user selection
              const quality = await new Promise((resolve) => {
-               shareQualityResolveRef.current = resolve;
-               setShowShareQualityModal(true);
+                shareQualityResolveRef.current = resolve;
+                setShowShareQualityModal(true);
              });
              setShowShareQualityModal(false);
              shareQualityResolveRef.current = null;
-
-             if (!quality) {
-               // User cancelled
-               toast.dismiss(toastId);
-               return;
-             }
+             if (!quality) { toast.dismiss(toastId); return; }
 
              toast.loading("Encoding Video...", { id: toastId });
              const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
-
              blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality);
              filename = `meme-${Date.now()}.mp4`;
              file = new File([blob], filename, { type: "video/mp4" });
            }
         } else {
-            // OPTIMIZATION: Pass-through for unmodified GIFs (Skip re-encoding)
-           // Support Tenor, Giphy, and any generic GIF URL if unmodified
-           const isGenericGif = activePanel?.url?.toLowerCase().includes('.gif') || activePanel?.sourceUrl?.toLowerCase().includes('.gif');
-           if ((isTenorGif || activePanel?.source === 'giphy' || isGenericGif) && isUnmodified && meme.layout === 'single') {
-             try {
-               toast.loading("Fetching GIF...", { id: toastId });
-               // Fetch blob directly. Tenor/Giphy URLs are usually CORS-enabled.
-               // We use sourceUrl (original high-quality GIF) if available, otherwise url
-               const fetchUrl = activePanel.sourceUrl || activePanel.url;
-               const res = await fetch(fetchUrl);
-               if (!res.ok) throw new Error("Failed to fetch GIF source");
-               blob = await res.blob();
-               filename = `meme-${Date.now()}.gif`;
-               file = new File([blob], filename, { type: "image/gif" });
-               console.log("Pass-through GIF success:", fetchUrl);
-             } catch (err) {
-               console.warn("GIF pass-through fetch failed, falling back to encode:", err);
-             }
-           }
-
-           if (!blob) {
-             // GIF export for modified GIFs, animated stickers, animated text
-             toast.loading("Encoding GIF...", { id: toastId });
-             const { exportMemeAsGif } = await safeImport(() => import("../../services/gifExporter"));
-             blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
-             filename = `meme-${Date.now()}.gif`;
-             file = new File([blob], filename, { type: "image/gif" });
+           // ... GIF Logic ...
+           if (existingPublicUrl) {
+                // Pass-through optimization
+                toast.loading("Fetching GIF...", { id: toastId });
+                const res = await fetch(existingPublicUrl);
+                blob = await res.blob();
+                filename = `meme-${Date.now()}.gif`;
+                file = new File([blob], filename, { type: "image/gif" });
+           } else {
+                // Encode GIF
+                toast.loading("Encoding GIF...", { id: toastId });
+                const { exportMemeAsGif } = await safeImport(() => import("../../services/gifExporter"));
+                blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
+                filename = `meme-${Date.now()}.gif`;
+                file = new File([blob], filename, { type: "image/gif" });
            }
         }
       } else {
+        // Static PNG
         const { exportImageAsPng } = await import("../../services/gifExporter");
         blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
         filename = `meme-${Date.now()}.png`;
         file = new File([blob], filename, { type: "image/png" });
       }
 
-      // OPTIMIZATION: If source is already public (Giphy/Tenor) and UNMODIFIED, use that URL directly!
-      // This skips the slow tmpfiles.org upload and ensures obscure clipboard focus issues are minimized.
-      // This applies to both animated (GIF) and static (PNG) cases if unmodified.
-      if (isUnmodified && (isTenorGif || activePanel?.source === 'giphy' || activePanel?.sourceUrl?.startsWith('http'))) {
-           existingPublicUrl = activePanel.sourceUrl || activePanel.url;
-           console.log("Using existing public URL for share:", existingPublicUrl);
-      }
+      // 4. UPLOAD & CLIPBOARD RESOLUTION
 
-      // Try Web Share API first (works on mobile and some desktop browsers)
+      // Try Web Share API First (Mobile)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // If we reserved clipboard but ended up sharing natively, we should reject the clipboard promises to clean up
+        if (clipboardResolver.isReserved) {
+            clipboardResolver.rejectHtml && clipboardResolver.rejectHtml(new Error("Used Web Share instead"));
+            clipboardResolver.rejectText && clipboardResolver.rejectText(new Error("Used Web Share instead"));
+        }
+
         try {
           await navigator.share({ files: [file] });
           toast.success("Shared!", { id: toastId });
           return;
         } catch (shareErr) {
-          if (shareErr.name === 'AbortError') {
-            toast.dismiss(toastId);
-            return;
-          }
-          console.warn("Native share failed, falling back...", shareErr);
+          if (shareErr.name === 'AbortError') { toast.dismiss(toastId); return; }
+          // Fall back to desktop flow if share fails
         }
       }
 
-      // Desktop fallback: Clipboard Loophole or Download
-      if (isAnimated) {
-        // GIF/MP4 Upload & Clipboard Logic
-        try {
-          // B. Upload to Cloud (For Chat Paste - Signal/Discord)
-          let publicUrl = isAnimated ? existingPublicUrl : null; // Use existing if available (defined above)
-
-          if (!publicUrl) {
-              try {
-                toast.loading("Generating sharable link...", { id: toastId });
-
+      // START BACKGROUND UPLOAD (for URL generation)
+      let uploadPromise = null;
+      if (isAnimated && !existingPublicUrl) {
+         uploadPromise = (async () => {
+             try {
                 const formData = new FormData();
                 formData.append('file', blob, filename);
-
-                // DIRECT CLIENT-SIDE UPLOAD (Bypasses Netlify Bandwidth)
-                const uploadRes = await fetch('https://tmpfiles.org/api/v1/upload', {
-                  method: 'POST',
-                  body: formData
-                });
-
-                if (uploadRes.ok) {
-                  const uploadJson = await uploadRes.json();
-                  // Tmpfiles returns: { data: { url: "https://tmpfiles.org/..." } }
-                  // Need to convert to DL link: .../org/dl/...
-                  if (uploadJson && uploadJson.data && uploadJson.data.url) {
-                    publicUrl = uploadJson.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-                    console.log("Upload success:", publicUrl);
-                  } else {
-                    console.warn("Upload response missing url:", uploadJson);
-                    throw new Error("Invalid upload response");
-                  }
-                } else {
-                  console.warn("Upload failed:", uploadRes.status, uploadRes.statusText);
-                  throw new Error(`Upload failed: ${uploadRes.status}`);
+                const res = await fetch('https://tmpfiles.org/api/v1/upload', { method: 'POST', body: formData });
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json?.data?.url) {
+                        return json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                    }
                 }
-              } catch (uploadErr) {
-                console.error("Upload network error:", uploadErr);
-                toast.error("Upload failed, checking clipboard...");
-              }
-          } else {
-             console.log("Skipping upload, using existing public URL:", publicUrl);
+             } catch (e) { console.warn("Background upload failed:", e); }
+             return null;
+         })();
+      }
+
+      // HANDLE CLIPBOARD (GIF/Video/Static)
+      if (isAnimated && !isMp4) {
+          // GIF Strategy:
+          // 1. If we reserved clipboard, resolve it now.
+          // 2. Resolve with Base64 if small (<4MB) for speed, OR wait for Upload if large (avoid size limits).
+
+          let publicUrl = existingPublicUrl;
+          let resolveWithUrl = false;
+
+          // Decide whether to wait for URL
+          if (!publicUrl && blob.size > 4 * 1024 * 1024 && uploadPromise) {
+              toast.loading("Uploading large GIF...", { id: toastId });
+              publicUrl = await uploadPromise;
+              resolveWithUrl = !!publicUrl;
           }
 
-          // C. Construct Clipboard Items
-          // For MP4, we can't really do the HTML image paste trick easily.
-          // For GIF, we can use URL-based HTML (small, fast) or base64 fallback.
-
-          if (!isMp4) {
-              // GIF: Build clipboard content
-              // Strategy: Use public URL in <img> if available (tiny, fast, Discord/Signal auto-embed).
-              // Only fall back to base64 data URL if no public URL exists.
-              let htmlContent, textContent;
-
-              if (publicUrl) {
-                htmlContent = `<img src="${publicUrl}" alt="Meme GIF" />`;
-                textContent = publicUrl;
-              } else {
-                // No public URL — convert to base64 for HTML clipboard (Gmail/Docs support)
-                const base64Data = await new Promise((resolve) => {
+          // Generate HTML Content
+          let htmlContent, textContent;
+          if (publicUrl) {
+              htmlContent = `<img src="${publicUrl}" alt="Meme GIF" />`;
+              textContent = publicUrl;
+          } else {
+              // Convert to Base64 (Fast path for small GIFs, or fallback)
+              const base64 = await new Promise(r => {
                   const reader = new FileReader();
-                  reader.onloadend = () => resolve(reader.result);
+                  reader.onloadend = () => r(reader.result);
                   reader.readAsDataURL(blob);
-                });
-                htmlContent = `<img src="${base64Data}" alt="Meme GIF" />`;
-                textContent = "";
-              }
+              });
+              htmlContent = `<img src="${base64}" alt="Meme GIF" />`;
+              textContent = "";
 
-              // Helper for clipboard write attempts
-              const writeGifToClipboard = async () => {
-                const clipboardItem = new ClipboardItem({
-                  "text/html": new Blob([htmlContent], { type: "text/html" }),
-                  "text/plain": new Blob([textContent], { type: "text/plain" })
-                });
-                await navigator.clipboard.write([clipboardItem]);
-              };
+              // If we didn't get a publicUrl yet, we can try to get it from the background upload later for the toast
+              if (uploadPromise && !publicUrl) {
+                  uploadPromise.then(url => {
+                      if (url) console.log("Background upload completed:", url);
+                  });
+              }
+          }
+
+          const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+          const textBlob = new Blob([textContent], { type: "text/plain" });
+
+          if (clipboardResolver.isReserved) {
+              // FULFILL THE RESERVED PROMISES
+              clipboardResolver.resolveHtml(htmlBlob);
+              clipboardResolver.resolveText(textBlob);
 
               try {
-                await writeGifToClipboard();
-
-                toast.success((
-                  <div className="flex flex-col gap-1">
-                    <span>{publicUrl ? "GIF Copied!" : "Copied to clipboard!"}</span>
-                    <span className="text-xs opacity-80 font-normal">
-                      {publicUrl ? "Paste anywhere — apps auto-embed the GIF." : "Paste in Gmail/Docs"}
-                    </span>
-                  </div>
-                ), { id: toastId, duration: 4000 });
-              } catch (autoCopyErr) {
-                 // Fallback to manual button if auto-write fails (focus lost, permissions)
-                 console.warn("Clipboard write failed (focus lost?):", autoCopyErr);
-                 toast((t) => (
-                   <div className="flex flex-col gap-2">
-                      <span className="font-bold">{publicUrl ? "GIF Ready!" : "Sharing Ready!"}</span>
-                      <span className="text-xs">Click copy to save to clipboard.</span>
-                      <button
-                        onClick={async () => {
-                           try {
-                             await writeGifToClipboard();
-                             toast.success("Copied!", { id: t.id });
-                           } catch (e1) {
-                             console.warn("Rich copy failed, trying text only:", e1);
-                             try {
-                               await navigator.clipboard.writeText(publicUrl || textContent);
-                               toast.success(publicUrl ? "Link Copied!" : "Copied!", { id: t.id });
-                             } catch (e2) {
-                               console.error("All copy methods failed:", e2);
-                               toast.error("Failed to copy", { id: t.id });
-                             }
-                           }
-                        }}
-                        className="bg-brand text-white text-xs px-3 py-1.5 rounded-lg font-bold mt-1"
-                      >
-                        Copy to Clipboard
-                      </button>
-                   </div>
-                 ), { id: toastId, duration: 8000 });
+                  await clipboardResolver.writePromise;
+                  toast.success("Copied to clipboard!", { id: toastId, duration: 4000 });
+              } catch (writeErr) {
+                  console.warn("Speculative write failed:", writeErr);
+                  // Fallback to manual
+                  throw new Error("Clipboard write failed");
               }
           } else {
-             // MP4: Just copy the link if we have it
-             if (publicUrl) {
-                 try {
-                     await navigator.clipboard.writeText(publicUrl);
-                     toast.success((
-                      <div className="flex flex-col gap-1">
-                        <span>Video Link Copied!</span>
-                        <span className="text-xs opacity-80 font-normal">Paste in Discord/Signal</span>
-                      </div>
-                    ), { id: toastId, duration: 4000 });
-                 } catch (clipErr) {
-                     console.warn("Clipboard write failed (focus lost?):", clipErr);
-                       toast((t) => (
-                       <div className="flex flex-col gap-2">
-                          <span className="font-bold">Video Link Ready!</span>
-                          <span className="text-xs">Click copy to save link.</span>
-                          <button
-                            onClick={() => {
-                               navigator.clipboard.writeText(publicUrl)
-                                 .then(() => toast.success("Copied!", { id: t.id }))
-                                 .catch(() => toast.error("Failed to copy", { id: t.id }));
-                            }}
-                            className="bg-brand text-white text-xs px-3 py-1.5 rounded-lg font-bold mt-1"
-                          >
-                            Copy Link
-                          </button>
-                       </div>
-                     ), { id: toastId, duration: 8000 });
-                 }
-             } else {
-                 // No link (upload failed) -> Must download
-                 throw new Error("Upload failed, falling back to download");
-             }
+              // Standard write (if reservation skipped/failed check)
+              // This might fail if too much time passed, but we try anyway
+              const item = new ClipboardItem({
+                  "text/html": htmlBlob,
+                  "text/plain": textBlob
+              });
+              await navigator.clipboard.write([item]);
+              toast.success("Copied to clipboard!", { id: toastId, duration: 4000 });
+          }
+      } else if (isMp4) {
+          // MP4: Link only
+          let publicUrl = existingPublicUrl;
+          if (!publicUrl && uploadPromise) {
+              toast.loading("Uploading video...", { id: toastId });
+              publicUrl = await uploadPromise;
           }
 
-        } catch (clipboardErr) {
-          // Fallback to Download
-          console.warn("Clipboard/Upload failed:", clipboardErr);
-
-          await triggerDownload(blob, filename);
-
-          // Inform user why it downloaded
-          toast.success((
-            <div className="flex flex-col gap-1">
-              <span>{isMp4 ? "Video downloaded!" : "GIF downloaded!"}</span>
-              <span className="text-xs opacity-80 font-normal">{isMp4 ? "Upload failed." : "Apps prevented clipboard copy."}</span>
-            </div>
-          ), { id: toastId, duration: 4000 });
-        }
+          if (publicUrl) {
+              await navigator.clipboard.writeText(publicUrl);
+              toast.success("Video Link Copied!", { id: toastId });
+          } else {
+              throw new Error("Could not generate video link (Upload failed)");
+          }
       } else {
-        // PNG: Try clipboard with focus handling
-        try {
+          // Static PNG
           await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          toast.success("Copied to clipboard!", { id: toastId, duration: 3000 });
-        } catch (clipboardError) {
-          // Clipboard failed (focus lost or not supported) - fall back to download
-          console.warn("Clipboard failed, downloading instead:", clipboardError);
-          await triggerDownload(blob, `meme-${Date.now()}.png`);
-          toast.success("Downloaded! (Clipboard unavailable)", { id: toastId, duration: 4000 });
-        }
+          toast.success("Copied!", { id: toastId });
       }
+
     } catch (e) {
       if (e.name !== "AbortError") {
-        console.error("Share Error:", e);
-        toast.error("Share failed", { id: toastId });
+        console.error("Share failed:", e);
+        // Fallback: Manual Copy Button
+        // If we have the blob, at least allow manual copy/download
+        toast((t) => (
+             <div className="flex flex-col gap-2">
+                <span className="font-bold">Clipboard failed</span>
+                <span className="text-xs">Click to download instead:</span>
+                <button
+                   onClick={() => triggerDownload(blob || new Blob(), filename || 'meme.gif')}
+                   className="bg-brand text-white text-xs px-3 py-1.5 rounded-lg font-bold mt-1"
+                >
+                   Download File
+                </button>
+             </div>
+        ), { id: toastId, duration: 8000 });
       } else {
         toast.dismiss(toastId);
       }

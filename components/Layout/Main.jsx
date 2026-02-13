@@ -3822,8 +3822,9 @@ export default function Main() {
           // Generate HTML Content
           let htmlContent, textContent;
           if (publicUrl) {
+              const proxyUrl = `${window.location.origin}/.netlify/functions/share?url=${encodeURIComponent(publicUrl)}&type=gif&title=${encodeURIComponent(meme.name)}`;
               htmlContent = `<img src="${publicUrl}" alt="Meme GIF" />`;
-              textContent = publicUrl;
+              textContent = proxyUrl; // Use Proxy for text pasting (Discord/iMessage)
           } else {
               // Convert to Base64 (Fast path for small GIFs, or fallback)
               const base64 = await new Promise(r => {
@@ -3832,12 +3833,18 @@ export default function Main() {
                   reader.readAsDataURL(blob);
               });
               htmlContent = `<img src="${base64}" alt="Meme GIF" />`;
-              textContent = "";
+              textContent = ""; // No link yet
 
               // If we didn't get a publicUrl yet, we can try to get it from the background upload later for the toast
               if (uploadPromise && !publicUrl) {
                   uploadPromise.then(url => {
-                      if (url) console.log("Background upload completed:", url);
+                      if (url) {
+                          console.log("Background upload completed:", url);
+                          const proxyUrl = `${window.location.origin}/.netlify/functions/share?url=${encodeURIComponent(url)}&type=gif&title=${encodeURIComponent(meme.name)}`;
+                          // We can't update the clipboard asynchronously after the fact easily due to browser security,
+                          // but we can log it or potentially update UI if we had a "Copy Link" button that was waiting.
+                          // For now, the user just gets the image on clipboard.
+                      }
                   });
               }
           }
@@ -3877,7 +3884,8 @@ export default function Main() {
           }
 
           if (publicUrl) {
-              await navigator.clipboard.writeText(publicUrl);
+              const proxyUrl = `${window.location.origin}/.netlify/functions/share?url=${encodeURIComponent(publicUrl)}&type=video&title=${encodeURIComponent(meme.name)}`;
+              await navigator.clipboard.writeText(proxyUrl);
               toast.success("Video Link Copied!", { id: toastId });
           } else {
               throw new Error("Could not generate video link (Upload failed)");

@@ -60,6 +60,10 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
     exportWidth = Math.round(exportWidth * settings.scale);
     exportHeight = Math.round(exportHeight * settings.scale);
 
+    const contentHeight = Math.round(dimensions.contentHeight * settings.scale);
+    const contentOffsetY = Math.round(dimensions.contentOffsetY * settings.scale);
+    const contentOffsetBottom = Math.round(dimensions.contentOffsetBottom * settings.scale);
+
     // MP4 specific: Dimensions must be even for H.264
     if (exportWidth % 2 !== 0) exportWidth++;
     if (exportHeight % 2 !== 0) exportHeight++;
@@ -68,7 +72,10 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
     dimensions = {
         ...dimensions,
         exportWidth,
-        exportHeight
+        exportHeight,
+        contentHeight,
+        contentOffsetY,
+        contentOffsetBottom
     };
 
     console.log(`Exporting MP4 (${quality}): ${exportWidth}x${exportHeight} @ ${settings.bitrate / 1000}kbps`);

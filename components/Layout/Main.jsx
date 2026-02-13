@@ -3805,10 +3805,18 @@ export default function Main() {
           let resolveWithUrl = false;
 
           // Decide whether to wait for URL
-          if (!publicUrl && blob.size > 4 * 1024 * 1024 && uploadPromise) {
-              toast.loading("Uploading large GIF...", { id: toastId });
-              publicUrl = await uploadPromise;
-              resolveWithUrl = !!publicUrl;
+          if (!publicUrl && uploadPromise) {
+              // On mobile, or if file is large, we prefer the link
+              // If < 4MB on desktop, we typically just use base64, but for robustness:
+
+              const isLarge = blob.size > 4 * 1024 * 1024;
+              // User specifically mentioned "Generating link" toast gap.
+              // We should show this status if we are waiting on the upload.
+              if (isLarge || isMobile) {
+                  toast.loading("Generating shareable link...", { id: toastId });
+                  publicUrl = await uploadPromise;
+                  resolveWithUrl = !!publicUrl;
+              }
           }
 
           // Generate HTML Content
@@ -3844,7 +3852,7 @@ export default function Main() {
 
               try {
                   await clipboardResolver.writePromise;
-                  toast.success("Copied to clipboard!", { id: toastId, duration: 4000 });
+                  toast.success(resolveWithUrl ? "Link copied to clipboard!" : "Copied to clipboard!", { id: toastId, duration: 4000 });
               } catch (writeErr) {
                   console.warn("Speculative write failed:", writeErr);
                   // Fallback to manual

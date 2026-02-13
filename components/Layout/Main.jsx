@@ -3657,6 +3657,10 @@ export default function Main() {
     // 2. SPECULATIVE CLIPBOARD RESERVATION (Desktop/GIF only)
     // We must do this synchronously within the user gesture (click event) BEFORE any await.
     // We create unresolved promises that we will fulfil later with the exported blob/url.
+    // CRITICAL: On Mobile, we must NOT do this, because calling clipboard.write() consumes
+    // the user gesture, causing navigator.share() (Native Share) to fail or hang.
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && /mobile|tablet|ip(ad|hone|od)|android/i.test(navigator.userAgent));
+
     let clipboardResolver = {
         resolveHtml: null,
         rejectHtml: null,
@@ -3666,7 +3670,7 @@ export default function Main() {
         isReserved: false
     };
 
-    if (isGifToExport && typeof ClipboardItem !== "undefined") {
+    if (isGifToExport && !isMobile && typeof ClipboardItem !== "undefined") {
         try {
             // Check if browser supports Promise-based ClipboardItem (Chrome 98+, Safari 13.1+)
             // Firefox only added support recently (v127), so this try-catch is essential.

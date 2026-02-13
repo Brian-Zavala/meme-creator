@@ -65,4 +65,15 @@ export class VideoFrameProvider {
              // Fallback for timeout?
         }
     }
+
+
+    cleanup() {
+        this.videos.forEach(video => {
+            video.pause();
+            video.src = "";
+            video.load();
+        });
+        this.videos.clear();
+        this.bitmaps.clear();
+    }
 }

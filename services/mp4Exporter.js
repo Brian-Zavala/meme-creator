@@ -19,6 +19,8 @@ import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnim
  * @param {string} quality - Quality preset ('high', 'medium', 'low')
  * @returns {Promise<Blob>} - The generated MP4 blob
  */
+import { VideoFrameProvider } from './VideoFrameProvider';
+
 export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality = 'medium') {
     if (!("VideoEncoder" in window)) {
         throw new Error("WebCodecs (VideoEncoder) is not supported in this browser.");
@@ -27,9 +29,16 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
     // WORKER IMPLEMENTATION
     const exportId = crypto.randomUUID();
     let wakeLock = null;
+    let videoProvider = null;
 
     try {
         if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+
+        // Setup Video Proxy
+        videoProvider = new VideoFrameProvider();
+        await videoProvider.init(meme);
+        const { port1, port2 } = new MessageChannel();
+        port1.onmessage = (e) => videoProvider.handleMessage(e, port1);
 
         return new Promise((resolve, reject) => {
             const worker = new Worker(new URL('./exportWorker.js', import.meta.url), { type: 'module' });
@@ -37,6 +46,8 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
             const terminate = () => {
                 worker.terminate();
                 if (wakeLock) wakeLock.release().catch(() => {});
+                port1.close();
+                videoProvider.cleanup();
             };
 
             worker.onmessage = (e) => {
@@ -68,14 +79,16 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
                     texts: structuredClone(texts),
                     stickers: structuredClone(stickers),
                     quality,
-                    format: 'mp4'
+                    format: 'mp4',
+                    videoProxyPort: port2
                 }
-            });
+            }, [port2]); // Transfer port2
         });
 
     } catch (err) {
         console.error("Export Failed:", err);
         if (wakeLock) await wakeLock.release().catch(() => {});
+        if (videoProvider) videoProvider.cleanup();
         throw err;
     }
 }

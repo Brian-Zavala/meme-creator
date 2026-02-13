@@ -29,12 +29,21 @@ function createTickWorker() {
     return new Worker(URL.createObjectURL(blob));
 }
 
+import { VideoFrameProvider } from './VideoFrameProvider';
+
 export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality = 5) {
     const exportId = crypto.randomUUID();
     let wakeLock = null;
+    let videoProvider = null;
 
     try {
         if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+
+        // Setup Video Proxy
+        videoProvider = new VideoFrameProvider();
+        await videoProvider.init(meme);
+        const { port1, port2 } = new MessageChannel();
+        port1.onmessage = (e) => videoProvider.handleMessage(e, port1);
 
         // WORKER IMPLEMENTATION
         return new Promise((resolve, reject) => {
@@ -45,6 +54,8 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
                 worker.terminate();
                 if (wakeLock) wakeLock.release().catch(() => {});
                 db.activeExports.delete(exportId).catch(() => {});
+                port1.close();
+                videoProvider.cleanup();
             };
 
             worker.onmessage = (e) => {
@@ -52,7 +63,6 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
 
                 if (type === 'PROGRESS') {
                     if (onProgress) onProgress(payload.progress, payload.message);
-                    // Update DB for recovery ?? (Optional, keeping it simple for now)
                     if (payload.progress % 10 === 0) {
                          db.activeExports.update(exportId, { progress: payload.progress, status: 'rendering' }).catch(() => {});
                     }
@@ -76,13 +86,14 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
                 type: 'START_EXPORT',
                 payload: {
                     exportId,
-                    meme: structuredClone(meme), // Ensure structured clone compat
+                    meme: structuredClone(meme),
                     texts: structuredClone(texts),
                     stickers: structuredClone(stickers),
                     quality,
-                    format: 'gif'
+                    format: 'gif',
+                    videoProxyPort: port2
                 }
-            });
+            }, [port2]); // Transfer port2
 
             // Initial DB record
             db.activeExports.add({ id: exportId, type: 'gif', status: 'starting', progress: 0 }).catch(() => {});
@@ -91,6 +102,7 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
     } catch (err) {
         console.error("Export Failed:", err);
         if (wakeLock) await wakeLock.release().catch(() => {});
+        if (videoProvider) videoProvider.cleanup();
         throw err;
     }
 }

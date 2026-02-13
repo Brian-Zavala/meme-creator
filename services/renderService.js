@@ -214,11 +214,15 @@ export async function createVideoProcessor(url, options = {}) {
                     }
                 }
             };
+            };
         }
 
-        console.warn("createVideoProcessor called in worker without proxy - returning null");
-        resolve(null);
-        return;
+        console.warn("createVideoProcessor called in worker without proxy - returning null", {
+            hasFetch: !!fetchVideoFrame,
+            hasPanelId: !!panelId,
+            hasMetadata: !!metadata
+        });
+        return null;
     }
 
     return new Promise((resolve) => {
@@ -471,7 +475,9 @@ export async function loadMemeAssets(meme, stickers, videoProxyPort) {
         // We need to fetch metadata for all video panels first
         await Promise.all(videoPanels.map(async p => {
              try {
+                 console.log(`[Worker] Fetching metadata for panel ${p.id}...`);
                  const meta = await fetchVideoFrame(p.id, 0, 'METADATA');
+                 console.log(`[Worker] Got metadata for panel ${p.id}:`, meta);
                  videoMetadata[p.id] = meta;
              } catch (e) {
                  console.warn(`Failed to fetch metadata for panel ${p.id}`, e);

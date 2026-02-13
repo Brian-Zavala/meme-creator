@@ -3586,7 +3586,8 @@ export default function Main() {
            // GIF export for Giphy/Tenor GIFs, animated stickers, animated text
            toast.loading("Encoding GIF...", { id: toastId });
            const { exportMemeAsGif } = await import("../../services/gifExporter");
-           blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress);
+           // Fast export (10) for sharing
+           blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
            filename = `meme-${Date.now()}.gif`;
            file = new File([blob], filename, { type: "image/gif" });
         }
@@ -3682,18 +3683,58 @@ export default function Main() {
                 ), { id: toastId, duration: 4000 });
               } catch (autoCopyErr) {
                  // Fallback to manual button if auto-write fails
-                 throw autoCopyErr;
+                 console.warn("Clipboard write failed (focus lost?):", autoCopyErr);
+                 toast((t) => (
+                   <div className="flex flex-col gap-2">
+                      <span className="font-bold">Sharing Ready!</span>
+                      <span className="text-xs">Click copy to save to clipboard.</span>
+                      <button
+                        onClick={() => {
+                           navigator.clipboard.write([
+                             new ClipboardItem({
+                               "text/html": new Blob([htmlContent], { type: "text/html" }),
+                               "text/plain": new Blob([textContent], { type: "text/plain" })
+                             })
+                           ]).then(() => toast.success("Copied!", { id: t.id }))
+                             .catch(() => toast.error("Failed to copy", { id: t.id }));
+                        }}
+                        className="bg-brand text-white text-xs px-3 py-1.5 rounded-lg font-bold mt-1"
+                      >
+                        Copy to Clipboard
+                      </button>
+                   </div>
+                 ), { id: toastId, duration: 8000 });
               }
           } else {
              // MP4: Just copy the link if we have it
              if (publicUrl) {
-                 await navigator.clipboard.writeText(publicUrl);
-                 toast.success((
-                  <div className="flex flex-col gap-1">
-                    <span>Video Link Copied!</span>
-                    <span className="text-xs opacity-80 font-normal">Paste in Discord/Signal</span>
-                  </div>
-                ), { id: toastId, duration: 4000 });
+                 try {
+                     await navigator.clipboard.writeText(publicUrl);
+                     toast.success((
+                      <div className="flex flex-col gap-1">
+                        <span>Video Link Copied!</span>
+                        <span className="text-xs opacity-80 font-normal">Paste in Discord/Signal</span>
+                      </div>
+                    ), { id: toastId, duration: 4000 });
+                 } catch (clipErr) {
+                     console.warn("Clipboard write failed (focus lost?):", clipErr);
+                       toast((t) => (
+                       <div className="flex flex-col gap-2">
+                          <span className="font-bold">Video Link Ready!</span>
+                          <span className="text-xs">Click copy to save link.</span>
+                          <button
+                            onClick={() => {
+                               navigator.clipboard.writeText(publicUrl)
+                                 .then(() => toast.success("Copied!", { id: t.id }))
+                                 .catch(() => toast.error("Failed to copy", { id: t.id }));
+                            }}
+                            className="bg-brand text-white text-xs px-3 py-1.5 rounded-lg font-bold mt-1"
+                          >
+                            Copy Link
+                          </button>
+                       </div>
+                     ), { id: toastId, duration: 8000 });
+                 }
              } else {
                  // No link (upload failed) -> Must download
                  throw new Error("Upload failed, falling back to download");

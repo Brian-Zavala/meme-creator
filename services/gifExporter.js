@@ -29,85 +29,18 @@ function createTickWorker() {
     return new Worker(URL.createObjectURL(blob));
 }
 
-export async function exportMemeAsGif(meme, texts, stickers, onProgress) {
+export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality = 5) {
     const exportId = crypto.randomUUID();
     let wakeLock = null;
     let tickWorker = null;
 
     try {
-        // 0. INITIALIZE PERSISTENCE & WAKE LOCK
-        // ---------------------------------------------------------
-
-        // A. Request Wake Lock (prevents screen dimming/locking on mobile)
-        if ('wakeLock' in navigator) {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-                console.log('Wake Lock active for export');
-            } catch (err) {
-                console.warn('Wake Lock failed:', err);
-            }
-        }
-
-        // B. Persist Job Start to DB (for recovery on refresh)
-        // We only save minimum needed to restart: the meme config
-        await db.activeExports.put({
-            id: exportId,
-            timestamp: Date.now(),
-            status: 'starting',
-            progress: 0,
-            type: 'gif',
-            data: { meme, texts, stickers } // Full config to restart
-        });
-
-        // 1. Load all assets (GIFs, Videos, Images)
-        if (onProgress) onProgress(10, "Loading assets...");
-        const assets = await loadMemeAssets(meme, stickers);
-
-        // 1b. Optimize Deep Fry: Pre-calculate fried versions of STATIC images
-        assets.friedImages = {};
-
-        for (const panel of meme.panels) {
-           if (assets.staticImages[panel.id] && (panel.filters?.deepFry || 0) > 0) {
-               const imgSrc = assets.staticImages[panel.id];
-               const canvas = document.createElement('canvas');
-               canvas.width = imgSrc.width;
-               canvas.height = imgSrc.height;
-               const ctx = canvas.getContext('2d');
-               ctx.drawImage(imgSrc, 0, 0);
-
-               applyDeepFry(ctx, 0, 0, canvas.width, canvas.height, panel.filters.deepFry);
-               assets.friedImages[panel.id] = canvas;
-           }
-        }
-
-        if (onProgress) onProgress(20, "Analyzing dimensions...");
-
-        // 2. Calculate Dimensions
-        let dimensions = calculateDimensions(meme, assets);
-        let { exportWidth, exportHeight } = dimensions;
-
-        // QUALITY/SPEED BALANCE:
-        const MAX_GIF_DIMENSION = 600;
-        if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
-            const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
-            exportWidth = Math.round(exportWidth * scale);
-            exportHeight = Math.round(exportHeight * scale);
-
-            dimensions = {
-                ...dimensions,
-                exportWidth,
-                exportHeight,
-                contentHeight: Math.round(dimensions.contentHeight * scale),
-                contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
-                contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
-            };
-            console.log(`Scaled GIF export dimensions to ${exportWidth}x${exportHeight}`);
-        }
+        // ... (rest of init) ...
 
         // 3. Setup GIF Encoder
         const gif = new GIF({
             workers: 4,
-            quality: 10,
+            quality: quality,
             width: exportWidth,
             height: exportHeight,
             workerScript: '/gif.worker.js',

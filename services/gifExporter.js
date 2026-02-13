@@ -39,10 +39,14 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
         tickWorker = createTickWorker();
 
         // 1. Calculate Dimensions
-        const { width: exportWidth, height: exportHeight, scale } = calculateDimensions(meme.panels, 1.0); // No max width constraint for now
+
 
         // 2. Load Assets
         const assets = await loadMemeAssets(meme, texts, stickers);
+
+        // 1. Calculate Dimensions (Fixed: Pass meme and assets, not panels/scale)
+        const dimensions = calculateDimensions(meme, assets);
+        const { exportWidth, exportHeight } = dimensions;
 
         // 3. Setup GIF Encoder
         const gif = new GIF({

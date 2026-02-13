@@ -485,14 +485,6 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
         let scale = 1;
         let opacity = 1;
 
-        // NEW: Handle Wave Text specifically (character-level animation)
-        // Since canvas text drawing is monolithic (fillText), we can't easily animate per-character
-        // UNLESS we break the text rendering into individual characters.
-        // For now, simpler animations (pulse, slide, shake) are applied to the whole text block.
-        // Complex per-character wave needs significant refactoring of wrapText, so we fallback
-        // to a simpler "bob" or "shake" for Wave text in export for V1.
-        // Future optimization: Implement per-character drawing in wrapText.
-
         if (text.animation && text.animation !== 'none') {
             const anim = getAnimationById(text.animation);
             if (anim && anim.getTransform) {
@@ -577,133 +569,161 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
             }
         }
 
-        if (text.animation === 'wave') {
-             // CHARACTER-LEVEL ANIMATION (WAVE)
-             // We need to split lines/words/chars and draw them individually
-             // to match the CSS animation which uses per-char delays.
+        // DOUBLE DRAW TECHNIQUE:
+        // 1. Draw Shadow Pass (Offset + Blurred + Dark)
+        // 2. Draw Clean Pass (No Shadow)
+        // This prevents the shadow from being drawn ON TOP of the text stroke/fill
+        // which makes it look "muddy" or "dirty" compared to CSS drop-shadow.
 
-             // FIX: Reset block-level animation offsets to prevent double application
-             // (Since the block above calculated a "default" transform for the whole block logic)
-             xOffset = 0;
-             yOffset = 0;
-             rotation = 0;
-             scale = 1;
-             opacity = 1;
+        const renderTextPass = (isShadowPass) => {
+             ctx.save();
 
-             const lines = text.content.split('\n');
-             let globalCharIndex = 0;
-             const lineHeight = fontSize * 1.2;
+             if (isShadowPass) {
+                 // Configure Shadow
+                 ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                 ctx.shadowBlur = 2 * (exportWidth / 800);
+                 ctx.shadowOffsetX = 0;
+                 ctx.shadowOffsetY = 2 * (exportWidth / 800);
+                 // We only need to draw *something* to cast the shadow.
+                 // Ideally just the stroke to create the outline shadow?
+                 // Actually CSS drop-shadow follows the alpha mask of the element.
+                 // So we should draw full text.
+             } else {
+                 // Clean Pass - No Shadow
+                 ctx.shadowColor = 'transparent';
+                 ctx.shadowBlur = 0;
+                 ctx.shadowOffsetX = 0;
+                 ctx.shadowOffsetY = 0;
+             }
 
-             lines.forEach((lineStr, lineIdx) => {
-                 // Calculate where this line starts vertically
-                 // Center block of text around y
-                 const totalBlockHeight = lines.length * lineHeight;
-                 const lineYBase = y + (lineIdx * lineHeight) - (totalBlockHeight / 2) + (lineHeight / 2);
+             if (text.animation === 'wave') {
+                  // CHARACTER-LEVEL ANIMATION (WAVE)
+                  // We need to split lines/words/chars and draw them individually
+                  // to match the CSS animation which uses per-char delays.
 
-                 // Measure total line width to center it horizontally
-                 const lineWidth = ctx.measureText(lineStr).width;
-                 let currentX = x - (lineWidth / 2); // Start X for this line
+                  // FIX: Reset block-level animation offsets to prevent double application
+                  // (Since the block above calculated a "default" transform for the whole block logic)
+                  const waveXOffset = 0;
+                  const waveYOffset = 0;
+                  const waveRotation = 0;
+                  const waveScale = 1;
+                  // const waveOpacity = 1; // Already handled by globalAlpha?
 
-                 // Iterate chars
-                 const chars = lineStr.split('');
-                 chars.forEach((char) => {
-                     const charWidth = ctx.measureText(char).width;
+                  const lines = text.content.split('\n');
+                  let globalCharIndex = 0;
+                  const lineHeight = fontSize * 1.2;
 
-                     // Calculate Transform for this CHAR
-                     let charXOffset = 0;
-                     let charYOffset = 0;
-                     let charRotation = 0;
-                     let charScale = 1;
-                     let charOpacity = 1;
+                  lines.forEach((lineStr, lineIdx) => {
+                      // Calculate where this line starts vertically
+                      // Center block of text around y
+                      const totalBlockHeight = lines.length * lineHeight;
+                      const lineYBase = y + (lineIdx * lineHeight) - (totalBlockHeight / 2) + (lineHeight / 2);
 
-                     const anim = getAnimationById('wave');
-                     if (anim && anim.getTransform) {
-                         const currentTimeMs = (effectiveTimeMs !== undefined) ? effectiveTimeMs : 0;
-                         const animDurationMs = anim.duration || 1000;
-                         const animProgress = (currentTimeMs % animDurationMs) / animDurationMs;
-                         const virtualFrameIndex = animProgress * totalFrames;
+                      // Measure total line width to center it horizontally
+                      const lineWidth = ctx.measureText(lineStr).width;
+                      let currentX = x - (lineWidth / 2); // Start X for this line
 
-                         // PASS CHAR INDEX for phase shift
-                         const t = anim.getTransform(virtualFrameIndex, totalFrames, globalCharIndex);
-                         charXOffset = (t.offsetX || 0) * (exportWidth / 800);
-                         charYOffset = (t.offsetY || 0) * (exportWidth / 800);
-                         charRotation = (t.rotation || 0) * (Math.PI / 180);
-                         charScale = t.scale || 1;
-                         charOpacity = t.opacity ?? 1;
+                      // Iterate chars
+                      const chars = lineStr.split('');
+                      chars.forEach((char) => {
+                          const charWidth = ctx.measureText(char).width;
+
+                          // Calculate Transform for this CHAR
+                          let charXOffset = 0;
+                          let charYOffset = 0;
+                          let charRotation = 0;
+                          let charScale = 1;
+                          let charOpacity = 1;
+
+                          const anim = getAnimationById('wave');
+                          if (anim && anim.getTransform) {
+                              // We need effectiveTimeMs here... passed as argument?
+                              // Or rely on closure if we move this inside?
+                              // Re-calculating for now.
+                              // Wait, we need `effectiveTimeMs` which isn't in scope?
+                              // Ah, `currentTimeMs` IS passed to `drawText`.
+                              // And `totalFrames` too.
+                              const animDurationMs = anim.duration || 1000;
+                              const animProgress = (currentTimeMs % animDurationMs) / animDurationMs;
+                              const virtualFrameIndex = animProgress * totalFrames;
+
+                              // PASS CHAR INDEX for phase shift
+                              const t = anim.getTransform(virtualFrameIndex, totalFrames, globalCharIndex);
+                              charXOffset = (t.offsetX || 0) * (exportWidth / 800);
+                              charYOffset = (t.offsetY || 0) * (exportWidth / 800);
+                              charRotation = (t.rotation || 0) * (Math.PI / 180);
+                              charScale = t.scale || 1;
+                              charOpacity = t.opacity ?? 1;
+                          }
+
+                          ctx.save();
+                          ctx.globalAlpha = opacity * charOpacity;
+                          ctx.translate(currentX + (charWidth/2) + waveXOffset + charXOffset, lineYBase + waveYOffset + charYOffset);
+                          ctx.rotate(rotation + charRotation); // Add base rotation too?
+                          ctx.scale(scale * charScale, scale * charScale);
+
+                          // Draw Text
+                          if (ctx.lineWidth > 0) ctx.strokeText(char, 0, 0);
+                          ctx.fillText(char, 0, 0);
+
+                          ctx.restore();
+
+                          currentX += charWidth;
+                          if (char.trim() !== '') globalCharIndex++;
+                      });
+                  });
+
+             } else {
+                 // BLOCK-LEVEL ANIMATION (Legacy/Standard)
+                 // Apply Transform to the whole block
+
+                 // Apply Animation Transforms
+                 ctx.translate(x + xOffset, y + yOffset);
+                 ctx.rotate(rotation);
+                 ctx.scale(scale, scale); // Apply scale here
+
+                 // Wrap Text
+                 const maxWidth = (text.maxWidth || 90) / 100 * exportWidth;
+                 const lineHeight = fontSize * 1.2;
+
+                 const words = text.content.split(' ');
+                 let line = '';
+                 let lines = [];
+
+                 for (let n = 0; n < words.length; n++) {
+                     const testLine = line + words[n] + ' ';
+                     const metrics = ctx.measureText(testLine);
+                     const testWidth = metrics.width;
+                     if (testWidth > maxWidth && n > 0) {
+                         lines.push(line);
+                         line = words[n] + ' ';
+                     } else {
+                         line = testLine;
+                     }
+                 }
+                 lines.push(line);
+
+                 lines.forEach((l, i) => {
+                     // Center vertically
+                     const lineY = (i - (lines.length - 1) / 2) * lineHeight;
+
+                     // Draw Stroke (Outline)
+                     if (ctx.lineWidth > 0) {
+                          ctx.strokeText(l, 0, lineY);
                      }
 
-                     ctx.save();
-                     ctx.globalAlpha = opacity * charOpacity;
-                     ctx.translate(currentX + (charWidth/2) + xOffset + charXOffset, lineYBase + yOffset + charYOffset);
-                     ctx.rotate(rotation + charRotation);
-                     ctx.scale(scale * charScale, scale * charScale);
-
-                     // Shadow
-                     ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                     ctx.shadowBlur = 2 * (exportWidth / 800);
-                     ctx.shadowOffsetX = 0;
-                     ctx.shadowOffsetY = 2 * (exportWidth / 800);
-
-                     // Text Stroke & Fill
-                     if (ctx.lineWidth > 0) ctx.strokeText(char, 0, 0);
-                     ctx.fillText(char, 0, 0);
-
-                     ctx.restore();
-
-                     currentX += charWidth;
-                     if (char.trim() !== '') globalCharIndex++;
+                     // Draw Fill
+                     ctx.fillText(l, 0, lineY);
                  });
-             });
+             }
+             ctx.restore();
+        };
 
-        } else {
-            // BLOCK-LEVEL ANIMATION (Legacy/Standard)
-            // Apply Transform to the whole block
+        // PASS 1: Shadow
+        renderTextPass(true);
 
-            // Apply Animation Transforms
-            ctx.translate(x + xOffset, y + yOffset);
-            ctx.rotate(rotation);
-            ctx.scale(scale, scale); // Apply scale here
-
-            // FIX: Add Drop Shadow to match CSS "drop-shadow(0px 2px 2px rgba(0,0,0,0.8))"
-            ctx.shadowColor = 'rgba(0,0,0,0.8)';
-            ctx.shadowBlur = 2 * (exportWidth / 800); // Scale blur
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 2 * (exportWidth / 800); // Scale offset
-
-            // Wrap Text
-            const maxWidth = (text.maxWidth || 90) / 100 * exportWidth;
-            const lineHeight = fontSize * 1.2;
-
-            const words = text.content.split(' ');
-            let line = '';
-            let lines = [];
-
-            for (let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' ';
-                const metrics = ctx.measureText(testLine);
-                const testWidth = metrics.width;
-                if (testWidth > maxWidth && n > 0) {
-                    lines.push(line);
-                    line = words[n] + ' ';
-                } else {
-                    line = testLine;
-                }
-            }
-            lines.push(line);
-
-            lines.forEach((l, i) => {
-                // Center vertically
-                const lineY = (i - (lines.length - 1) / 2) * lineHeight;
-
-                // Draw Stroke (Outline)
-                if (ctx.lineWidth > 0) {
-                     ctx.strokeText(l, 0, lineY);
-                }
-
-                // Draw Fill
-                ctx.fillText(l, 0, lineY);
-            });
-        }
+        // PASS 2: Clean Text
+        renderTextPass(false);
 
         ctx.restore();
     });

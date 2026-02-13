@@ -13,6 +13,7 @@ function mapGiphyResult(item) {
     width: parseInt(item.images.original.width, 10),
     height: parseInt(item.images.original.height, 10),
     isSticker: !!item.import_datetime, // Rough check, or we pass context
+    source: 'giphy',
   };
 }
 

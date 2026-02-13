@@ -24,6 +24,7 @@ const ImageSourceTabs = lazy(() => import("../MemeEditor/ImageSourceTabs"));
 const MemeToolbar = lazy(() => import("../MemeEditor/MemeToolbar"));
 
 const LayoutSelector = lazy(() => import("../MemeEditor/LayoutSelector").then(module => ({ default: module.LayoutSelector })));
+import { ShareQualityModal } from "../Modals/ShareQualityModal";
 const ExportConfirmModal = lazy(() => import("../Modals/ExportConfirmModal").then(module => ({ default: module.ExportConfirmModal })));
 const SnippetSuccessModal = lazy(() => import("../Modals/SnippetSuccessModal").then(module => ({ default: module.SnippetSuccessModal })));
 import { ToastIcon } from "../ui/ToastIcon";
@@ -407,6 +408,9 @@ export default function Main() {
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showShareQualityModal, setShowShareQualityModal] = useState(false);
+  const shareQualityResolveRef = useRef(null);
+  const exportResolveRef = useRef(null);
   const [isStickerExport, setIsStickerExport] = useState(false);
 
   // Cropper state
@@ -1171,6 +1175,8 @@ export default function Main() {
                 url: first.url,
                 sourceUrl: first.shareUrl,
                 isVideo: !!isVideo,
+                isGif: !isVideo,
+                source: first.source || 'giphy',
                 sourceBlob: null,
                 objectFit: "cover",
                 posX: 50,
@@ -1183,11 +1189,6 @@ export default function Main() {
           ...prev,
           panels: newPanels,
           name: first.name.replace(/\s+/g, "-"),
-          // Keep mode as video if it's a video, otherwise determine best mode or keep current?
-          // Actually if it's a GIF, 'video' mode is usually fine as it implies "Time-based media"
-          // But let's check if 'gif' mode exists.
-          // Looking at defaultState, mode is "image".
-          // If we load a GIF/Video, users usually expect "video" controls (timeline etc).
           mode: "video",
           fontSize: calculateSmartFontSize(first.width, first.height, prev.texts),
         };
@@ -1229,7 +1230,7 @@ export default function Main() {
         updateState((prev) => {
           const newPanels = prev.panels.map(p =>
             p.id === prev.activePanelId
-              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: isVideo, sourceBlob: null, objectFit: "cover", posX: 50, posY: 50, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
+              ? { ...p, url: newMeme.url, sourceUrl: newMeme.shareUrl, isVideo: isVideo, isGif: !isVideo, source: newMeme.source || 'giphy', sourceBlob: null, objectFit: "cover", posX: 50, posY: 50, filters: { ...DEFAULT_FILTERS }, processedImage: null, processedDeepFryLevel: 0 }
               : p
           );
           return {
@@ -1375,6 +1376,8 @@ export default function Main() {
               url: selectedMedia,
               sourceUrl: sourceUrl,
               isVideo: isVideo,
+              isGif: !isVideo && !!sourceUrl,
+              source: sourceUrl ? 'giphy' : 'imgflip',
               objectFit: "cover",
               filters: chaosFilters,
               processedImage: null,
@@ -2644,6 +2647,7 @@ export default function Main() {
                 sourceBlob: isProcessed ? null : file,
                 isVideo: isVideo,
                 isGif: isGif,
+                source: 'upload',
                 objectFit: "cover",
                 posX: 50,
                 posY: 50,
@@ -2733,6 +2737,7 @@ export default function Main() {
                   sourceBlob: isProcessed ? null : file,
                   isVideo: isVideo,
                   isGif: isGif,
+                  source: 'upload',
                   objectFit: "cover",
                   posX: 50,
                   posY: 50,
@@ -3539,25 +3544,33 @@ export default function Main() {
       let isMp4 = false;
 
       if (isAnimated) {
-        // DETECT VIDEO CONTENT VS GIF CONTENT
-        // Strategy: Use PERSISTED 'source' property if available, otherwise heuristic.
-        // Pexels Video = 'pexels_video'
-        // Tenor GIF = 'tenor' (or p.url includes tenor)
-        // User Upload = 'upload' (could be gif or mp4, we check p.isVideo)
+        // DETECT: True video (MP4) vs GIF
+        // MP4 only for: Pexels videos OR user-uploaded MP4s (NOT GIFs)
+        // Everything else animated → GIF export
+        const hasTrueVideo = meme.panels.some(p =>
+          p.source === 'pexels_video' ||
+          (p.source === 'upload' && p.isVideo && !p.isGif)
+        );
 
-        const hasVideoPanel = meme.panels.some(p => p.isVideo || p.isGif || (p.url && p.url.includes('.gif')));
-
-        // Accurate Detection:
-        const isPexelsVideo = meme.panels.some(p => p.source === 'pexels_video');
-        const isUserVideo = meme.panels.some(p => p.source === 'upload' && p.isVideo && !p.url.includes('tenor') && !p.url.includes('giphy'));
-
-        // If it's a Pexels video OR a user-uploaded MP4 (not a GIF), export as MP4.
-        // Tenor GIFs (source='tenor' or url matches) will default to GIF.
-        if (isPexelsVideo || isUserVideo) {
+        if (hasTrueVideo) {
             isMp4 = true;
         }
 
         if (isMp4) {
+           // Show quality picker and wait for user selection
+           const quality = await new Promise((resolve) => {
+             shareQualityResolveRef.current = resolve;
+             setShowShareQualityModal(true);
+           });
+           setShowShareQualityModal(false);
+           shareQualityResolveRef.current = null;
+
+           if (!quality) {
+             // User cancelled
+             toast.dismiss(toastId);
+             return;
+           }
+
            toast.loading("Encoding Video...", { id: toastId });
            const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
 
@@ -3565,11 +3578,11 @@ export default function Main() {
              toast.loading(`${msg} (${pct}%)`, { id: toastId });
            };
 
-           blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress);
+           blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality);
            filename = `meme-${Date.now()}.mp4`;
            file = new File([blob], filename, { type: "video/mp4" });
         } else {
-           // Fallback to GIF for Tenor/Stickers/Text
+           // GIF export for Giphy/Tenor GIFs, animated stickers, animated text
            toast.loading("Encoding GIF...", { id: toastId });
            const { exportGif } = await import("../../services/gifExporter");
            blob = await exportGif(meme, meme.texts, meme.stickers);
@@ -3912,7 +3925,26 @@ export default function Main() {
 
         return (
           <>
-            {/* Export Confirmation Modal */}
+            {/* Quality Selection Modal */}
+      <ShareQualityModal
+        isOpen={showShareQualityModal}
+        onClose={() => {
+          setShowShareQualityModal(false);
+          if (shareQualityResolveRef.current) {
+            shareQualityResolveRef.current(null);
+            shareQualityResolveRef.current = null;
+          }
+        }}
+        onSelect={(quality) => {
+          setShowShareQualityModal(false);
+          if (shareQualityResolveRef.current) {
+            shareQualityResolveRef.current(quality);
+            shareQualityResolveRef.current = null;
+          }
+        }}
+      />
+
+      {/* Export Confirmation Modal */}
             <Suspense fallback={null}>
               <ExportConfirmModal
                 isOpen={showExportModal}

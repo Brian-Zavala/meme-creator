@@ -10,7 +10,16 @@ import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnim
  * @param {Function} onProgress - Progress callback (percentage, statusMessage)
  * @returns {Promise<Blob>} - The generated MP4 blob
  */
-export async function exportMemeAsMp4(meme, texts, stickers, onProgress) {
+/**
+ * Exports a meme as an MP4 video using WebCodecs and mp4-muxer
+ * @param {Object} meme - The meme state
+ * @param {Array} texts - Text overlays
+ * @param {Array} stickers - Stickers
+ * @param {Function} onProgress - Progress callback (percentage, statusMessage)
+ * @param {string} quality - Quality preset ('high', 'medium', 'low')
+ * @returns {Promise<Blob>} - The generated MP4 blob
+ */
+export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality = 'medium') {
     if (!("VideoEncoder" in window)) {
         throw new Error("WebCodecs (VideoEncoder) is not supported in this browser.");
     }
@@ -40,6 +49,17 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress) {
     let dimensions = calculateDimensions(meme, assets);
     let { exportWidth, exportHeight } = dimensions;
 
+    // Apply Quality Scaling
+    const QUALITY_SETTINGS = {
+        high: { scale: 1.0, bitrate: 4_000_000 },
+        medium: { scale: 0.75, bitrate: 1_500_000 },
+        low: { scale: 0.5, bitrate: 800_000 }
+    };
+    const settings = QUALITY_SETTINGS[quality] || QUALITY_SETTINGS.medium;
+
+    exportWidth = Math.round(exportWidth * settings.scale);
+    exportHeight = Math.round(exportHeight * settings.scale);
+
     // MP4 specific: Dimensions must be even for H.264
     if (exportWidth % 2 !== 0) exportWidth++;
     if (exportHeight % 2 !== 0) exportHeight++;
@@ -51,7 +71,7 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress) {
         exportHeight
     };
 
-    console.log(`Exporting MP4: ${exportWidth}x${exportHeight}`);
+    console.log(`Exporting MP4 (${quality}): ${exportWidth}x${exportHeight} @ ${settings.bitrate / 1000}kbps`);
 
     // 3. Determine Duration and FPS
     // For MP4, we want a smoother 30FPS vs GIF's 10FPS
@@ -105,7 +125,7 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress) {
         codec: 'avc1.4d002a', // Main Profile Level 4.2 (Supports up to 1080p @ 60fps)
         width: exportWidth,
         height: exportHeight,
-        bitrate: 4_000_000, // 4 Mbps - High quality for HD video
+        bitrate: settings.bitrate,
         framerate: FPS
     });
 

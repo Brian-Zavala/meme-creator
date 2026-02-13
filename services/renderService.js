@@ -4,6 +4,20 @@ import { GifReader } from 'omggif';
 import { getAnimationById, hasAnimatedText, calculateGifLoopDuration } from '../constants/textAnimations';
 
 /* =========================================================================================
+   ENV HELPERS
+   ========================================================================================= */
+
+export function createGenericCanvas(w, h) {
+    if (typeof OffscreenCanvas !== 'undefined') {
+        return new OffscreenCanvas(w, h);
+    }
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    return c;
+}
+
+/* =========================================================================================
    ASSET LOADING AND PROCESSING
    ========================================================================================= */
 
@@ -39,15 +53,11 @@ export async function createGifProcessor(url) {
         }
 
         // Canvas to hold the CURRENT state of the GIF (accumulated frames)
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        const canvas = createGenericCanvas(width, height);
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         // Helper for decoding
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = width;
-        tempCanvas.height = height;
+        const tempCanvas = createGenericCanvas(width, height);
         const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
         const rawFrameData = new Uint8ClampedArray(width * height * 4);
 
@@ -64,18 +74,26 @@ export async function createGifProcessor(url) {
 
             // Returns the correct frame index for a specific time (ms) in the loop
             getFrameAtTime: (timeMs) => {
-                if (numFrames <= 1) return 0;
-                // Handle looping
-                const t = timeMs % totalDuration;
+                if (numFrames <= 0) return 0;
+                if (timeMs < 0) timeMs = 0;
 
-                // Find frame where accum[i] <= t < accum[i+1]
-                // accum array has numFrames + 1 entries
-                // We want to find the first index where cumulativeDelays[index] > t
-                // Then the frame index is index - 1
-                const idx = cumulativeDelays.findIndex(d => d > t);
+                // Handle looping using robust modulo (works for any duration)
+                const t = totalDuration > 0 ? timeMs % totalDuration : 0;
 
-                // If not found (shouldn't happen if logic is correct, but safe fallback), return last frame
-                return idx === -1 ? numFrames - 1 : Math.max(0, idx - 1);
+                // Deterministic Frame Selection:
+                // Find frame `i` such that cumulativeDelays[i] <= t < cumulativeDelays[i+1]
+                // cumulativeDelays = [0, endOfFrame0, endOfFrame1, ...]
+
+                for (let i = 0; i < numFrames; i++) {
+                    // cumulativeDelays[i] is the start time of frame i
+                    // cumulativeDelays[i+1] is the end time of frame i
+                    if (t < cumulativeDelays[i+1]) {
+                        return i;
+                    }
+                }
+
+                // Fallback: If for some reason t >= last end time (e.g. float precision), return last frame
+                return numFrames - 1;
             },
 
             // getDelay returns delay in centiseconds (1/100s) - GIF format standard
@@ -154,7 +172,55 @@ export async function createGifProcessor(url) {
 }
 
 
-export async function createVideoProcessor(url) {
+export async function createVideoProcessor(url, options = {}) {
+    const { fetchVideoFrame, panelId, metadata } = options;
+
+    // WORKER PATH WITH PROXY
+    if (typeof document === 'undefined') {
+        if (fetchVideoFrame && panelId && metadata) {
+            const { width, height, duration } = metadata;
+            const fps = 30;
+            const numFrames = Math.floor(duration * fps);
+
+            return {
+                width: width || 1920,
+                height: height || 1080,
+                getDuration: () => duration * 1000,
+                numFrames: numFrames || 1,
+                isProxy: true,
+                panelId,
+
+                // Support both time-based and frame-based access
+                getFrameAtTime: (timeMs) => {
+                    return timeMs; // Just pass time through to renderFrame
+                },
+
+                renderFrame: async (frameIndexOrTime) => {
+                    // If it looks like a frame index (small integer), convert to time
+                    // But if we used getFrameAtTime, we returned timeMs.
+                    let timeMs = frameIndexOrTime;
+
+                    // Fallback for direct index usage
+                    if (frameIndexOrTime < numFrames && frameIndexOrTime % 1 === 0 && frameIndexOrTime < 1000) {
+                        timeMs = (frameIndexOrTime / fps) * 1000;
+                    }
+
+                    try {
+                        const bitmap = await fetchVideoFrame(panelId, timeMs, 'FRAME');
+                        return { canvas: bitmap, dispose: true };  // Mark for cleanup
+                    } catch (e) {
+                         console.warn("Proxy frame fetch failed", e);
+                         return { canvas: null };
+                    }
+                }
+            };
+        }
+
+        console.warn("createVideoProcessor called in worker without proxy - returning null");
+        resolve(null);
+        return;
+    }
+
     return new Promise((resolve) => {
         const video = document.createElement('video');
         // FIX: Do NOT set crossOrigin for blob/data URLs (local uploads)
@@ -292,7 +358,7 @@ export async function createVideoProcessor(url) {
     });
 }
 
-export async function loadMemeAssets(meme, stickers) {
+export async function loadMemeAssets(meme, stickers, videoProxyPort) {
     const gifProcessors = {};
     const staticImages = {};
     const stickerProcessors = {};
@@ -339,6 +405,80 @@ export async function loadMemeAssets(meme, stickers) {
         }
     };
 
+    // Helper: abstract image loading for Main Thread (Image) vs Worker (ImageBitmap)
+    const loadGenericImage = async (url, item) => {
+        if (!url) return null;
+
+        // WORKER PATH: Use fetch + createImageBitmap
+        if (typeof document === 'undefined' && typeof createImageBitmap !== 'undefined') {
+            try {
+                // Determine source: URL or Blob?
+                let source = url;
+                if (url.startsWith('blob:') && item.sourceBlob instanceof Blob) {
+                    // Blob URLs might not work in worker if not created there?
+                    // Actually blob URLs are usually origin-bound.
+                    // But if passed from main, they might work.
+                    // Safer: use the Blob directly if available.
+                    source = item.sourceBlob;
+                }
+
+                // If it's a string URL, fetch it first
+                if (typeof source === 'string') {
+                    const resp = await fetch(source);
+                    source = await resp.blob();
+                }
+
+                return await createImageBitmap(source);
+            } catch (e) {
+                console.warn("Worker image load failed:", e);
+                return null;
+            }
+        }
+
+        // MAIN THREAD PATH: Use HTMLImageElement
+        return loadImageWithFallback(item);
+    };
+
+    // Setup Video Proxy Helper if port is provided
+    let fetchVideoFrame = null;
+    let videoMetadata = {}; // cache for width/height/duration
+
+    if (videoProxyPort) {
+        let reqIdCounter = 0;
+        const pendingRequests = new Map();
+
+        videoProxyPort.onmessage = (e) => {
+            const { reqId, bitmap, error, meta } = e.data;
+            if (pendingRequests.has(reqId)) {
+                const { resolve, reject } = pendingRequests.get(reqId);
+                pendingRequests.delete(reqId);
+                if (error) reject(new Error(error));
+                else resolve(meta || bitmap);
+            }
+        };
+
+        fetchVideoFrame = (panelId, timeMs, type = 'FRAME') => {
+            return new Promise((resolve, reject) => {
+                 const reqId = ++reqIdCounter;
+                 pendingRequests.set(reqId, { resolve, reject });
+                 videoProxyPort.postMessage({ reqId, panelId, timeMs, type });
+            });
+        };
+
+        // Initial Metadata Load
+        const videoPanels = meme.panels.filter(p => !p.isGif && (p.isVideo || (p.url && p.url.match(/\.(mp4|webm|mov)$/i))));
+
+        // We need to fetch metadata for all video panels first
+        await Promise.all(videoPanels.map(async p => {
+             try {
+                 const meta = await fetchVideoFrame(p.id, 0, 'METADATA');
+                 videoMetadata[p.id] = meta;
+             } catch (e) {
+                 console.warn(`Failed to fetch metadata for panel ${p.id}`, e);
+             }
+        }));
+    }
+
     await Promise.all(meme.panels.map(async (panel) => {
         const url = getLoadableUrl(panel);
         if (!url) return;
@@ -368,14 +508,18 @@ export async function loadMemeAssets(meme, stickers) {
                 processor = await createGifProcessor(freshUrl);
             }
         } else if (isVideo) {
-            processor = await createVideoProcessor(url);
+            processor = await createVideoProcessor(url, {
+                fetchVideoFrame,
+                panelId: panel.id,
+                metadata: videoMetadata[panel.id]
+            });
         }
 
         if (processor) {
             gifProcessors[panel.id] = processor;
         } else if (!isGif || !processor) {
             // Fallback to Static Image (if not animated or processor failed)
-            const img = await loadImageWithFallback(panel);
+            const img = await loadGenericImage(url, panel);
             if (img) staticImages[panel.id] = img;
         }
     }));
@@ -393,7 +537,7 @@ export async function loadMemeAssets(meme, stickers) {
         }
 
         if (!processor) {
-            const img = await loadImageWithFallback(s);
+            const img = await loadGenericImage(getLoadableUrl(s), s);
             if (img) stickerImages[s.id] = img;
         }
     }));
@@ -765,11 +909,7 @@ export function applyDeepFry(ctx, x, y, w, h, intensity = 50) {
 
         // JPEG Artifacting simulation (using low quality scale/draw)
         // Draw to small temporary canvas then scale back up
-        const smallCanvas = document.createElement('canvas');
-        const sw = Math.max(1, w / (1 + intensity / 20));
-        const sh = Math.max(1, h / (1 + intensity / 20));
-        smallCanvas.width = sw;
-        smallCanvas.height = sh;
+        const smallCanvas = createGenericCanvas(sw, sh);
         const sctx = smallCanvas.getContext('2d');
         sctx.drawImage(ctx.canvas, x, y, w, h, 0, 0, sw, sh);
 
@@ -911,6 +1051,11 @@ export async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, as
                 const offY = py + (ph - newH) / 2;
 
                 ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
+
+                // Cleanup Proxy Bitmaps to prevent memory leaks in Worker
+                if (result && result.dispose && sourceCanvas && typeof sourceCanvas.close === 'function') {
+                    sourceCanvas.close();
+                }
 
                 // Only apply per-frame deep fry if it wasn't pre-calculated
                 if (!isPreFried && (f.deepFry || 0) > 0) {

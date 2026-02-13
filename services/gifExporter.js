@@ -32,175 +32,65 @@ function createTickWorker() {
 export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality = 5) {
     const exportId = crypto.randomUUID();
     let wakeLock = null;
-    let tickWorker = null;
 
     try {
         if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
-        tickWorker = createTickWorker();
 
-        // 1. Calculate Dimensions
-
-
-        // 2. Load Assets
-        const assets = await loadMemeAssets(meme, texts, stickers);
-
-        // 1. Calculate Dimensions (Fixed: Pass meme and assets, not panels/scale)
-        const dimensions = calculateDimensions(meme, assets);
-        const { exportWidth, exportHeight } = dimensions;
-
-        // 3. Setup GIF Encoder
-        const gif = new GIF({
-            workers: 4,
-            quality: quality,
-            width: exportWidth,
-            height: exportHeight,
-            workerScript: '/gif.worker.js',
-            dither: true
-        });
-
-        if (onProgress) onProgress(30, "Rendering frames...");
-
-        // 4. Frame Logic & TIMING
-        const { gifProcessors, staticImages } = assets;
-
-        // STEP 1: Determine Optimal Frame Delay
-        let minDelay = 100;
-        let hasAnimatedAssets = false;
-
-        const allProcessors = [
-            ...Object.values(gifProcessors),
-            ...Object.values(assets.stickerProcessors)
-        ];
-
-        if (allProcessors.length > 0) {
-            hasAnimatedAssets = true;
-            allProcessors.forEach(p => {
-                 if (p.getDelay) {
-                     let d = p.getDelay(0) * 10;
-                     if (d < 20) d = 100;
-                     if (d > 0) minDelay = Math.min(minDelay, d);
-                 }
-            });
-            minDelay = Math.max(50, minDelay);
-        } else if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
-            minDelay = 80;
-        } else {
-            minDelay = 100;
-        }
-
-        const delay = Math.round(minDelay / 10) * 10;
-
-        // STEP 2: Calculate Total Loop Duration
-        let maxDuration = 3000;
-
-        if (hasAnimatedAssets) {
-            allProcessors.forEach(p => {
-                let duration = 0;
-                if (p.getDuration) {
-                    duration = p.getDuration();
-                } else if (p.numFrames && p.getAllDelays) {
-                     duration = p.getAllDelays().reduce((a, b) => a + b, 0) * 10;
-                } else if (p.numFrames) {
-                     duration = p.numFrames * 100;
-                }
-                if (duration > 0) maxDuration = Math.max(maxDuration, duration);
-            });
-        }
-
-        if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
-             const textDuration = calculateGifLoopDuration(texts, stickers);
-             maxDuration = Math.max(maxDuration, textDuration);
-        }
-
-        const MAX_DURATION_MS = 5000;
-        const finalDuration = Math.min(maxDuration, MAX_DURATION_MS);
-
-        // STEP 3: Calculate Final Frame Count
-        const totalFrames = Math.ceil(finalDuration / delay);
-
-        console.log(`Exporting GIF: ${totalFrames} frames @ ${delay}ms delay (${Math.round(1000/delay)} FPS). Duration: ${finalDuration}ms`);
-
-        // 5. Render Loop with TICK WORKER protection
-        const canvas = document.createElement('canvas');
-        canvas.width = exportWidth;
-        canvas.height = exportHeight;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        // Start Tick Worker
-        tickWorker = createTickWorker();
-
-        for (let i = 0; i < totalFrames; i++) {
-            await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
-                 stickersOnly: false,
-                 totalFrames,
-                 exportDelayMs: delay
-            });
-
-            gif.addFrame(ctx, { copy: true, delay });
-
-            if (onProgress) {
-                const pct = 30 + Math.round((i / totalFrames) * 40);
-                onProgress(pct, `Rendering Frame ${i + 1}/${totalFrames}`);
-
-                // Update DB progress occasionally (every 5 frames or so)
-                if (i % 5 === 0) {
-                     db.activeExports.update(exportId, { progress: pct, status: 'rendering' }).catch(() => {});
-                }
-            }
-
-            // Yield using Tick Worker to bypass background throttling
-            await new Promise(resolve => {
-                const handler = () => {
-                    tickWorker.removeEventListener('message', handler);
-                    resolve();
-                };
-                tickWorker.addEventListener('message', handler);
-                tickWorker.postMessage('tick');
-            });
-        }
-
-        // Terminate worker when loop done
-        if (tickWorker) tickWorker.terminate();
-
-        if (onProgress) onProgress(75, "Encoding GIF...");
-        await db.activeExports.update(exportId, { progress: 75, status: 'encoding' });
-
-        // 6. Finalize
+        // WORKER IMPLEMENTATION
         return new Promise((resolve, reject) => {
-            gif.on('finished', async (blob) => {
-                if (onProgress) onProgress(100, "Done!");
+            const worker = new Worker(new URL('./exportWorker.js', import.meta.url), { type: 'module' });
 
-                // CLEANUP: Remove from active exports
-                await db.activeExports.delete(exportId);
-                if (wakeLock) await wakeLock.release().catch(() => {});
+            // Clean up helper
+            const terminate = () => {
+                worker.terminate();
+                if (wakeLock) wakeLock.release().catch(() => {});
+                db.activeExports.delete(exportId).catch(() => {});
+            };
 
-                resolve(blob);
+            worker.onmessage = (e) => {
+                const { type, payload } = e.data;
+
+                if (type === 'PROGRESS') {
+                    if (onProgress) onProgress(payload.progress, payload.message);
+                    // Update DB for recovery ?? (Optional, keeping it simple for now)
+                    if (payload.progress % 10 === 0) {
+                         db.activeExports.update(exportId, { progress: payload.progress, status: 'rendering' }).catch(() => {});
+                    }
+                } else if (type === 'DONE') {
+                    terminate();
+                    resolve(payload); // Blob
+                } else if (type === 'ERROR') {
+                    terminate();
+                    reject(new Error(payload));
+                }
+            };
+
+            worker.onerror = (err) => {
+                 console.error("Worker Error Event:", err);
+                 terminate();
+                 reject(err);
+            };
+
+            // Start Export
+            worker.postMessage({
+                type: 'START_EXPORT',
+                payload: {
+                    exportId,
+                    meme: structuredClone(meme), // Ensure structured clone compat
+                    texts: structuredClone(texts),
+                    stickers: structuredClone(stickers),
+                    quality,
+                    format: 'gif'
+                }
             });
 
-            gif.on('progress', (p) => {
-                 if (onProgress) {
-                    const pct = 75 + Math.round(p * 24);
-                    onProgress(pct, "Encoding pixels...");
-                 }
-            });
-
-            try {
-                gif.render();
-            } catch (e) {
-                reject(e);
-            }
+            // Initial DB record
+            db.activeExports.add({ id: exportId, type: 'gif', status: 'starting', progress: 0 }).catch(() => {});
         });
 
     } catch (err) {
-        // ERROR HANDLING
         console.error("Export Failed:", err);
-        // Mark as failed in DB so recovery manager knows (or just delete?)
-        // Deleting is safer to avoid recover-loops for broken memes.
-        await db.activeExports.delete(exportId).catch(() => {});
-
         if (wakeLock) await wakeLock.release().catch(() => {});
-        if (tickWorker) tickWorker.terminate();
-
         throw err;
     }
 }

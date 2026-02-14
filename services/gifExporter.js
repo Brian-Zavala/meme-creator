@@ -31,7 +31,7 @@ function createTickWorker() {
 
 import { VideoFrameProvider } from './VideoFrameProvider';
 
-export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality = 5) {
+export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality = 5, action = 'download') {
     const exportId = crypto.randomUUID();
     let wakeLock = null;
     let videoProvider = null;
@@ -105,7 +105,8 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
                     meme: structuredClone(meme),
                     texts: structuredClone(texts),
                     stickers: structuredClone(stickers),
-                    quality
+                    quality,
+                    action
                 }
             }).catch(() => {});
         });

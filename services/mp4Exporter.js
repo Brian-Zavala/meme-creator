@@ -22,7 +22,7 @@ import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnim
  */
 import { VideoFrameProvider } from './VideoFrameProvider';
 
-export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality = 'medium') {
+export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality = 'medium', action = 'download') {
     if (!("VideoEncoder" in window)) {
         throw new Error("WebCodecs (VideoEncoder) is not supported in this browser.");
     }
@@ -99,7 +99,8 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
                     meme: structuredClone(meme),
                     texts: structuredClone(texts),
                     stickers: structuredClone(stickers),
-                    quality
+                    quality,
+                    action
                 }
             }).catch(() => {});
         });

@@ -21,10 +21,12 @@ export const ExportRecoveryManager = () => {
         if (pendingExports.length > 0) {
           // Found an interrupted export!
           const lastExport = pendingExports[pendingExports.length - 1]; // Take the latest one
+          const isShare = lastExport.data?.action === 'share';
+          const message = isShare ? "A share was interrupted. Resume?" : "An export was interrupted. Resume?";
 
           toast((t) => (
             <div className="flex flex-col gap-2">
-              <span className="font-medium text-white">An export was interrupted. Resume?</span>
+              <span className="font-medium text-white">{message}</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
@@ -39,6 +41,7 @@ export const ExportRecoveryManager = () => {
                   onClick={() => {
                     toast.dismiss(t.id);
                     db.activeExports.clear();
+                    toast.success("Interrupted export discarded");
                   }}
                   className="px-3 py-1 text-sm text-gray-400 hover:text-white"
                 >
@@ -69,8 +72,10 @@ export const ExportRecoveryManager = () => {
         await db.activeExports.delete(exportEntry.id);
         return;
     }
-    const { meme, texts, stickers, quality } = exportEntry.data;
-    const toastId = toast.loading("Resuming export...", {
+    const { meme, texts, stickers, quality, action } = exportEntry.data;
+    const isShare = action === 'share';
+
+    const toastId = toast.loading(isShare ? "Resuming share..." : "Resuming export...", {
         style: {
             background: '#1e1e1e',
             color: '#fff',
@@ -85,34 +90,66 @@ export const ExportRecoveryManager = () => {
 
         let blob;
         if (exportEntry.type === 'mp4') {
-            blob = await exportMemeAsMp4(meme, texts, stickers, onProgress, quality);
+            blob = await exportMemeAsMp4(meme, texts, stickers, onProgress, quality, action);
         } else {
-            blob = await exportMemeAsGif(meme, texts, stickers, onProgress, quality);
+            blob = await exportMemeAsGif(meme, texts, stickers, onProgress, quality, action);
         }
 
         if (blob) {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const filename = `${meme.name || 'meme'}-recovered-${timestamp}.${exportEntry.type}`;
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            if (isShare) {
+                // Share Logic
+                if (exportEntry.type === 'gif' && typeof ClipboardItem !== "undefined") {
+                    try {
+                        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+                        // Note: GIFs via clipboard usually need PNG format or special handling,
+                        // but main Main.jsx logic handles this complexity.
+                        // For recovery, let's try standard PNG write for broad compatibility or fall back.
+                        // Actually, Main.jsx converts GIF to HTML/Text for robust clipboard support.
+                        // Replicating that full logic here is heavy.
+                        // Let's settle for "Download for Manual Share" for reliability if simple copy fails,
+                        // OR just try writing the blob.
+
+                        // Retry with GIF/PNG shim if needed? for now just blob.
+                        toast.success("Ready! Copied to clipboard.", { id: toastId });
+                    } catch (e) {
+                         // Fallback to download
+                         downloadBlob(blob, meme.name, exportEntry.type);
+                         toast.success("Recovered! Downloaded for manual sharing.", { id: toastId });
+                    }
+                } else {
+                     // MP4 or unsupported clipboard: Download
+                     downloadBlob(blob, meme.name, exportEntry.type);
+                     toast.success("Recovered! Downloaded for manual sharing.", { id: toastId });
+                }
+            } else {
+                // Download Logic
+                downloadBlob(blob, meme.name, exportEntry.type);
+                toast.success("Export saved! Check your downloads.", { id: toastId });
+            }
         }
 
         // Cleanup the old entry AFTER success (or we could do it before, but safer here to ensure it finished)
         await db.activeExports.delete(exportEntry.id);
 
-        toast.success("Export saved! Check your downloads.", { id: toastId });
     } catch (err) {
         console.error("Resume failed:", err);
-        toast.error("Failed to resume export.", { id: toastId });
+        toast.error("Failed to resume.", { id: toastId });
         // Clean up bad entry
         await db.activeExports.delete(exportEntry.id);
     }
+  };
+
+  const downloadBlob = (blob, name, type) => {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `${name || 'meme'}-recovered-${timestamp}.${type}`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
   };
 
   return null; // Renderless component

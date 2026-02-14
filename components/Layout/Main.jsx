@@ -3786,7 +3786,7 @@ export default function Main() {
 
              toast.loading("Encoding Video...", { id: toastId });
              const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
-             blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality);
+             blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality, 'share');
              filename = `${getSafeFilename(meme.name)}-${Date.now()}.mp4`;
              file = new File([blob], filename, { type: "video/mp4" });
            }
@@ -3804,7 +3804,7 @@ export default function Main() {
                 toast.loading("Encoding GIF...", { id: toastId });
                 const { exportMemeAsGif } = await safeImport(() => import("../../services/gifExporter"));
                 // speed=10 for fastest encoding possible
-                blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
+                blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10, 'share');
                 filename = `${getSafeFilename(meme.name)}-${Date.now()}.gif`;
                 file = new File([blob], filename, { type: "image/gif" });
            }

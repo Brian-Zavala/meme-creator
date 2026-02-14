@@ -117,21 +117,25 @@ export const ExportRecoveryManager = () => {
                         // OR just try writing the blob.
 
                         // Retry with GIF/PNG shim if needed? for now just blob.
-                        toast.success("Ready! Copied to clipboard.", { id: toastId, duration: 5000 });
+                        toast.dismiss(toastId);
+                        toast.success("Ready! Copied to clipboard.", { duration: 5000 });
                     } catch (e) {
                          // Fallback to download
                          downloadBlob(blob, meme.name, exportEntry.type);
-                         toast.success("Recovered! Downloaded for manual sharing.", { id: toastId, duration: 5000 });
+                         toast.dismiss(toastId);
+                         toast.success("Recovered! Downloaded for manual sharing.", { duration: 5000 });
                     }
                 } else {
                      // MP4 or unsupported clipboard: Download
                      downloadBlob(blob, meme.name, exportEntry.type);
-                     toast.success("Recovered! Downloaded for manual sharing.", { id: toastId, duration: 5000 });
+                     toast.dismiss(toastId);
+                     toast.success("Recovered! Downloaded for manual sharing.", { duration: 5000 });
                 }
             } else {
                 // Download Logic
                 downloadBlob(blob, meme.name, exportEntry.type);
-                toast.success("Export saved! Check your downloads.", { id: toastId, duration: 5000 });
+                toast.dismiss(toastId);
+                toast.success("Export saved! Check your downloads.", { duration: 5000 });
             }
         }
 
@@ -140,7 +144,8 @@ export const ExportRecoveryManager = () => {
 
     } catch (err) {
         console.error("Resume failed:", err);
-        toast.error("Failed to resume.", { id: toastId, duration: 5000 });
+        toast.dismiss(toastId);
+        toast.error("Failed to resume.", { duration: 5000 });
         // Clean up bad entry
         await db.activeExports.delete(exportEntry.id);
     }

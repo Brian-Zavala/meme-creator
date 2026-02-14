@@ -83,8 +83,11 @@ export const ExportRecoveryManager = () => {
         }
     });
 
+    let isFinished = false;
+
     try {
         const onProgress = (progress, message) => {
+            if (isFinished) return;
             toast.loading(`${message || 'Exporting'} (${Math.round(progress)}%)`, {
                 id: toastId,
                 style: {
@@ -103,6 +106,7 @@ export const ExportRecoveryManager = () => {
         }
 
         if (blob) {
+            isFinished = true;
             if (isShare) {
                 // Share Logic
                 if (exportEntry.type === 'gif' && typeof ClipboardItem !== "undefined") {
@@ -143,6 +147,7 @@ export const ExportRecoveryManager = () => {
         await db.activeExports.delete(exportEntry.id);
 
     } catch (err) {
+        isFinished = true;
         console.error("Resume failed:", err);
         toast.dismiss(toastId);
         toast.error("Failed to resume.", { duration: 5000 });

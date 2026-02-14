@@ -83,7 +83,7 @@ export default defineConfig({
         name: 'Meme Creator',
         short_name: 'MemeCreator',
         description: 'Create ultra-high quality memes with AI and localized processing.',
-        theme_color: '#ef4444',
+        theme_color: 'oklch(53% 0.187 39)',
         background_color: '#1a1a1a',
         display: 'standalone',
         display_override: ['window-controls-overlay', 'standalone'],

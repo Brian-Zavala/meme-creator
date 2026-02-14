@@ -96,7 +96,18 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
             }, [port2]); // Transfer port2
 
             // Initial DB record
-            db.activeExports.add({ id: exportId, type: 'gif', status: 'starting', progress: 0 }).catch(() => {});
+            db.activeExports.add({
+                id: exportId,
+                type: 'gif',
+                status: 'starting',
+                progress: 0,
+                data: {
+                    meme: structuredClone(meme),
+                    texts: structuredClone(texts),
+                    stickers: structuredClone(stickers),
+                    quality
+                }
+            }).catch(() => {});
         });
 
     } catch (err) {

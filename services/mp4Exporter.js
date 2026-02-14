@@ -1,4 +1,5 @@
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
+import { db } from './db';
 import { loadMemeAssets, renderMemeFrame, calculateDimensions, applyDeepFry } from './renderService';
 import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnimations';
 
@@ -46,6 +47,7 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
             const terminate = () => {
                 worker.terminate();
                 if (wakeLock) wakeLock.release().catch(() => {});
+                db.activeExports.delete(exportId).catch(() => {});
                 port1.close();
                 videoProvider.cleanup();
             };
@@ -55,6 +57,9 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
 
                 if (type === 'PROGRESS') {
                     if (onProgress) onProgress(payload.progress, payload.message);
+                    if (payload.progress % 10 === 0) {
+                        db.activeExports.update(exportId, { progress: payload.progress, status: 'rendering' }).catch(() => {});
+                    }
                 } else if (type === 'DONE') {
                     terminate();
                     resolve(payload); // Blob
@@ -83,6 +88,20 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
                     videoProxyPort: port2
                 }
             }, [port2]); // Transfer port2
+
+            // Initial DB record
+            db.activeExports.add({
+                id: exportId,
+                type: 'mp4',
+                status: 'starting',
+                progress: 0,
+                data: {
+                    meme: structuredClone(meme),
+                    texts: structuredClone(texts),
+                    stickers: structuredClone(stickers),
+                    quality
+                }
+            }).catch(() => {});
         });
 
     } catch (err) {

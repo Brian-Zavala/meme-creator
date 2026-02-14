@@ -50,8 +50,30 @@ async function startExport({ meme, texts, stickers, quality, format, videoProxyP
 
 async function exportGif(meme, texts, stickers, assets, quality) {
     // 1. Dimensions
-    const dimensions = calculateDimensions(meme, assets);
-    const { exportWidth, exportHeight } = dimensions;
+    // 1. Dimensions
+    let dimensions = calculateDimensions(meme, assets);
+    let { exportWidth, exportHeight } = dimensions;
+
+    // CLAMP: Prevent OOM by capping GIF size to 1200px
+    // Browsers (especially mobile) crash when encoding > 2000px GIFs
+    const MAX_GIF_DIMENSION = 1200;
+    if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
+        const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
+        exportWidth = Math.round(exportWidth * scale);
+        exportHeight = Math.round(exportHeight * scale);
+
+        // Update dimensions object for renderMemeFrame to correctly scale content
+        dimensions = {
+            ...dimensions,
+            exportWidth,
+            exportHeight,
+            // We also need to scale the internal content offsets if they exist
+            contentHeight: Math.round(dimensions.contentHeight * scale),
+            contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
+            contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
+        };
+        console.log(`[Worker] Clamped GIF dimensions to ${exportWidth}x${exportHeight}`);
+    }
 
     // 2. Setup GIF Encoder
     // Note: gif.js spawns its OWN workers.
@@ -181,6 +203,15 @@ async function exportMp4(meme, texts, stickers, assets, quality) {
 
     exportWidth = Math.round(exportWidth * settings.scale);
     exportHeight = Math.round(exportHeight * settings.scale);
+
+    // CLAMP: Cap MP4 to 1080p (1920px) to prevent mobile encoder crashes
+    const MAX_MP4_DIMENSION = 1920;
+    if (exportWidth > MAX_MP4_DIMENSION || exportHeight > MAX_MP4_DIMENSION) {
+        const scale = MAX_MP4_DIMENSION / Math.max(exportWidth, exportHeight);
+        exportWidth = Math.round(exportWidth * scale);
+        exportHeight = Math.round(exportHeight * scale);
+        console.log(`[Worker] Clamped MP4 dimensions to ${exportWidth}x${exportHeight}`);
+    }
 
     // MP4 even-dim requirement
     if (exportWidth % 2 !== 0) exportWidth++;

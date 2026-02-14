@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { db } from '../services/db';
 import { exportMemeAsGif } from '../services/gifExporter';
+import { exportMemeAsMp4 } from '../services/mp4Exporter';
 
 /**
  * Checks for interrupted exports on mount and offers to resume them.
@@ -37,7 +38,7 @@ export const ExportRecoveryManager = () => {
                 <button
                   onClick={() => {
                     toast.dismiss(t.id);
-                    db.activeExports.delete(lastExport.id);
+                    db.activeExports.clear();
                   }}
                   className="px-3 py-1 text-sm text-gray-400 hover:text-white"
                 >
@@ -63,7 +64,12 @@ export const ExportRecoveryManager = () => {
   }, []);
 
   const resumeExport = async (exportEntry) => {
-    const { meme, texts, stickers } = exportEntry.data;
+    if (!exportEntry.data) {
+        toast.error("Cannot resume: missing data");
+        await db.activeExports.delete(exportEntry.id);
+        return;
+    }
+    const { meme, texts, stickers, quality } = exportEntry.data;
     const toastId = toast.loading("Resuming export...", {
         style: {
             background: '#1e1e1e',
@@ -73,12 +79,18 @@ export const ExportRecoveryManager = () => {
     });
 
     try {
-        // Reuse export logic
-        await exportMemeAsGif(meme, texts, stickers, (progress, message) => {
-            // Update the toast directly
-            // Not ideal to update toast continually but works for visual feedback
-            // Better would be connecting to a global progress store, but for recovery this is fine.
-        });
+        const onProgress = (progress, message) => {
+            // Update the toast or UI if possible
+        };
+
+        if (exportEntry.type === 'mp4') {
+            await exportMemeAsMp4(meme, texts, stickers, onProgress, quality);
+        } else {
+            await exportMemeAsGif(meme, texts, stickers, onProgress, quality);
+        }
+
+        // Cleanup the old entry AFTER success (or we could do it before, but safer here to ensure it finished)
+        await db.activeExports.delete(exportEntry.id);
 
         toast.success("Export saved! Check your downloads.", { id: toastId });
     } catch (err) {

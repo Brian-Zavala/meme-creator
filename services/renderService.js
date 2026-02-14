@@ -65,6 +65,10 @@ export async function createGifProcessor(url) {
         let savedState = null; // For disposal = 3
         let currentFrameIndex = -1;
 
+        // CACHE: Store Frame 0 to restore on loop (prevents flicker)
+        let firstFrameData = null;
+        let firstFrameInfo = null;
+
         return {
             width,
             height,
@@ -120,16 +124,24 @@ export async function createGifProcessor(url) {
                 // OPTIMIZATION: If it's a single frame GIF (static image), NEVER reset.
                 // This prevents the "flash" when the loop restarts for background images/static stickers.
                 if (numFrames > 1 && currentFrameIndex !== -1 && frameIndex < currentFrameIndex) {
-                    // Reset state for loop
-                    // MOBILE FIX: Use fillRect with transparent before clear to ensure
-                    // canvas is in a known state on all platforms (iOS Safari fix) & prevent flickering
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.fillStyle = 'rgba(0,0,0,0)';
-                    ctx.fillRect(0, 0, width, height);
-                    ctx.clearRect(0, 0, width, height);
-                    previousInfo = null;
-                    savedState = null;
-                    currentFrameIndex = -1;
+                    if (firstFrameData) {
+                         // PERFECT RESTORE: Put Frame 0 back exactly as it was
+                         ctx.putImageData(firstFrameData, 0, 0);
+
+                         // Reset internal tracking to AFTER Frame 0
+                         currentFrameIndex = 0;
+                         previousInfo = firstFrameInfo;
+                         savedState = null;
+                    } else {
+                         // Fallback (First run logic or cache failed)
+                         ctx.globalCompositeOperation = 'source-over';
+                         ctx.fillStyle = 'rgba(0,0,0,0)';
+                         ctx.fillRect(0, 0, width, height);
+                         ctx.clearRect(0, 0, width, height);
+                         previousInfo = null;
+                         savedState = null;
+                         currentFrameIndex = -1;
+                    }
                 }
 
                 // If we missed frames (shouldn't happen in our loop), we technically should catch up.
@@ -161,6 +173,13 @@ export async function createGifProcessor(url) {
                     const imageData = new ImageData(rawFrameData, width, height);
                     tempCtx.putImageData(imageData, 0, 0);
                     ctx.drawImage(tempCanvas, 0, 0);
+
+                    // CACHE FRAME 0:
+                    // Only do this on the very first render of Frame 0
+                    if (i === 0 && !firstFrameData) {
+                         firstFrameData = ctx.getImageData(0, 0, width, height);
+                         firstFrameInfo = info;
+                    }
 
                     previousInfo = info;
                 }

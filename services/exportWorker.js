@@ -173,9 +173,9 @@ async function exportMp4(meme, texts, stickers, assets, quality) {
     let { exportWidth, exportHeight } = dimensions;
 
     const QUALITY_SETTINGS = {
-        high: { scale: 1.0, bitrate: 4_000_000 },
-        medium: { scale: 0.75, bitrate: 1_500_000 },
-        low: { scale: 0.5, bitrate: 800_000 }
+        high: { scale: 1.0, bitrate: 6_000_000, framerate: 60 },
+        medium: { scale: 0.75, bitrate: 2_500_000, framerate: 60 },
+        low: { scale: 0.5, bitrate: 1_000_000, framerate: 30 }
     };
     const settings = QUALITY_SETTINGS[quality] || QUALITY_SETTINGS.medium;
 
@@ -189,7 +189,8 @@ async function exportMp4(meme, texts, stickers, assets, quality) {
     dimensions = { ...dimensions, exportWidth, exportHeight };
 
     // 2. Duration
-    const FPS = 30;
+    // 2. Duration
+    const FPS = settings.framerate;
     const FRAME_DURATION_MS = 1000 / FPS;
     const MAX_SHARING_DURATION_MS = 60000;
     let durationMs = 1000;

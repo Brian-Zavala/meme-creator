@@ -181,7 +181,7 @@ export async function createVideoProcessor(url, options = {}) {
     if (typeof document === 'undefined') {
         if (fetchVideoFrame && panelId && metadata) {
             const { width, height, duration } = metadata;
-            const fps = 30;
+            const fps = 60; // Increase to 60 to capture smoother motion from source
             const numFrames = Math.floor(duration * fps);
 
             return {
@@ -249,7 +249,7 @@ export async function createVideoProcessor(url, options = {}) {
             const duration = (isFinite(video.duration) && video.duration > 0) ? video.duration : 5;
             const width = video.videoWidth;
             const height = video.videoHeight;
-            const fps = 30; // MP4 can use 30FPS comfortably
+            const fps = 60; // Capture at 60fps for smoother potential export
             const numFrames = Math.floor(duration * fps);
 
             const canvas = document.createElement('canvas');

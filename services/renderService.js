@@ -157,12 +157,18 @@ export async function createGifProcessor(url) {
                         const { disposal, x, y, width: fW, height: fH } = previousInfo;
                         if (disposal === 2) {
                             ctx.clearRect(x, y, fW, fH);
-                        } else if (disposal === 3 && savedState) {
-                            ctx.putImageData(savedState, 0, 0);
+                        } else if (disposal === 3) {
+                             if (savedState) {
+                                 ctx.putImageData(savedState, 0, 0);
+                             } else {
+                                 // Fallback: If savedState is lost (e.g. after loop reset),
+                                 // assume previous state was empty (Start of Loop).
+                                 ctx.clearRect(0, 0, width, height);
+                             }
                         }
                     }
 
-                    // Save state for THIS frame if needed
+                    // Save state for THIS frame if needed (BEFORE drawing)
                     if (info.disposal === 3) {
                         savedState = ctx.getImageData(0, 0, width, height);
                     }

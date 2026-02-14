@@ -1005,6 +1005,7 @@ export async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, as
             let srcW = 0, srcH = 0;
             // Check for PRE-FRIED static asset first
             let isPreFried = false;
+            let result = null;
 
             if (assets.friedImages && assets.friedImages[panel.id]) {
                 sourceCanvas = assets.friedImages[panel.id];
@@ -1020,7 +1021,7 @@ export async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, as
                 const frameIdx = proc.getFrameAtTime ? proc.getFrameAtTime(effectiveTimeMs) : frameIndex % proc.numFrames;
 
                 // ASYNC AWAIT: Needed for Video Processor (GIF processor is sync but this works for both)
-                const result = await proc.renderFrame(frameIdx);
+                result = await proc.renderFrame(frameIdx);
                 sourceCanvas = result.canvas;
                 srcW = proc.width;
                 srcH = proc.height;

@@ -445,7 +445,12 @@ export default function Main() {
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
 
   // Video Search State (Pexels)
-  const [videoSource, setVideoSource] = useState("giphy");
+  const [videoSource, setVideoSource] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("meme_video_source") || "giphy";
+    }
+    return "giphy";
+  });
   const [pexelsVideoResults, setPexelsVideoResults] = useState([]);
   const [pexelsVideoQuery, setPexelsVideoQuery] = useState("");
   const [pexelsVideoPage, setPexelsVideoPage] = useState(1);
@@ -4180,8 +4185,17 @@ export default function Main() {
                       const m = e.target.value;
                       startTransition(() => {
                         updateState((prev) => ({ ...prev, mode: m }));
-                        if (m === "image") clearSearch();
-                        getMemeImage(m);
+                        if (m === "image") {
+                          clearSearch();
+                          getMemeImage(m);
+                        } else {
+                          // Respect persisted video source preference
+                          if (videoSource === "pexels") {
+                            handleRandomVideo();
+                          } else {
+                            getMemeImage(m);
+                          }
+                        }
                       });
                     }}
                   />
@@ -4235,6 +4249,7 @@ export default function Main() {
                            activeSource={videoSource}
                            onSourceChange={(source) => {
                              setVideoSource(source);
+                             localStorage.setItem("meme_video_source", source);
                              // Reset states when switching
                              if (source === "giphy") {
                                setSearchQuery("");

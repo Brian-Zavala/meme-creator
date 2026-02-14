@@ -1,8 +1,7 @@
-import { Play, Video } from "lucide-react";
 
 const SOURCES = [
-  { id: "giphy", label: "GIFs", Icon: Play }, // Using "GIFs" label for Tenor/Giphy
-  { id: "pexels", label: "Pexels", Icon: Video },
+  { id: "giphy", label: "GIFs"  }, // Using "GIFs" label for Tenor/Giphy
+  { id: "pexels", label: "Pexels" },
 ];
 
 export default function VideoSourceTabs({ activeSource, onSourceChange }) {
@@ -10,7 +9,6 @@ export default function VideoSourceTabs({ activeSource, onSourceChange }) {
     <div className="flex p-1 bg-[#181818] rounded-xl border border-[#2f3336]">
       {SOURCES.map((source) => {
         const isActive = activeSource === source.id;
-        const Icon = source.Icon;
 
         return (
           <button
@@ -27,7 +25,6 @@ export default function VideoSourceTabs({ activeSource, onSourceChange }) {
             {isActive && (
               <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent rounded-lg border border-brand/20" />
             )}
-            <Icon className={`w-3.5 h-3.5 ${isActive ? "text-brand" : "currentColor"}`} />
             <span className="relative z-10">{source.label}</span>
           </button>
         );

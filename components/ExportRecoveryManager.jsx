@@ -83,10 +83,24 @@ export const ExportRecoveryManager = () => {
             // Update the toast or UI if possible
         };
 
+        let blob;
         if (exportEntry.type === 'mp4') {
-            await exportMemeAsMp4(meme, texts, stickers, onProgress, quality);
+            blob = await exportMemeAsMp4(meme, texts, stickers, onProgress, quality);
         } else {
-            await exportMemeAsGif(meme, texts, stickers, onProgress, quality);
+            blob = await exportMemeAsGif(meme, texts, stickers, onProgress, quality);
+        }
+
+        if (blob) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `${meme.name || 'meme'}-recovered-${timestamp}.${exportEntry.type}`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // Cleanup the old entry AFTER success (or we could do it before, but safer here to ensure it finished)

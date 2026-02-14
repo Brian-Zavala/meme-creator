@@ -3743,6 +3743,7 @@ export default function Main() {
                 // Encode GIF
                 toast.loading("Encoding GIF...", { id: toastId });
                 const { exportMemeAsGif } = await safeImport(() => import("../../services/gifExporter"));
+                // speed=10 for fastest encoding possible
                 blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10);
                 filename = `${getSafeFilename(meme.name)}-${Date.now()}.gif`;
                 file = new File([blob], filename, { type: "image/gif" });

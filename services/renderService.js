@@ -119,8 +119,10 @@ export async function createGifProcessor(url) {
                 if (currentFrameIndex !== -1 && frameIndex < currentFrameIndex) {
                     // Reset state for loop
                     // MOBILE FIX: Use fillRect with transparent before clear to ensure
-                    // canvas is in a known state on all platforms (iOS Safari fix)
+                    // canvas is in a known state on all platforms (iOS Safari fix) & prevent flickering
                     ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = 'rgba(0,0,0,0)';
+                    ctx.fillRect(0, 0, width, height);
                     ctx.clearRect(0, 0, width, height);
                     previousInfo = null;
                     savedState = null;

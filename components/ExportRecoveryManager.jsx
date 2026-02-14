@@ -41,7 +41,7 @@ export const ExportRecoveryManager = () => {
                   onClick={() => {
                     toast.dismiss(t.id);
                     db.activeExports.clear();
-                    toast.success("Interrupted export discarded");
+                    toast.success("Interrupted export discarded", { duration: 3000 });
                   }}
                   className="px-3 py-1 text-sm text-gray-400 hover:text-white"
                 >
@@ -85,7 +85,14 @@ export const ExportRecoveryManager = () => {
 
     try {
         const onProgress = (progress, message) => {
-            // Update the toast or UI if possible
+            toast.loading(`${message || 'Exporting'} (${Math.round(progress)}%)`, {
+                id: toastId,
+                style: {
+                    background: '#1e1e1e',
+                    color: '#fff',
+                    border: '1px solid #333'
+                }
+            });
         };
 
         let blob;
@@ -110,21 +117,21 @@ export const ExportRecoveryManager = () => {
                         // OR just try writing the blob.
 
                         // Retry with GIF/PNG shim if needed? for now just blob.
-                        toast.success("Ready! Copied to clipboard.", { id: toastId });
+                        toast.success("Ready! Copied to clipboard.", { id: toastId, duration: 5000 });
                     } catch (e) {
                          // Fallback to download
                          downloadBlob(blob, meme.name, exportEntry.type);
-                         toast.success("Recovered! Downloaded for manual sharing.", { id: toastId });
+                         toast.success("Recovered! Downloaded for manual sharing.", { id: toastId, duration: 5000 });
                     }
                 } else {
                      // MP4 or unsupported clipboard: Download
                      downloadBlob(blob, meme.name, exportEntry.type);
-                     toast.success("Recovered! Downloaded for manual sharing.", { id: toastId });
+                     toast.success("Recovered! Downloaded for manual sharing.", { id: toastId, duration: 5000 });
                 }
             } else {
                 // Download Logic
                 downloadBlob(blob, meme.name, exportEntry.type);
-                toast.success("Export saved! Check your downloads.", { id: toastId });
+                toast.success("Export saved! Check your downloads.", { id: toastId, duration: 5000 });
             }
         }
 
@@ -133,7 +140,7 @@ export const ExportRecoveryManager = () => {
 
     } catch (err) {
         console.error("Resume failed:", err);
-        toast.error("Failed to resume.", { id: toastId });
+        toast.error("Failed to resume.", { id: toastId, duration: 5000 });
         // Clean up bad entry
         await db.activeExports.delete(exportEntry.id);
     }

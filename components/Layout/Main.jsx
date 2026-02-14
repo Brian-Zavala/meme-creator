@@ -1503,14 +1503,21 @@ export default function Main() {
         const fonts = ["Impact", "Anton", "Archivo Black", "Bangers", "Comic Neue", "Creepster", "Oswald", "Permanent Marker", "Cinzel", "Bebas Neue", "Luckiest Guy", "Bungee", "Russo One", "Righteous", "Fredoka", "Press Start 2P", "Black Ops One"];
         const colors = ["#ffffff", "#ffff00", "#00ff00", "#ff00ff", "#00ffff", "#ff6600", "#ff0000", "#000000"];
 
-        const newTexts = randomQuote.map((line, idx) => ({
+        const newTexts = randomQuote.map((line, idx) => {
+          let baseY = idx === 0 ? 10 : (idx === 1 ? 50 : 90);
+          if (randomQuote.length === 2) {
+            baseY = idx === 0 ? 10 : 90;
+          }
+
+          return {
           id: crypto.randomUUID(),
           content: line,
-          x: 50 + (Math.random() * 10 - 5), // Slight jiggle
-          y: idx === 0 ? 10 + (Math.random() * 10 - 5) : (idx === 1 ? 50 : 90 + (Math.random() * 10 - 5)),
-          rotation: Math.floor(Math.random() * 20 - 10), // Random rotation -10 to 10
+          x: 50,
+          y: baseY,
+          rotation: 0,
           animation: null,
-        }));
+        };
+      });
 
         // Add empty text input to ensure editor is active
         newTexts.push({
@@ -1603,14 +1610,21 @@ export default function Main() {
         .map(t => t.animation);
       const currentAnimation = existingAnimations[0] || null;
 
-      const newTexts = randomQuote.map((line, idx) => ({
+      const newTexts = randomQuote.map((line, idx) => {
+        let yPos = idx === 0 ? 10 : (idx === 1 ? 50 : 90);
+        if (randomQuote.length === 2) {
+          yPos = idx === 0 ? 10 : 90;
+        }
+
+        return {
         id: crypto.randomUUID(),
         content: line,
         x: 50,
-        y: idx === 0 ? 10 : (idx === 1 ? 50 : 90),
+        y: yPos,
         rotation: 0,
         animation: currentAnimation, // Preserve animation!
-      }));
+      };
+    });
       newTexts.push({ id: crypto.randomUUID(), content: "", x: 50, y: 90, rotation: 0, animation: currentAnimation });
       return { ...prev, texts: newTexts };
     });

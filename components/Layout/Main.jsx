@@ -1551,7 +1551,9 @@ export default function Main() {
         </picture>
       );
       toast(eventName ? `${eventName} ACTIVATED!` : "CHAOS MODE ACTIVATED!", {
-        icon: chaosIcon
+        icon: chaosIcon,
+        id: "chaos-mode",
+        duration: 2000
       });
     } catch (e) {
       console.error("Chaos failed", e);
@@ -1632,7 +1634,9 @@ export default function Main() {
     toast("Caption remixed!", {
       icon: (
         <ToastIcon src="/animations/speech-bubble.json" />
-      )
+      ),
+      id: "remix-caption",
+      duration: 2000
     });
 
     showLongPressHint();
@@ -1673,7 +1677,9 @@ export default function Main() {
     toast(`Style: ${nextStyle.paletteName} ${nextStyle.fontFamily}`, {
       icon: (
         <ToastIcon src="/animations/performing-arts.json" />
-      )
+      ),
+      id: "remix-style",
+      duration: 2000
     });
   }
 
@@ -1932,7 +1938,9 @@ export default function Main() {
     toast(`${name} Mode applied!`, {
       icon: (
         <ToastIcon src="/animations/filter-frenzy.json" />
-      )
+      ),
+      id: "filter-mode",
+      duration: 2000
     });
   }
 
@@ -2017,7 +2025,9 @@ export default function Main() {
     toast(`${formatName} vibe applied!`, {
       icon: (
         <ToastIcon src="/animations/vibe-check-toast.json" />
-      )
+      ),
+      id: "vibe-check",
+      duration: 2000
     });
   }
 
@@ -2052,13 +2062,17 @@ export default function Main() {
             <source srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp" type="image/webp" />
             <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif" alt="🔥" width="32" height="32" />
           </picture>
-        )
+        ),
+        id: "deep-fry",
+        duration: 2000
       });
     } else {
       toast("Deep Fry removed", {
         icon: (
           <ToastIcon src="/animations/broom.json" />
-        )
+        ),
+        id: "deep-fry",
+        duration: 2000
       });
     }
   }
@@ -2113,7 +2127,9 @@ export default function Main() {
       }));
 
       toast(`Stickerfy: ${randomKeyword}!`, {
-        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+        id: "stickerfy",
+        duration: 2000
       });
     } catch (error) {
       console.error("Stickerfy error:", error);
@@ -2142,7 +2158,9 @@ export default function Main() {
       });
       setActiveEffects(prev => ({ ...prev, [panelId]: null }));
       toast("Nuked removed", {
-        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+        id: "nuked",
+        duration: 2000
       });
       return;
     }
@@ -2170,7 +2188,9 @@ export default function Main() {
     setActiveEffects(prev => ({ ...prev, [panelId]: 'nuked' }));
     remixClickCountRef.current.nuked = (remixClickCountRef.current.nuked || 0) + 1;
     toast("Nuked applied", {
-      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+      id: "nuked",
+      duration: 2000
     });
   }
 
@@ -2211,7 +2231,9 @@ export default function Main() {
       setActiveEffects(prev => ({ ...prev, [panelId]: null }));
       remixClickCountRef.current.glitch = 0;
       toast("Glitch removed", {
-        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+        id: "glitch",
+        duration: 2000
       });
       return;
     }
@@ -2245,7 +2267,9 @@ export default function Main() {
     setActiveEffects(prev => ({ ...prev, [panelId]: 'glitch' }));
     remixClickCountRef.current.glitch = currentIndex + 1;
     toast(`${preset.name} glitch applied (${currentIndex + 1}/${glitchPresets.length})`, {
-      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+      id: "glitch",
+      duration: 2000
     });
   }
 
@@ -2268,7 +2292,9 @@ export default function Main() {
       });
       setActiveEffects(prev => ({ ...prev, [panelId]: null }));
       toast("Cursed removed", {
-        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+        id: "cursed",
+        duration: 2000
       });
       return;
     }
@@ -2306,7 +2332,9 @@ export default function Main() {
     setActiveEffects(prev => ({ ...prev, [panelId]: 'cursed' }));
     remixClickCountRef.current.cursed = (remixClickCountRef.current.cursed || 0) + 1;
     toast("Cursed applied", {
-      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+      id: "cursed",
+      duration: 2000
     });
   }
 
@@ -2353,7 +2381,9 @@ export default function Main() {
 
     remixClickCountRef.current.confetti = (remixClickCountRef.current.confetti || 0) + 1;
     toast("Confetti Blast! 🎉", {
-      icon: <ToastIcon src="/animations/confetti.json" />
+      icon: <ToastIcon src="/animations/confetti.json" />,
+      id: "confetti",
+      duration: 2000
     });
   }
 
@@ -2394,7 +2424,9 @@ export default function Main() {
       setActiveEffects(prev => ({ ...prev, [panelId]: null }));
       remixClickCountRef.current.timewarp = 0;
       toast("Time Warp removed", {
-        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+        id: "time-warp",
+        duration: 2000
       });
       return;
     }
@@ -2421,7 +2453,9 @@ export default function Main() {
     setActiveEffects(prev => ({ ...prev, [panelId]: 'timewarp' }));
     remixClickCountRef.current.timewarp = currentIndex + 1;
     toast(`${preset.name} applied (${currentIndex + 1}/${timePresets.length})`, {
-      icon: <ToastIcon src="/animations/filter-frenzy.json" />
+      icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+      id: "time-warp",
+      duration: 2000
     });
   }
 
@@ -2583,7 +2617,9 @@ export default function Main() {
     toast("Filters reset", {
       icon: (
         <ToastIcon src="/animations/performing-arts.json" />
-      )
+      ),
+      id: "filters-reset",
+      duration: 2000
     });
   }
 
@@ -3121,7 +3157,7 @@ export default function Main() {
         }))
       }));
     });
-    toast.success("Effects cleared!");
+    toast.success("Effects cleared!", { id: "effects-cleared", duration: 2000 });
   }
 
   function addTextAtPosition(x, y) {
@@ -3186,7 +3222,9 @@ export default function Main() {
     toast.error("Sticker removed", {
       icon: (
         <ToastIcon src="/animations/waste-basket.json" />
-      )
+      ),
+      id: "sticker-removed",
+      duration: 2000
     });
   }
 
@@ -3200,7 +3238,7 @@ export default function Main() {
     if (editingId === id) {
       setEditingId(null);
     }
-    toast.success("Text removed");
+    toast.success("Text removed", { id: "text-removed", duration: 2000 });
   }
 
   function handleCanvasPointerDown() {
@@ -3317,7 +3355,8 @@ export default function Main() {
 
       toast("Magic logic applied!", {
         duration: 2000,
-        icon: <ToastIcon src="/animations/filter-frenzy.json" />
+        icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+        id: "magic-logic"
       });
       setIsMagicGenerating(false);
 
@@ -3381,6 +3420,7 @@ export default function Main() {
               icon: (
                 <ToastIcon src="/animations/filter-frenzy.json" />
               ),
+              id: "sticker-selected",
               duration: 1000
             });
           }, 350);
@@ -3398,6 +3438,7 @@ export default function Main() {
             icon: (
               <ToastIcon src="/animations/filter-frenzy.json" />
             ),
+            id: "text-selected",
             duration: 1000
           });
         }, 700);

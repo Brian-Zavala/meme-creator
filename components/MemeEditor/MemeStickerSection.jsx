@@ -83,7 +83,8 @@ export function MemeStickerSection({ onAddSticker, hasStickers, onExportStickers
         </picture>
       ),
       style: { borderRadius: '10px', background: '#333', color: '#fff' },
-      duration: 3000
+      duration: 3000,
+      id: "sticker-help"
     });
   };
 

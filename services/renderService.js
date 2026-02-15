@@ -705,11 +705,20 @@ export async function loadMemeAssets(meme, stickers, videoProxyPort) {
     await Promise.all((stickers || []).filter(s => s.type === 'image' || s.type === 'giphy' || s.type === 'tenor').map(async (s) => {
         let processor = null;
         if (s.isAnimated || s.url.includes('.gif')) {
-            processor = await createGifProcessor(s.url);
-            // Fallback: try sourceBlob if blob URL failed
+            // Use cached processor for stickers (pre-renders all frames, eliminates loop flicker)
+            // Falls back to sequential processor if >200 frames (returns null)
+            processor = await createCachedGifProcessor(s.url);
+            // Fallback chain: cachedProcessor → sequential processor → static image
+            if (!processor) {
+                processor = await createGifProcessor(s.url);
+            }
+            // Fallback: try sourceBlob if both failed
             if (!processor && s.sourceBlob instanceof Blob) {
                 const freshUrl = URL.createObjectURL(s.sourceBlob);
-                processor = await createGifProcessor(freshUrl);
+                processor = await createCachedGifProcessor(freshUrl);
+                if (!processor) {
+                    processor = await createGifProcessor(freshUrl);
+                }
             }
             if (processor) stickerProcessors[s.id] = processor;
         }

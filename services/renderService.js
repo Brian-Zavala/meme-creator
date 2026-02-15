@@ -202,6 +202,138 @@ export async function createGifProcessor(url) {
 }
 
 
+/**
+ * Pre-renders ALL frames of a GIF into cached canvases.
+ * Used for sticker GIFs to eliminate the flash/flicker that occurs when
+ * the stateful sequential decoder resets on loop restart.
+ *
+ * Returns the same API as createGifProcessor, but renderFrame() is a
+ * simple array lookup with zero mutable state.
+ */
+export async function createCachedGifProcessor(url) {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const arrayBuffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const reader = new GifReader(uint8Array);
+
+        const width = reader.width;
+        const height = reader.height;
+        const numFrames = reader.numFrames();
+
+        // GUARD: Fall back to sequential processor for pathologically large GIFs
+        if (numFrames > 200) {
+            console.warn(`[CachedGifProcessor] GIF has ${numFrames} frames (>200), falling back to sequential processor`);
+            return null;
+        }
+
+        // Pre-calculate frame timing
+        const frameDelays = [];
+        let totalDuration = 0;
+        const cumulativeDelays = [0];
+
+        for (let i = 0; i < numFrames; i++) {
+            const info = reader.frameInfo(i);
+            const delay = (info.delay || 10) * 10;
+            frameDelays.push(delay);
+            totalDuration += delay;
+            cumulativeDelays.push(totalDuration);
+        }
+
+        // === PRE-RENDER ALL FRAMES ===
+        const compositeCanvas = createGenericCanvas(width, height);
+        const compositeCtx = compositeCanvas.getContext('2d', { willReadFrequently: true });
+        const tempCanvas = createGenericCanvas(width, height);
+        const tempCtx = tempCanvas.getContext('2d');
+        const rawFrameData = new Uint8ClampedArray(width * height * 4);
+
+        const frameCache = [];
+        let previousInfo = null;
+        let savedState = null;
+
+        for (let i = 0; i < numFrames; i++) {
+            const info = reader.frameInfo(i);
+
+            // Apply disposal from PREVIOUS frame
+            if (i > 0 && previousInfo) {
+                const { disposal, x, y, width: fW, height: fH } = previousInfo;
+                if (disposal === 2) {
+                    compositeCtx.clearRect(x, y, fW, fH);
+                } else if (disposal === 3) {
+                    if (savedState) {
+                        compositeCtx.putImageData(savedState, 0, 0);
+                    } else {
+                        compositeCtx.clearRect(0, 0, width, height);
+                    }
+                }
+            }
+
+            // Save state BEFORE drawing (for disposal mode 3)
+            if (info.disposal === 3) {
+                savedState = compositeCtx.getImageData(0, 0, width, height);
+            }
+
+            // Decode and draw this frame
+            rawFrameData.fill(0);
+            reader.decodeAndBlitFrameRGBA(i, rawFrameData);
+            const imageData = new ImageData(new Uint8ClampedArray(rawFrameData), width, height);
+            tempCtx.putImageData(imageData, 0, 0);
+            compositeCtx.drawImage(tempCanvas, 0, 0);
+
+            previousInfo = info;
+
+            // Snapshot the composited result into a cached canvas
+            const cachedCanvas = createGenericCanvas(width, height);
+            const cachedCtx = cachedCanvas.getContext('2d');
+            cachedCtx.drawImage(compositeCanvas, 0, 0);
+            frameCache.push(cachedCanvas);
+        }
+
+        return {
+            width,
+            height,
+            numFrames,
+            getDuration: () => totalDuration,
+
+            getFrameAtTime: (timeMs) => {
+                if (numFrames <= 0) return 0;
+                if (timeMs < 0) timeMs = 0;
+                const t = totalDuration > 0 ? timeMs % totalDuration : 0;
+                for (let i = 0; i < numFrames; i++) {
+                    if (t < cumulativeDelays[i + 1]) return i;
+                }
+                return numFrames - 1;
+            },
+
+            getDelay: (frameIndex = 0) => reader.frameInfo(Math.min(frameIndex, numFrames - 1)).delay,
+
+            getAllDelays: () => {
+                const delays = [];
+                for (let i = 0; i < numFrames; i++) {
+                    delays.push(reader.frameInfo(i).delay);
+                }
+                return delays;
+            },
+
+            renderFrame: (frameIndex) => {
+                const clampedIndex = Math.max(0, Math.min(frameIndex, numFrames - 1));
+                return { canvas: frameCache[clampedIndex], delay: frameDelays[clampedIndex] };
+            }
+        };
+    } catch (e) {
+        console.error("Failed to create cached GIF processor:", url, e);
+        return null;
+    }
+}
+
+
 export async function createVideoProcessor(url, options = {}) {
     const { fetchVideoFrame, panelId, metadata } = options;
 

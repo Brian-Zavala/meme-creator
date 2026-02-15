@@ -679,11 +679,19 @@ export async function loadMemeAssets(meme, stickers, videoProxyPort) {
         );
 
         if (isGif) {
-            processor = await createGifProcessor(url);
-            // Fallback: if blob URL failed, try sourceBlob
+            // Use cached processor for flicker-free loop restart (pre-renders all frames)
+            // Falls back to sequential processor if >200 frames or decode fails
+            processor = await createCachedGifProcessor(url);
+            if (!processor) {
+                processor = await createGifProcessor(url);
+            }
+            // Fallback: if both failed, try sourceBlob
             if (!processor && panel.sourceBlob instanceof Blob) {
                 const freshUrl = URL.createObjectURL(panel.sourceBlob);
-                processor = await createGifProcessor(freshUrl);
+                processor = await createCachedGifProcessor(freshUrl);
+                if (!processor) {
+                    processor = await createGifProcessor(freshUrl);
+                }
             }
         } else if (isVideo) {
             processor = await createVideoProcessor(url, {

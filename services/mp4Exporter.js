@@ -56,7 +56,17 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
                 const { type, payload } = e.data;
 
                 if (type === 'PROGRESS') {
-                    if (onProgress) onProgress(payload.progress, payload.message);
+                    if (onProgress) {
+                        // Map worker messages to simplified stages
+                        let stage = 'encoding';
+                        if (payload.message.includes('Loading assets')) {
+                            stage = 'preparing';
+                        } else if (payload.message.includes('Encoding video frame')) {
+                            stage = 'encoding';
+                        }
+
+                        onProgress({ stage, progress: payload.progress });
+                    }
                     if (payload.progress % 10 === 0) {
                         db.activeExports.update(exportId, { progress: payload.progress, status: 'rendering' }).catch(() => {});
                     }

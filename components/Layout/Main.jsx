@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { removeImageBackground } from "../../services/backgroundRemover";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
+import { useExportToast } from '../../hooks/useExportToast';
 import { searchGiphy, registerShare, getAutocomplete, getCategories } from "../../services/giphy";
 import { searchImages, trackUnsplashDownload, getRandomImage, searchPexelsVideos, getRandomPexelsVideo } from "../../services/imageSearch";
 import VideoSourceTabs from "../MemeEditor/VideoSourceTabs";
@@ -351,6 +352,9 @@ export default function Main() {
 
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
+
+  // Export toast feedback system
+  const exportToast = useExportToast();
 
   const [allMemes, setAllMemes] = useState([]);
   const [allGifs, setAllGifs] = useState([]);
@@ -3475,84 +3479,75 @@ export default function Main() {
     if (!memeRef.current) return;
 
     const { stickersOnly = false } = options;
-    const isDeepFrying = meme.panels.some(p => (p.filters?.deepFry || 0) > 0);
-    const hasVideo = meme.panels.some(p => p.isVideo);
 
-    let loadingMsg = stickersOnly ? "Exporting stickers..." : "Encoding GIF...";
-    if (hasVideo) loadingMsg = "Converting Video to GIF... (this may take a minute) 🎥";
-    else if (isDeepFrying) loadingMsg = "Deep frying frames... (computing heavily) 🍟";
-
-    const toastId = toast.loading(loadingMsg, { duration: Infinity }); // Ensure it stays up
+    exportToast.start('download', 'gif');
 
     try {
       const exportMeme = { ...meme, stickersOnly };
       const { exportMemeAsGif: exportGif } = await safeImport(() => import("../../services/gifExporter"));
 
-      const onProgress = (pct, msg) => {
-        toast.loading(`${msg} (${pct}%)`, { id: toastId });
+      const onProgress = ({ stage, progress }) => {
+        exportToast.setStage(stage, { progress });
       };
 
       const blob = await exportGif(exportMeme, meme.texts, meme.stickers, onProgress);
+
       if (meme.id) registerShare(meme.id, searchQuery);
 
-      const safeName = getSafeFilename(meme.name);
+      exportToast.setStage('finalizing');
 
+      const safeName = getSafeFilename(meme.name);
       const filename = `${safeName}-${stickersOnly ? 'stickers' : ''}-${Date.now()}.gif`;
       await triggerDownload(blob, filename);
       triggerFireworks();
 
-      // Artificial delay removed per user request for dynamic timing
-      // await new Promise(resolve => setTimeout(resolve, 1000));
-
-      toast.success("Downloaded!", { id: toastId, duration: 5000 });
+      exportToast.success("Downloaded!");
     } catch (err) {
       console.error("GIF Export Error:", err);
       const isChunkError = err.message?.includes("failed to fetch") || err.message?.includes("Importing a module script failed");
       if (isChunkError) {
-        toast.error("Update available! Please refresh the page.", { id: toastId, duration: 8000 });
+        exportToast.error("Update available! Please refresh the page.");
       } else {
-        toast.error("Export failed", { id: toastId, duration: 5000 });
+        exportToast.error("Export failed");
       }
     }
-  }, [meme, searchQuery]);
+  }, [meme, searchQuery, exportToast]);
 
   // Helper: Execute MP4 export
   const handleExportMp4 = useCallback(async () => {
     if (!memeRef.current) return;
 
-    const toastId = toast.loading("Initializing MP4 Encoder...", { duration: Infinity });
+    exportToast.start('download', 'mp4');
 
     try {
       const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
 
-      const onProgress = (pct, msg) => {
-        toast.loading(`${msg} (${pct}%)`, { id: toastId });
+      const onProgress = ({ stage, progress }) => {
+        exportToast.setStage(stage, { progress });
       };
 
       const blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress);
 
       if (meme.id) registerShare(meme.id, searchQuery);
 
-      const safeName = getSafeFilename(meme.name);
+      exportToast.setStage('finalizing');
 
+      const safeName = getSafeFilename(meme.name);
       const filename = `${safeName}-${Date.now()}.mp4`;
       await triggerDownload(blob, filename);
       triggerFireworks();
 
-      // Artificial delay removed per user request for dynamic timing
-      // await new Promise(resolve => setTimeout(resolve, 1000));
-
-      toast.success("MP4 Downloaded!", { id: toastId, duration: 5000 });
+      exportToast.success("MP4 Downloaded!");
     } catch (err) {
       console.error("MP4 Export Error:", err);
       const isChunkError = err.message?.includes("failed to fetch") || err.message?.includes("Importing a module script failed");
       if (isChunkError) {
-        toast.error("Update available! Please refresh the page.", { id: toastId, duration: 8000 });
+        exportToast.error("Update available! Please refresh the page.");
       } else {
-        toast.error("Export failed: " + err.message, { id: toastId, duration: 5000 });
+        exportToast.error("Export failed: " + err.message);
       }
     }
-  }, [meme, searchQuery]);
+  }, [meme, searchQuery, exportToast]);
 
   // Helper: Execute static PNG export
   const doStaticExport = useCallback(async (options = {}) => {
@@ -3560,50 +3555,45 @@ export default function Main() {
 
     const { stickersOnly = false, forceStatic = false } = options;
 
-    // Special Case: Static Sticker Export via PNG (Transparent)
-    if (stickersOnly) {
-      const toastId = toast.loading("Exporting sticker...", { duration: Infinity });
-      try {
-        // Use our new direct PNG exporter!
+    exportToast.start('download', 'png');
+
+    try {
+      exportToast.setStage('preparing');
+
+      if (stickersOnly) {
+        exportToast.setStage('rendering');
         const { exportStickersAsPng } = await safeImport(() => import("../../services/gifExporter"));
         const blob = await exportStickersAsPng(meme, meme.stickers);
+
+        exportToast.setStage('finalizing');
         const filename = `stickers-${Date.now()}.png`;
         await triggerDownload(blob, filename);
         triggerFireworks();
-        toast.success("Downloaded!", { id: toastId, duration: 5000 });
-      } catch (e) {
-        const isChunkError = e.message?.includes("failed to fetch");
-        if (isChunkError) {
-           toast.error("Update available! Please refresh.", { id: toastId, duration: 8000 });
-        } else {
-           toast.error("Export failed", { id: toastId, duration: 5000 });
-        }
+        exportToast.success("Downloaded!");
+      } else {
+        exportToast.setStage('rendering');
+        const { exportImageAsPng } = await safeImport(() => import("../../services/gifExporter"));
+        const blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
+
+        if (meme.id) registerShare(meme.id, searchQuery);
+
+        exportToast.setStage('finalizing');
+        const safeName = getSafeFilename(meme.name);
+        const filename = `${safeName}-${Date.now()}.png`;
+        await triggerDownload(blob, filename);
+        triggerFireworks();
+        exportToast.success("Downloaded!");
       }
-      return;
-    }
-
-    const toastId = toast.loading("Generating...", { duration: Infinity });
-    try {
-      // REPLACED: html2canvas with native renderer for filter consistency
-      const { exportImageAsPng } = await safeImport(() => import("../../services/gifExporter"));
-      const blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
-
-      const safeName = getSafeFilename(meme.name);
-
-      const filename = `${safeName}-${Date.now()}.png`;
-      await triggerDownload(blob, filename);
-      triggerFireworks();
-      toast.success("Downloaded!", { id: toastId, duration: 5000 });
     } catch (err) {
-      console.error("Image Export Error:", err);
+      console.error("PNG Export Error:", err);
       const isChunkError = err.message?.includes("failed to fetch");
       if (isChunkError) {
-         toast.error("Update available! Please refresh.", { id: toastId, duration: 8000 });
+        exportToast.error("Update available! Please refresh.");
       } else {
-         toast.error("Export failed", { id: toastId, duration: 5000 });
+        exportToast.error("Export failed");
       }
     }
-  }, [meme, searchQuery]);
+  }, [meme, searchQuery, exportToast]);
 
   async function handleDownload() {
     if (!memeRef.current) return;
@@ -3751,22 +3741,22 @@ export default function Main() {
         }
     }
 
-    const toastId = toast.loading("Preparing to share...");
+    exportToast.start('share', isAnimated ? (isMp4 ? 'mp4' : 'gif') : 'png');
 
     try {
       let blob, file, filename;
 
       // 3. GENERATE / FETCH CONTENT
       if (isAnimated) {
-        const onProgress = (pct, msg) => {
-          toast.loading(`${msg} (${pct}%)`, { id: toastId });
+        const onProgress = ({ stage, progress }) => {
+          exportToast.setStage(stage === 'rendering' ? 'encoding_gif' : stage, { progress });
         };
 
         if (isMp4) {
            // ... MP4 Logic (Existing) ...
            if (activePanel?.source === 'pexels_video' && isUnmodified && meme.layout === 'single') {
              try {
-               toast.loading("Fetching video...", { id: toastId });
+               exportToast.setStage('encoding');
                const res = await fetch(activePanel.url);
                if (!res.ok) throw new Error("Failed to fetch video");
                blob = await res.blob();
@@ -3782,11 +3772,19 @@ export default function Main() {
              });
              setShowShareQualityModal(false);
              shareQualityResolveRef.current = null;
-             if (!quality) { toast.dismiss(toastId); return; }
+             if (!quality) {
+               exportToast.error("Share cancelled");
+               return;
+             }
 
-             toast.loading("Encoding Video...", { id: toastId });
+             exportToast.setStage('encoding');
              const { exportMemeAsMp4 } = await safeImport(() => import("../../services/mp4Exporter"));
-             blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgress, quality, 'share');
+
+             const onProgressMp4 = ({ stage, progress }) => {
+               exportToast.setStage(stage, { progress });
+             };
+
+             blob = await exportMemeAsMp4(meme, meme.texts, meme.stickers, onProgressMp4, quality, 'share');
              filename = `${getSafeFilename(meme.name)}-${Date.now()}.mp4`;
              file = new File([blob], filename, { type: "video/mp4" });
            }
@@ -3794,14 +3792,14 @@ export default function Main() {
            // ... GIF Logic ...
            if (existingPublicUrl) {
                 // Pass-through optimization
-                toast.loading("Fetching GIF...", { id: toastId });
+                exportToast.setStage('encoding_gif');
                 const res = await fetch(existingPublicUrl);
                 blob = await res.blob();
                 filename = `${getSafeFilename(meme.name)}-${Date.now()}.gif`;
                 file = new File([blob], filename, { type: "image/gif" });
            } else {
                 // Encode GIF
-                toast.loading("Encoding GIF...", { id: toastId });
+                exportToast.setStage('encoding_gif');
                 const { exportMemeAsGif } = await safeImport(() => import("../../services/gifExporter"));
                 // speed=10 for fastest encoding possible
                 blob = await exportMemeAsGif(meme, meme.texts, meme.stickers, onProgress, 10, 'share');
@@ -3811,6 +3809,7 @@ export default function Main() {
         }
       } else {
         // Static PNG
+        exportToast.setStage('rendering');
         const { exportImageAsPng } = await import("../../services/gifExporter");
         blob = await exportImageAsPng(meme, meme.texts, meme.stickers);
         filename = `${getSafeFilename(meme.name)}-${Date.now()}.png`;
@@ -3829,10 +3828,13 @@ export default function Main() {
 
         try {
           await navigator.share({ files: [file] });
-          toast.success("Shared!", { id: toastId });
+          exportToast.success("Shared!");
           return;
         } catch (shareErr) {
-          if (shareErr.name === 'AbortError') { toast.dismiss(toastId); return; }
+          if (shareErr.name === 'AbortError') {
+            exportToast.error("Share cancelled");
+            return;
+          }
           // Fall back to desktop flow if share fails
         }
       }
@@ -3874,8 +3876,11 @@ export default function Main() {
               // User specifically mentioned "Generating link" toast gap.
               // We should show this status if we are waiting on the upload.
               if (isLarge || isMobile) {
-                  toast.loading("Generating shareable link...", { id: toastId });
+                  exportToast.setStage('uploading');
                   publicUrl = await uploadPromise;
+                  if (publicUrl) {
+                    exportToast.setStage('generating_link');
+                  }
                   resolveWithUrl = !!publicUrl;
               }
           }
@@ -3919,8 +3924,9 @@ export default function Main() {
               clipboardResolver.resolveText(textBlob);
 
               try {
+                  exportToast.setStage('finalizing_clipboard');
                   await clipboardResolver.writePromise;
-                  toast.success(resolveWithUrl ? "Link copied to clipboard!" : "Copied to clipboard!", { id: toastId, duration: 4000 });
+                  exportToast.success(resolveWithUrl ? "Link copied to clipboard!" : "Copied to clipboard!");
               } catch (writeErr) {
                   console.warn("Speculative write failed:", writeErr);
                   // Fallback to manual
@@ -3929,53 +3935,46 @@ export default function Main() {
           } else {
               // Standard write (if reservation skipped/failed check)
               // This might fail if too much time passed, but we try anyway
+              exportToast.setStage('finalizing_clipboard');
               const item = new ClipboardItem({
                   "text/html": htmlBlob,
                   "text/plain": textBlob
               });
               await navigator.clipboard.write([item]);
-              toast.success("Copied to clipboard!", { id: toastId, duration: 4000 });
+              exportToast.success("Copied to clipboard!");
           }
       } else if (isMp4) {
           // MP4: Link only
           let publicUrl = existingPublicUrl;
           if (!publicUrl && uploadPromise) {
-              toast.loading("Uploading video...", { id: toastId });
+              exportToast.setStage('uploading');
               publicUrl = await uploadPromise;
+              if (publicUrl) {
+                exportToast.setStage('generating_link');
+              }
           }
 
           if (publicUrl) {
+              exportToast.setStage('finalizing_clipboard');
               const proxyUrl = `${window.location.origin}/.netlify/functions/share?url=${encodeURIComponent(publicUrl)}&type=video&title=${encodeURIComponent(meme.name)}`;
               await navigator.clipboard.writeText(proxyUrl);
-              toast.success("Video Link Copied!", { id: toastId });
+              exportToast.success("Video Link Copied!");
           } else {
               throw new Error("Could not generate video link (Upload failed)");
           }
       } else {
           // Static PNG
+          exportToast.setStage('finalizing_clipboard');
           await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          toast.success("Copied!", { id: toastId });
+          exportToast.success("Copied!");
       }
 
     } catch (e) {
       if (e.name !== "AbortError") {
         console.error("Share failed:", e);
-        // Fallback: Manual Copy Button
-        // If we have the blob, at least allow manual copy/download
-        toast((t) => (
-             <div className="flex flex-col gap-2">
-                <span className="font-bold">Clipboard failed</span>
-                <span className="text-xs">Click to download instead:</span>
-                <button
-                   onClick={() => triggerDownload(blob || new Blob(), filename || 'meme.gif')}
-                   className="bg-brand text-white text-xs px-3 py-1.5 rounded-lg font-bold mt-1"
-                >
-                   Download File
-                </button>
-             </div>
-        ), { id: toastId, duration: 8000 });
+        exportToast.error("Share failed - try downloading instead");
       } else {
-        toast.dismiss(toastId);
+        exportToast.error("Share cancelled");
       }
     }
   }

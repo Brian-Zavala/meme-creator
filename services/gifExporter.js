@@ -33,7 +33,21 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
                 const { type, payload } = e.data;
 
                 if (type === 'PROGRESS') {
-                    if (onProgress) onProgress(payload.progress, payload.message);
+                    if (onProgress) {
+                        // Map worker messages to simplified stages
+                        let stage = 'rendering';
+                        if (payload.message.includes('Loading assets')) {
+                            stage = 'preparing';
+                        } else if (payload.message.includes('Rendering Frame') || payload.message.includes('Rendering')) {
+                            stage = 'rendering';
+                        } else if (payload.message.includes('Optimizing')) {
+                            stage = 'optimizing';
+                        } else if (payload.message.includes('Done')) {
+                            stage = 'finalizing';
+                        }
+
+                        onProgress({ stage, progress: payload.progress });
+                    }
                     if (payload.progress % 10 === 0) {
                          db.activeExports.update(exportId, { progress: payload.progress, status: 'rendering' }).catch(() => {});
                     }

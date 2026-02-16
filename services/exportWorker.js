@@ -166,6 +166,10 @@ async function exportGif(meme, texts, stickers, assets, quality, action) {
     self.postMessage({ type: 'PROGRESS', payload: { progress: 72, message: "Optimizing GIF..." } });
 
     // --- 7. gifsicle Post-Processing ---
+    // Polyfill Element for worker context — gifsicle-wasm-browser's testType()
+    // does `input instanceof Element` which throws ReferenceError in workers
+    if (typeof Element === 'undefined') self.Element = class Element {};
+
     let finalBlob;
     try {
         const gifsicle = (await import('gifsicle-wasm-browser')).default;

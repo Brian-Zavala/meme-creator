@@ -1242,8 +1242,11 @@ export async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, as
 
                 const newW = srcW * ratio;
                 const newH = srcH * ratio;
-                const offX = px + (pw - newW) / 2;
-                const offY = py + (ph - newH) / 2;
+                // Apply panel.posX/posY to match CSS objectPosition behavior
+                // When cover: newW > pw, so (pw - newW) is negative, shifting image to show correct region
+                // When contain: newW < pw, so (pw - newW) is positive, positioning within letterbox
+                const offX = px + (pw - newW) * ((panel.posX ?? 50) / 100);
+                const offY = py + (ph - newH) * ((panel.posY ?? 50) / 100);
 
                 ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, offX, offY, newW, newH);
 

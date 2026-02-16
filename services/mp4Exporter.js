@@ -85,6 +85,7 @@ export async function exportMemeAsMp4(meme, texts, stickers, onProgress, quality
                     stickers: structuredClone(stickers),
                     quality,
                     format: 'mp4',
+                    action,
                     videoProxyPort: port2
                 }
             }, [port2]); // Transfer port2

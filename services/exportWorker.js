@@ -44,7 +44,7 @@ async function startExport({ meme, texts, stickers, quality, format, action, vid
     if (format === 'gif') {
         await exportGif(meme, texts, stickers, assets, quality, action);
     } else if (format === 'mp4') {
-        await exportMp4(meme, texts, stickers, assets, quality);
+        await exportMp4(meme, texts, stickers, assets, quality, action);
     }
 }
 
@@ -198,49 +198,66 @@ async function exportGif(meme, texts, stickers, assets, quality, action) {
     self.postMessage({ type: 'DONE', payload: finalBlob });
 }
 
-async function exportMp4(meme, texts, stickers, assets, quality) {
+async function exportMp4(meme, texts, stickers, assets, quality, action) {
     if (typeof VideoEncoder === 'undefined') {
         throw new Error("WebCodecs (VideoEncoder) not supported in Worker.");
     }
 
-    // 1. Dimensions
+    const isShare = action === 'share';
+
+    // --- 1. Tier Config ---
+    // Share tier: small, fast, universally compatible (iMessage, Discord, WhatsApp)
+    // Download tier: high quality, user controls playback device
+    const TIER = isShare
+        ? { maxDimension: 480, fps: 24, bitrate: 800_000, codec: 'avc1.42001e', keyframeInterval: 24, maxDurationMs: 15_000 }
+        : { maxDimension: 1080, fps: 30, bitrate: 4_000_000, codec: 'avc1.4d002a', keyframeInterval: 30, maxDurationMs: 60_000 };
+
+    // Download tier still respects quality picker for additional scaling
+    const QUALITY_SCALE = isShare ? 1.0 : ({ high: 1.0, medium: 0.85, low: 0.65 }[quality] || 0.85);
+
+    console.log(`[Worker] MP4 tier: ${isShare ? 'share' : 'download'}, quality: ${quality}, codec: ${TIER.codec}`);
+
+    // --- 2. Dimensions ---
     let dimensions = calculateDimensions(meme, assets);
+    const origWidth = dimensions.exportWidth;
+    const origHeight = dimensions.exportHeight;
     let { exportWidth, exportHeight } = dimensions;
 
-    const QUALITY_SETTINGS = {
-        high: { scale: 1.0, bitrate: 6_000_000, framerate: 60 },
-        medium: { scale: 0.75, bitrate: 2_500_000, framerate: 60 },
-        low: { scale: 0.5, bitrate: 1_000_000, framerate: 30 }
-    };
-    const settings = QUALITY_SETTINGS[quality] || QUALITY_SETTINGS.medium;
+    // Apply quality scaling (download only — share is always 1.0)
+    exportWidth = Math.round(exportWidth * QUALITY_SCALE);
+    exportHeight = Math.round(exportHeight * QUALITY_SCALE);
 
-    exportWidth = Math.round(exportWidth * settings.scale);
-    exportHeight = Math.round(exportHeight * settings.scale);
-
-    // CLAMP: Cap MP4 to 1080p (1920px) to prevent mobile encoder crashes
-    const MAX_MP4_DIMENSION = 1920;
-    if (exportWidth > MAX_MP4_DIMENSION || exportHeight > MAX_MP4_DIMENSION) {
-        const scale = MAX_MP4_DIMENSION / Math.max(exportWidth, exportHeight);
+    // Clamp to tier max dimension
+    if (exportWidth > TIER.maxDimension || exportHeight > TIER.maxDimension) {
+        const scale = TIER.maxDimension / Math.max(exportWidth, exportHeight);
         exportWidth = Math.round(exportWidth * scale);
         exportHeight = Math.round(exportHeight * scale);
-        console.log(`[Worker] Clamped MP4 dimensions to ${exportWidth}x${exportHeight}`);
+        console.log(`[Worker] Clamped MP4 dimensions to ${exportWidth}x${exportHeight} (${isShare ? 'share' : 'download'} tier)`);
     }
 
     // MP4 even-dim requirement
     if (exportWidth % 2 !== 0) exportWidth++;
     if (exportHeight % 2 !== 0) exportHeight++;
 
-    dimensions = { ...dimensions, exportWidth, exportHeight };
+    // Scale ALL dimension components proportionally (not just exportWidth/exportHeight)
+    // Without this, panel positions are calculated for the original canvas size but drawn
+    // on a smaller scaled canvas, causing cropping and incorrect positioning.
+    const scaleX = exportWidth / origWidth;
+    const scaleY = exportHeight / origHeight;
+    dimensions = {
+        ...dimensions,
+        exportWidth,
+        exportHeight,
+        contentHeight: Math.round(dimensions.contentHeight * scaleY),
+        contentOffsetY: Math.round(dimensions.contentOffsetY * scaleY),
+        contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scaleY),
+    };
 
-    // 2. Duration
-    // 2. Duration
-    const FPS = settings.framerate;
+    // --- 3. Duration ---
+    const FPS = TIER.fps;
     const FRAME_DURATION_MS = 1000 / FPS;
-    const MAX_SHARING_DURATION_MS = 60000;
     let durationMs = 1000;
 
-    // ... (Duration logic similar to main thread, reused) ...
-    // Reuse specific logic or just copy for now to ensure isolation
     if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
         const animDuration = calculateGifLoopDuration(texts, stickers);
         durationMs = Math.max(durationMs, animDuration);
@@ -251,10 +268,12 @@ async function exportMp4(meme, texts, stickers, assets, quality) {
              if (d > 0) durationMs = Math.max(durationMs, d);
         }
     });
-    durationMs = Math.min(durationMs, MAX_SHARING_DURATION_MS);
+    durationMs = Math.min(durationMs, TIER.maxDurationMs);
     const totalFrames = Math.ceil(durationMs / FRAME_DURATION_MS);
 
-    // 3. Encoder Setup
+    console.log(`[Worker] MP4 export: ${exportWidth}x${exportHeight} @ ${FPS}fps, ${totalFrames} frames, ${Math.round(TIER.bitrate / 1000)}kbps, duration ${durationMs}ms`);
+
+    // --- 4. Encoder Setup ---
     const muxer = new Muxer({
         target: new ArrayBufferTarget(),
         video: {
@@ -272,14 +291,14 @@ async function exportMp4(meme, texts, stickers, assets, quality) {
     });
 
     videoEncoder.configure({
-        codec: 'avc1.4d002a',
+        codec: TIER.codec,
         width: exportWidth,
         height: exportHeight,
-        bitrate: settings.bitrate,
+        bitrate: TIER.bitrate,
         framerate: FPS
     });
 
-    // 4. Render Loop
+    // --- 5. Render Loop ---
     const canvas = new OffscreenCanvas(exportWidth, exportHeight);
     const ctx = canvas.getContext('2d', { alpha: false }); // MP4 no alpha
     ctx.fillStyle = "#000000";
@@ -296,19 +315,17 @@ async function exportMp4(meme, texts, stickers, assets, quality) {
             currentTimeMs: currentTimeMs
         });
 
-        // Convert OffscreenCanvas to VideoFrame
-        // VideoFrame can take OffscreenCanvas directly
         let frame = new VideoFrame(canvas, {
              timestamp: timestampMicroseconds,
              duration: Math.round(1_000_000 / FPS)
         });
 
-        const keyFrame = i % 15 === 0;
+        const keyFrame = i % TIER.keyframeInterval === 0;
         videoEncoder.encode(frame, { keyFrame });
         frame.close();
 
         // Progress
-        if (i % 15 === 0) {
+        if (i % TIER.keyframeInterval === 0) {
             const pct = 30 + Math.round((i / totalFrames) * 60);
              self.postMessage({ type: 'PROGRESS', payload: { progress: pct, message: `Encoding video frame ${i}/${totalFrames}` } });
              await new Promise(r => setTimeout(r, 0)); // Yield
@@ -319,7 +336,6 @@ async function exportMp4(meme, texts, stickers, assets, quality) {
     muxer.finalize();
 
     const { buffer } = muxer.target;
-    // MP4 blob
     const blob = new Blob([buffer], { type: 'video/mp4' });
     self.postMessage({ type: 'DONE', payload: blob });
 }

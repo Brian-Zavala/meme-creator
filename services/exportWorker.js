@@ -25,7 +25,7 @@ self.onmessage = async function (e) {
     }
 };
 
-async function startExport({ meme, texts, stickers, quality, format, videoProxyPort }) {
+async function startExport({ meme, texts, stickers, quality, format, action, videoProxyPort }) {
     // 1. Load Assets
     self.postMessage({ type: 'PROGRESS', payload: { progress: 10, message: "Loading assets (Worker)..." } });
 
@@ -42,13 +42,13 @@ async function startExport({ meme, texts, stickers, quality, format, videoProxyP
     const assets = await loadMemeAssets(meme, stickers, videoProxyPort);
 
     if (format === 'gif') {
-        await exportGif(meme, texts, stickers, assets, quality);
+        await exportGif(meme, texts, stickers, assets, quality, action);
     } else if (format === 'mp4') {
         await exportMp4(meme, texts, stickers, assets, quality);
     }
 }
 
-async function exportGif(meme, texts, stickers, assets, quality) {
+async function exportGif(meme, texts, stickers, assets, quality, action) {
     // 1. Dimensions
     // 1. Dimensions
     let dimensions = calculateDimensions(meme, assets);

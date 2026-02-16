@@ -90,6 +90,7 @@ export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality
                     texts: structuredClone(texts),
                     stickers: structuredClone(stickers),
                     quality,
+                    action,
                     format: 'gif',
                     videoProxyPort: port2
                 }

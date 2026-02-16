@@ -53,7 +53,7 @@ async function exportGif(meme, texts, stickers, assets, quality, action) {
     const isShare = action === 'share';
     const MAX_GIF_DIMENSION = isShare ? 480 : 800;
     const LOSSY_LEVEL = isShare ? 60 : 30;
-    const GIFSICLE_COLORS = isShare ? '--colors 128' : '';
+    const GIFSICLE_COLORS = isShare ? '--colors 128' : '--colors 256';
 
     // --- 2. Dimensions ---
     let dimensions = calculateDimensions(meme, assets);

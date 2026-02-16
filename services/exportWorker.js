@@ -1,6 +1,6 @@
 
 import { renderMemeFrame, calculateDimensions, loadMemeAssets } from './renderService';
-import GIF from 'gif.js';
+import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
 import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnimations';
 
@@ -49,50 +49,33 @@ async function startExport({ meme, texts, stickers, quality, format, action, vid
 }
 
 async function exportGif(meme, texts, stickers, assets, quality, action) {
-    // 1. Dimensions
-    // 1. Dimensions
+    // --- 1. Tier Config ---
+    const isShare = action === 'share';
+    const MAX_GIF_DIMENSION = isShare ? 480 : 800;
+    const LOSSY_LEVEL = isShare ? 60 : 30;
+    const GIFSICLE_COLORS = isShare ? '--colors 128' : '';
+
+    // --- 2. Dimensions ---
     let dimensions = calculateDimensions(meme, assets);
     let { exportWidth, exportHeight } = dimensions;
 
-    // CLAMP: Prevent OOM by capping GIF size to 1200px
-    // Browsers (especially mobile) crash when encoding > 2000px GIFs
-    const MAX_GIF_DIMENSION = 1200;
     if (exportWidth > MAX_GIF_DIMENSION || exportHeight > MAX_GIF_DIMENSION) {
         const scale = MAX_GIF_DIMENSION / Math.max(exportWidth, exportHeight);
         exportWidth = Math.round(exportWidth * scale);
         exportHeight = Math.round(exportHeight * scale);
 
-        // Update dimensions object for renderMemeFrame to correctly scale content
         dimensions = {
             ...dimensions,
             exportWidth,
             exportHeight,
-            // We also need to scale the internal content offsets if they exist
             contentHeight: Math.round(dimensions.contentHeight * scale),
             contentOffsetY: Math.round(dimensions.contentOffsetY * scale),
             contentOffsetBottom: Math.round(dimensions.contentOffsetBottom * scale)
         };
-        console.log(`[Worker] Clamped GIF dimensions to ${exportWidth}x${exportHeight}`);
+        console.log(`[Worker] Clamped GIF dimensions to ${exportWidth}x${exportHeight} (${isShare ? 'share' : 'download'} tier)`);
     }
 
-    // 2. Setup GIF Encoder
-    // Note: gif.js spawns its OWN workers.
-    // If we run gif.js inside a worker, it spawns workers from a worker (nested workers).
-    // Chrome supports this. Safari might be tricky but usually supports it now.
-    // However, gif.js expects 'window' or 'document' to find the worker script path?
-    // We need to pass workerScript to GIF constructor.
-
-    const numWorkers = 4;
-    const gif = new GIF({
-        workers: numWorkers,
-        quality: quality || 5,
-        width: exportWidth,
-        height: exportHeight,
-        workerScript: '/gif.worker.js', // Ensure this path is correct relative to the hosted site
-        dither: true
-    });
-
-    // 3. Frame Logic
+    // --- 3. Frame Timing ---
     const { gifProcessors } = assets;
     let minDelay = 100;
     let hasAnimatedAssets = false;
@@ -105,11 +88,11 @@ async function exportGif(meme, texts, stickers, assets, quality, action) {
     if (allProcessors.length > 0) {
         hasAnimatedAssets = true;
         allProcessors.forEach(p => {
-             if (p.getDelay) {
-                 let d = p.getDelay(0) * 10;
-                 if (d < 20) d = 100;
-                 if (d > 0) minDelay = Math.min(minDelay, d);
-             }
+            if (p.getDelay) {
+                let d = p.getDelay(0) * 10;
+                if (d < 20) d = 100;
+                if (d > 0) minDelay = Math.min(minDelay, d);
+            }
         });
         minDelay = Math.max(50, minDelay);
     } else if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
@@ -132,57 +115,83 @@ async function exportGif(meme, texts, stickers, assets, quality, action) {
     }
 
     if (hasAnimatedText(texts) || (stickers || []).some(s => s.animation && s.animation !== 'none')) {
-         const textDuration = calculateGifLoopDuration(texts, stickers);
-         maxDuration = Math.max(maxDuration, textDuration);
+        const textDuration = calculateGifLoopDuration(texts, stickers);
+        maxDuration = Math.max(maxDuration, textDuration);
     }
 
     const MAX_DURATION_MS = 5000;
     const finalDuration = Math.min(maxDuration, MAX_DURATION_MS);
     const totalFrames = Math.ceil(finalDuration / delay);
 
-    // 4. Render Loop (OffscreenCanvas)
+    // --- 4. gifenc Encoder Setup ---
+    const gif = GIFEncoder();
+
+    // --- 5. Render Loop (OffscreenCanvas) ---
     const canvas = new OffscreenCanvas(exportWidth, exportHeight);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     for (let i = 0; i < totalFrames; i++) {
         await renderMemeFrame(ctx, meme, stickers, texts, i, assets, dimensions, {
-             stickersOnly: false,
-             totalFrames,
-             exportDelayMs: delay
+            stickersOnly: false,
+            totalFrames,
+            exportDelayMs: delay
         });
 
-        // gif.js accepts ImageData or CanvasElement (which OffscreenCanvas is compatible with in some envs?)
-        // Actually gif.js checks for Context2D or ImageData.
-        // We can pass ctx which is OffscreenCanvasRenderingContext2D.
-        // Need to verify if gif.js supports it.
-        // If not, we pass ctx.getImageData(0,0,w,h). Safe fallback.
         const imageData = ctx.getImageData(0, 0, exportWidth, exportHeight);
-        gif.addFrame(imageData, { copy: true, delay });
+        const { data } = imageData;
+
+        // Quantize RGBA pixels to 256-color palette, then map to indices
+        const palette = quantize(data, 256, { format: 'rgb565' });
+        const index = applyPalette(data, palette, 'rgb565');
+
+        gif.writeFrame(index, exportWidth, exportHeight, {
+            palette,
+            delay,
+            repeat: 0,
+        });
 
         const pct = 30 + Math.round((i / totalFrames) * 40);
         self.postMessage({ type: 'PROGRESS', payload: { progress: pct, message: `Rendering Frame ${i + 1}/${totalFrames}` } });
 
-        // Yield to event loop to allow messages to flush
+        // Yield to event loop
         await new Promise(r => setTimeout(r, 0));
     }
 
-    self.postMessage({ type: 'PROGRESS', payload: { progress: 75, message: "Encoding GIF (Worker)..." } });
+    // --- 6. Finalize gifenc ---
+    gif.finish();
+    const rawBytes = gif.bytes();
+    const rawSizeMB = (rawBytes.byteLength / (1024 * 1024)).toFixed(2);
+    console.log(`[Worker] Raw GIF size: ${rawSizeMB}MB`);
 
-    // 5. Finalize
-    gif.on('finished', (blob) => {
-        self.postMessage({ type: 'DONE', payload: blob });
-    });
+    self.postMessage({ type: 'PROGRESS', payload: { progress: 72, message: "Optimizing GIF..." } });
 
-    gif.on('progress', (p) => {
-         const pct = 75 + Math.round(p * 24);
-         self.postMessage({ type: 'PROGRESS', payload: { progress: pct, message: "Encoding pixels..." } });
-    });
-
+    // --- 7. gifsicle Post-Processing ---
+    let finalBlob;
     try {
-        gif.render();
-    } catch (e) {
-        throw e;
+        const gifsicle = (await import('gifsicle-wasm-browser')).default;
+
+        const command = `-O2 --lossy=${LOSSY_LEVEL} ${GIFSICLE_COLORS} input.gif -o /out/optimized.gif`;
+
+        const results = await gifsicle.run({
+            input: [{ file: new Blob([rawBytes], { type: 'image/gif' }), name: 'input.gif' }],
+            command: [command]
+        });
+
+        if (results && results.length > 0) {
+            finalBlob = results[0];
+            const optimizedSizeMB = (finalBlob.size / (1024 * 1024)).toFixed(2);
+            console.log(`[Worker] Optimized GIF size: ${optimizedSizeMB}MB (was ${rawSizeMB}MB)`);
+        } else {
+            console.warn('[Worker] gifsicle returned no output, using raw GIF');
+            finalBlob = new Blob([rawBytes], { type: 'image/gif' });
+        }
+    } catch (err) {
+        console.warn('[Worker] gifsicle optimization failed, using raw GIF:', err.message);
+        finalBlob = new Blob([rawBytes], { type: 'image/gif' });
     }
+
+    self.postMessage({ type: 'PROGRESS', payload: { progress: 98, message: "Done!" } });
+    self.postMessage({ type: 'DONE', payload: finalBlob });
 }
 
 async function exportMp4(meme, texts, stickers, assets, quality) {

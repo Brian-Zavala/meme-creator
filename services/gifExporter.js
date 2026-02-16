@@ -1,6 +1,5 @@
-import GIF from 'gif.js';
 import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnimations';
-import { loadMemeAssets, renderMemeFrame, calculateDimensions, applyDeepFry } from './renderService';
+import { loadMemeAssets, renderMemeFrame, calculateDimensions } from './renderService';
 
 
 /**

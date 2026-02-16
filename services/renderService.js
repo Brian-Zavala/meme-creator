@@ -1,5 +1,4 @@
 
-import GIF from 'gif.js';
 import { GifReader } from 'omggif';
 import { getAnimationById, hasAnimatedText, calculateGifLoopDuration } from '../constants/textAnimations';
 

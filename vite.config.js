@@ -196,7 +196,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom", "react-hot-toast"],
-          "vendor-media": ["gif.js", "omggif", "@imgly/background-removal"],
+          "vendor-media": ["gifenc", "omggif", "@imgly/background-removal"],
           "vendor-utils": ["clsx", "tailwind-merge", "lucide-react"],
           "vendor-analytics": ["posthog-js"],
           "vendor-posthog-react": ["posthog-js/react"],

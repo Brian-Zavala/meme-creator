@@ -1,33 +1,5 @@
-import { calculateGifLoopDuration, hasAnimatedText } from '../constants/textAnimations';
 import { loadMemeAssets, renderMemeFrame, calculateDimensions } from './renderService';
-
-
-/**
- * Exports a meme as an animated GIF
- * Supports Multi-Panel, Per-Panel Filters, and Deep Fry
- */
-/**
- * Exports a meme as an animated GIF
- * Supports Multi-Panel, Per-Panel Filters, Deep Fry, and Background Persistence
- */
 import { db } from './db';
-
-// Helper: Create a "Tick Worker" to bypass background tab throttling
-// Browsers throttle setTimeout/setInterval to 1s in background tabs.
-// Web Workers run in a separate thread and are NOT throttled (mostly).
-function createTickWorker() {
-    const blob = new Blob([`
-        self.onmessage = function(e) {
-            if (e.data === 'tick') {
-                // Determine next tick (immediate or slight delay?)
-                // Just posting back immediately is fine for "setTimeout(0)" behavior
-                self.postMessage('tock');
-            }
-        };
-    `], { type: 'application/javascript' });
-    return new Worker(URL.createObjectURL(blob));
-}
-
 import { VideoFrameProvider } from './VideoFrameProvider';
 
 export async function exportMemeAsGif(meme, texts, stickers, onProgress, quality = 5, action = 'download') {

@@ -4774,6 +4774,7 @@ export default function Main() {
                 onAnimationChange={handleAnimationChange}
                 onStartCrop={handleStartCrop}
                 isCropping={isCropping}
+                onAddSticker={addSticker}
                 onChaos={handleChaos}
                 onCaptionRemix={handleCaptionRemix}
                 onStyleShuffle={handleStyleShuffle}

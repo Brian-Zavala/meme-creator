@@ -6,6 +6,7 @@ import ColorSwatchRow from "./ColorSwatchRow";
 import PillSelector from "./PillSelector";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 
+const MemeStickerLibrary = lazy(() => import("../MemeEditor/MemeStickerLibrary"));
 const TextToolRow    = lazy(() => import("./layers/TextToolRow"));
 const ImageToolRow   = lazy(() => import("./layers/ImageToolRow"));
 const DrawToolRow    = lazy(() => import("./layers/DrawToolRow"));
@@ -66,8 +67,16 @@ const TEXT_SLIDER_CONFIGS = {
 };
 
 function renderLayer2(activeTab, activeTool, meme, handlers) {
-  const { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange } = handlers;
+  const { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker } = handlers;
   const filters = meme.filters || {};
+
+  if (activeTab === "sticker" && activeTool) {
+    return (
+      <Suspense fallback={<div className="flex items-center justify-center h-full text-slate-500 text-sm">Loading...</div>}>
+        <MemeStickerLibrary onAddSticker={onAddSticker} onClose={() => {}} />
+      </Suspense>
+    );
+  }
 
   if (activeTab === "image") {
     const cfg = IMAGE_FILTER_CONFIGS[activeTool];
@@ -197,6 +206,8 @@ export default function MobileBottomBar({
   onAnimationChange,
   onStartCrop,
   isCropping,
+  // Sticker tab
+  onAddSticker,
   // Quick tab actions
   onChaos,
   onCaptionRemix,
@@ -230,9 +241,10 @@ export default function MobileBottomBar({
     setActiveTool((prev) => (prev === toolId ? null : toolId));
   }, [onStartCrop]);
 
-  const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange };
+  const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker };
   const toolRowProps = { activeTool, onToolTap: handleToolTap };
 
+  const isStickerLayer2 = activeTab === "sticker" && activeTool;
   const layer2Content = meme && activeTab && activeTool
     ? renderLayer2(activeTab, activeTool, meme, handlers)
     : null;
@@ -242,7 +254,7 @@ export default function MobileBottomBar({
       {/* Layer 2: Active Control — expands above Layer 1 */}
       <div className="mobile-active-control" data-visible={layer2Content ? true : undefined}>
         <div className="mobile-active-control-inner">
-          <div className="flex items-center h-[52px]">
+          <div className={isStickerLayer2 ? "h-[50vh] max-h-[400px] overflow-y-auto" : "flex items-center h-[52px]"}>
             {layer2Content}
           </div>
         </div>

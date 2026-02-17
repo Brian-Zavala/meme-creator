@@ -20,7 +20,7 @@
 | Phase 4: Top Bar | ✅ Done | 011f4d4 |
 | Bug: Layer 1/2 border-top clashes w/ canvas | ✅ Fixed | 51a09d0 |
 | Phase 5: Gestures & Polish | ✅ Done | 10333d5 |
-| Phase 6: Search Integration | 🔲 Pending | — |
+| Phase 6: Search Integration | ✅ Done | (pre-existing) |
 | Phase 7: Edge Cases & Testing | 🔲 Pending | — |
 
 ---
@@ -145,18 +145,11 @@
 
 ---
 
-### Phase 6: Search Integration 🔲 PENDING
+### Phase 6: Search Integration ✅ DONE (pre-existing)
 
-**Goal:** Image/GIF/Video search accessible from ⋮ menu as overlay.
+**Goal:** Image/GIF/Video search accessible on mobile.
 
-**Steps:**
-1. Create search overlay component (slides down from top or full-screen modal)
-2. Reuse existing GifSearch and image search components inside overlay
-3. Wire to existing search handlers (handleSearchInput, performSearch, etc.)
-4. Add close button and "select image" handler that dismisses overlay
-5. Ensure search works with both Images and Videos modes
-
-**Validation:** Can search and select GIFs/images/videos from the overlay, results load into canvas.
+**Status:** Already satisfied — Meme/Unsplash/Pexels search tabs + search bar are visible at the top of the mobile canvas view. No overlay needed; the existing layout already exposes search on mobile.
 
 ---
 
@@ -189,8 +182,8 @@ Phase 1 ✅
     └── Phase 4 (Top Bar) ✅
 Phase 2 + 3 + 4 ✅
     └── Phase 5 (Gestures & Polish) ✅
-        └── Phase 6 (Search Integration) ← NEXT
-            └── Phase 7 (Edge Cases)
+        └── Phase 6 (Search Integration) ✅
+            └── Phase 7 (Edge Cases) ← NEXT
 ```
 
 ---

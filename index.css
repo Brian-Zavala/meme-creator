@@ -1360,6 +1360,30 @@ body {
   border-color: rgba(255, 255, 255, 0.6);
 }
 
+/* ===== Layer 2: Active Control ===== */
+
+.mobile-active-control {
+  position: fixed;
+  bottom: 104px; /* above tab bar (56px) + tool row (48px) */
+  left: 0;
+  right: 0;
+  z-index: 48;
+  background: #0f0f0f;
+  border-top: 1px solid #2f3336;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms ease-out;
+}
+
+.mobile-active-control[data-visible] {
+  grid-template-rows: 1fr;
+}
+
+.mobile-active-control-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* Canvas bottom padding to avoid tab bar overlap on mobile */
 @media (max-width: 1023px) {
   .mobile-canvas-pad {

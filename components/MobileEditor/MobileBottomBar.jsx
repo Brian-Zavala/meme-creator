@@ -1,6 +1,10 @@
 import { useState, useCallback, lazy, Suspense } from "react";
 import { Type, ImageIcon, Pencil, Smile, Zap } from "lucide-react";
 import ToolPill from "./ToolPill";
+import SliderControl from "./SliderControl";
+import ColorSwatchRow from "./ColorSwatchRow";
+import PillSelector from "./PillSelector";
+import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 
 const TextToolRow    = lazy(() => import("./layers/TextToolRow"));
 const ImageToolRow   = lazy(() => import("./layers/ImageToolRow"));
@@ -16,7 +20,183 @@ const TABS = [
   { id: "quick",   label: "Quick",   icon: Zap },
 ];
 
+const FONTS = [
+  { name: "Impact",          label: "Impact" },
+  { name: "Anton",           label: "Block" },
+  { name: "Archivo Black",   label: "Bold" },
+  { name: "Oswald",          label: "Tall" },
+  { name: "Montserrat",      label: "Modern" },
+  { name: "Roboto",          label: "Clean" },
+  { name: "Comic Neue",      label: "Comic" },
+  { name: "Bangers",         label: "Loud" },
+  { name: "Permanent Marker",label: "Marker" },
+  { name: "Creepster",       label: "Scary" },
+  { name: "Cinzel",          label: "Epic" },
+  { name: "Pacifico",        label: "Script" },
+  { name: "Bebas Neue",      label: "Bebas" },
+  { name: "Luckiest Guy",    label: "Lucky" },
+  { name: "Bungee",          label: "Arcade" },
+  { name: "Lato",            label: "Slim" },
+  { name: "Russo One",       label: "Russo" },
+  { name: "Righteous",       label: "Retro" },
+  { name: "Fredoka",         label: "Bubbly" },
+  { name: "Rubik Mono One",  label: "Chunky" },
+  { name: "Press Start 2P",  label: "Pixel" },
+  { name: "Special Elite",   label: "Typer" },
+  { name: "Black Ops One",   label: "Army" },
+  { name: "Carter One",      label: "Carter" },
+];
+
+const IMAGE_FILTER_CONFIGS = {
+  brightness: { min: 0, max: 200, step: 1,   defaultValue: 100, name: "brightness", label: "Bright" },
+  contrast:   { min: 0, max: 200, step: 1,   defaultValue: 100, name: "contrast",   label: "Contrast" },
+  blur:       { min: 0, max: 10,  step: 0.5, defaultValue: 0,   name: "blur",       label: "Blur" },
+  hue:        { min: 0, max: 360, step: 1,   defaultValue: 0,   name: "hueRotate",  label: "Hue" },
+  grayscale:  { min: 0, max: 100, step: 1,   defaultValue: 0,   name: "grayscale",  label: "Gray" },
+  saturate:   { min: 0, max: 300, step: 1,   defaultValue: 100, name: "saturate",   label: "Saturate" },
+  sepia:      { min: 0, max: 100, step: 1,   defaultValue: 0,   name: "sepia",      label: "Sepia" },
+  invert:     { min: 0, max: 100, step: 1,   defaultValue: 0,   name: "invert",     label: "Invert" },
+  deepfry:    { min: 0, max: 100, step: 1,   defaultValue: 0,   name: "deepFry",    label: "Deep Fry", filledColor: "#ef4444" },
+};
+
+const TEXT_SLIDER_CONFIGS = {
+  size:    { min: 2,  max: 120, step: 1, defaultValue: 40,  name: "fontSize",      label: "Size" },
+  width:   { min: 20, max: 100, step: 1, defaultValue: 100, name: "maxWidth",      label: "Width" },
+  spacing: { min: -5, max: 50,  step: 1, defaultValue: 0,   name: "letterSpacing", label: "Spacing" },
+};
+
+function renderLayer2(activeTab, activeTool, meme, handlers) {
+  const { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange } = handlers;
+  const filters = meme.filters || {};
+
+  if (activeTab === "image") {
+    const cfg = IMAGE_FILTER_CONFIGS[activeTool];
+    if (!cfg) return null; // crop triggers directly, no Layer 2
+
+    return (
+      <SliderControl
+        {...cfg}
+        value={filters[cfg.name] ?? cfg.defaultValue}
+        onChange={handleFilterChange}
+        onCommit={handleStyleCommit}
+      />
+    );
+  }
+
+  if (activeTab === "text") {
+    const sliderCfg = TEXT_SLIDER_CONFIGS[activeTool];
+    if (sliderCfg) {
+      return (
+        <SliderControl
+          {...sliderCfg}
+          value={meme[sliderCfg.name] ?? sliderCfg.defaultValue}
+          onChange={handleStyleChange}
+          onCommit={handleStyleCommit}
+        />
+      );
+    }
+
+    if (activeTool === "font") {
+      return (
+        <PillSelector
+          items={FONTS}
+          value={meme.fontFamily || "Roboto"}
+          getId={(f) => f.name}
+          getLabel={(f) => f.label}
+          getStyle={(f) => ({ fontFamily: `${f.name}, sans-serif` })}
+          onSelect={(f) =>
+            handleStyleChange({ currentTarget: { name: "fontFamily", value: f.name } }, true)
+          }
+        />
+      );
+    }
+
+    if (activeTool === "anim") {
+      const activeAnimId =
+        (meme.texts || []).find((t) => t.animation && t.animation !== "none")?.animation || "none";
+      return (
+        <PillSelector
+          items={TEXT_ANIMATIONS}
+          value={activeAnimId}
+          getId={(a) => a.id}
+          getLabel={(a) => a.name}
+          onSelect={(a) => onAnimationChange && onAnimationChange(a.id)}
+        />
+      );
+    }
+
+    if (activeTool === "color") {
+      return (
+        <ColorSwatchRow name="textColor" value={meme.textColor} onChange={handleStyleChange} />
+      );
+    }
+
+    if (activeTool === "bg") {
+      return (
+        <ColorSwatchRow
+          name="textBgColor"
+          value={meme.textBgColor}
+          onChange={handleStyleChange}
+          allowTransparent
+        />
+      );
+    }
+
+    if (activeTool === "shadow") {
+      return (
+        <ColorSwatchRow name="textShadow" value={meme.textShadow} onChange={handleStyleChange} />
+      );
+    }
+
+    if (activeTool === "caption") {
+      return (
+        <div className="flex items-center gap-3 h-full px-3">
+          <button
+            type="button"
+            onClick={() =>
+              handleStyleChange(
+                { currentTarget: { name: "paddingTop", value: (meme.paddingTop || 0) > 0 ? 0 : 15 } },
+                true,
+              )
+            }
+            className="tool-pill"
+            data-active={(meme.paddingTop || 0) > 0 || undefined}
+          >
+            <span className="text-sm">▲</span>
+            <span>Top Bar {(meme.paddingTop || 0) > 0 ? "On" : "Off"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              handleStyleChange(
+                { currentTarget: { name: "paddingBottom", value: (meme.paddingBottom || 0) > 0 ? 0 : 15 } },
+                true,
+              )
+            }
+            className="tool-pill"
+            data-active={(meme.paddingBottom || 0) > 0 || undefined}
+          >
+            <span className="text-sm">▼</span>
+            <span>Bottom Bar {(meme.paddingBottom || 0) > 0 ? "On" : "Off"}</span>
+          </button>
+        </div>
+      );
+    }
+  }
+
+  return null;
+}
+
 export default function MobileBottomBar({
+  // Meme state (passed as { ...meme, filters: activePanel?.filters })
+  meme,
+  // Handlers
+  handleStyleChange,
+  handleFilterChange,
+  handleStyleCommit,
+  onAnimationChange,
+  onStartCrop,
+  isCropping,
   // Quick tab actions
   onChaos,
   onCaptionRemix,
@@ -41,23 +221,40 @@ export default function MobileBottomBar({
   }, []);
 
   const handleToolTap = useCallback((toolId) => {
+    // Crop activates immediately — no Layer 2
+    if (toolId === "crop" && onStartCrop) {
+      onStartCrop();
+      setActiveTool(null);
+      return;
+    }
     setActiveTool((prev) => (prev === toolId ? null : toolId));
-  }, []);
+  }, [onStartCrop]);
 
+  const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange };
   const toolRowProps = { activeTool, onToolTap: handleToolTap };
+
+  const layer2Content = meme && activeTab && activeTool
+    ? renderLayer2(activeTab, activeTool, meme, handlers)
+    : null;
 
   return (
     <div className="lg:hidden" data-html2canvas-ignore="true">
+      {/* Layer 2: Active Control — expands above Layer 1 */}
+      <div className="mobile-active-control" data-visible={layer2Content ? true : undefined}>
+        <div className="mobile-active-control-inner">
+          <div className="flex items-center h-[52px]">
+            {layer2Content}
+          </div>
+        </div>
+      </div>
+
       {/* Layer 1: Tool Row — slides up when a tab is active */}
       <div className="mobile-tool-row" data-visible={activeTab ? true : undefined}>
         <Suspense fallback={null}>
           {activeTab === "text"    && <TextToolRow    {...toolRowProps} />}
           {activeTab === "image"   && <ImageToolRow   {...toolRowProps} />}
           {activeTab === "draw"    && (
-            <DrawToolRow
-              {...toolRowProps}
-              onClearDrawings={onClearDrawings}
-            />
+            <DrawToolRow {...toolRowProps} onClearDrawings={onClearDrawings} />
           )}
           {activeTab === "sticker" && <StickerToolRow {...toolRowProps} />}
           {activeTab === "quick"   && (

@@ -4767,6 +4767,13 @@ export default function Main() {
             {/* Mobile Bottom Bar - Samsung-style 3-layer system */}
             <Suspense fallback={null}>
               <MobileBottomBar
+                meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
+                handleStyleChange={handleStyleChange}
+                handleFilterChange={handleFilterChange}
+                handleStyleCommit={handleStyleCommit}
+                onAnimationChange={handleAnimationChange}
+                onStartCrop={handleStartCrop}
+                isCropping={isCropping}
                 onChaos={handleChaos}
                 onCaptionRemix={handleCaptionRemix}
                 onStyleShuffle={handleStyleShuffle}

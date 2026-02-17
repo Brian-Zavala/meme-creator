@@ -17,8 +17,9 @@
 | Bug: Draw/erase not wired | ✅ Fixed | 4b7cec8 |
 | Bug: Sticker categories identical | ✅ Fixed | c57a0d8 |
 | Bug: Canvas dashed border z-index | ✅ Fixed | aa4ea62 |
-| Phase 4: Top Bar | 🔲 Next | — |
-| Phase 5: Gestures & Polish | 🔲 Pending | — |
+| Phase 4: Top Bar | ✅ Done | 011f4d4 |
+| Bug: Layer 1/2 border-top clashes w/ canvas | ✅ Fixed | 51a09d0 |
+| Phase 5: Gestures & Polish | ✅ Done | 10333d5 |
 | Phase 6: Search Integration | 🔲 Pending | — |
 | Phase 7: Edge Cases & Testing | 🔲 Pending | — |
 
@@ -84,50 +85,63 @@
 
 ---
 
-### Phase 4: Top Bar 🔲 NEXT
+### Phase 4: Top Bar ✅ DONE
 
 **Goal:** Floating top bar with Upload/Undo/Redo/Save/More replacing current scattered controls.
 
-**Steps:**
-1. Create `components/MobileEditor/MobileTopBar.jsx`
-2. Implement ⋮ More dropdown menu (Share, Layout, Mode, Search, Remove All, Remove Effects)
-3. Wire handlers: undo/redo from useHistory, upload from handleFileUpload, save from handleDownload
-4. Hide current mobile ModeSelector, LayoutSelector, MemeActions, remixActionControls in Main.jsx
-5. Add dark overlay behind ⋮ menu when open
-6. Style as semi-transparent floating bar (48px height, fixed top)
-7. Add top padding to canvas on mobile so content doesn't hide under top bar
+**Completed:**
+- Created `components/MobileEditor/MobileTopBar.jsx` — fixed 48px bar, blur backdrop, z-110
+- ⋮ More dropdown: Share, Layout (expandable pills), Mode (expandable pills), Instructions, Donate, Remove All, Remove Effects
+- "MEME CREATOR" title inside ⋮ menu header (keeps bar uncluttered)
+- Dark overlay behind menu when open (tap-to-dismiss)
+- `Header.jsx` hidden on mobile (`hidden lg:flex`) — no overlap conflict
+- `App.jsx` → `Main.jsx` → `MobileTopBar` prop thread for `onOpenInstructions`
+- `Main.jsx` accepts `onOpenInstructions` prop, passes to MobileTopBar
+- `mobile-canvas-pad` updated: `padding-top: calc(48px + env(safe-area-inset-top))`
+- CSS added: `.mobile-top-bar`, `.mobile-top-btn`, `.mobile-top-btn-primary`, `.mobile-top-bar-overlay`, `.mobile-more-menu`, `.mobile-more-item`, `.mobile-more-sub`, `.mobile-more-sub-item`, `.mobile-more-app-title`
+- Reduced motion rules added for overlay + menu animations
 
-**Prop requirements (from Main.jsx):**
-- `onUndo` — from `handleUndo`
-- `onRedo` — from `handleRedo`
-- `canUndo` — from `history.past.length > 0`
-- `canRedo` — from `history.future.length > 0`
-- `onUpload` — opens file input (trigger `memeInputRef` or similar)
-- `onDownload` — from `handleDownload`
-- `onShare` — from `handleShare`
-- `onRemoveAll` — from `handleReset`
-- `onRemoveEffects` — from `handleRemoveEffects`
-- `layout` / `onLayoutChange` — current layout value + setter
-- `mode` / `onModeChange` — current mode value + setter (Images/Videos)
+**Key implementation notes:**
+- Upload uses internal `<input type="file" ref>` in MobileTopBar — calls `handleFileUpload` directly (same event shape as MemeActions)
+- Mode change inline in Main.jsx JSX (replicates desktop ModeSelector logic, uses `startTransition` + `videoSource` preference)
+- `data-html2canvas-ignore="true"` on bar, overlay, and menu
 
-**Validation:** All top bar actions work, ⋮ menu opens/closes, layout/mode switching works.
+**Files created/modified:**
+- `components/MobileEditor/MobileTopBar.jsx` ← NEW
+- `components/Layout/Header.jsx` — added `hidden lg:flex`
+- `components/Layout/Main.jsx` — lazy import, `onOpenInstructions` prop, MobileTopBar render
+- `App.jsx` — passes `onOpenInstructions` to `<Main>`
+- `index.css` — all mobile top bar CSS + updated mobile-canvas-pad
 
 ---
 
-### Phase 5: Gestures & Polish 🔲 PENDING
+### Phase 5: Gestures & Polish ✅ DONE
 
-**Goal:** Swipe-to-dismiss, dark overlay, haptic feedback, smooth transitions.
+**Goal:** Swipe-to-dismiss, haptic feedback, canvas collapse, safe areas.
 
-**Steps:**
-1. Add PointerEvent swipe-down detection on bottom bar area
-2. Implement dark overlay (bg-black/40) when Layer 1+ is visible, tap to dismiss
-3. Add canvas tap handler to collapse all layers
-4. Add haptic feedback (navigator.vibrate) on tab/tool taps
-5. Ensure MemeFineTune floats above bottom bar correctly (bottom: calc(156px + safe-area))
-6. Handle keyboard showing/hiding (mobile input focus adjustments)
-7. Add safe-area-inset-bottom for iPhone home indicator
+**Commits:** 51a09d0 (border fix), 10333d5 (Phase 5)
 
-**Validation:** Swipe dismiss works, overlay dismiss works, iPhone safe areas correct.
+**Completed:**
+1. ✅ PointerEvent swipe-down on Layer 1 & Layer 2 (30px threshold → collapse)
+2. ⏭️ Dark overlay — **intentionally skipped**: would block real-time canvas editing visibility
+3. ✅ Canvas tap collapses all layers via `mobileCollapseRef` callback
+4. ✅ Haptic feedback `navigator.vibrate(8)` on tab taps, tool taps, and swipe dismiss
+5. ✅ MemeFineTune `position: fixed` above bottom bar: `bottom: calc(56px + env(safe-area-inset-bottom))`
+6. ⏭️ Keyboard show/hide — deferred (resize events already handled by existing canvas logic)
+7. ✅ Safe-area-inset-bottom on tab bar height, tool row bottom, active control bottom
+
+**Key implementation notes:**
+- `collapseLayers` exposed to Main.jsx via `collapseRef` prop (ref pattern, avoids lifting state)
+- Tab bar uses `height: calc(56px + env(safe-area-inset-bottom))` + `align-items: flex-start` + `padding-top: 4px` to keep icons above the notch
+- Layer 1 border-top was always visible (even when off-screen) — fixed to only show when `[data-visible]`
+- `haptic()` helper is a try/catch no-op on unsupported devices
+
+**Files modified:**
+- `components/MobileEditor/MobileBottomBar.jsx` — swipe handlers, haptic, collapseRef, collapseLayers
+- `components/Layout/Main.jsx` — mobileCollapseRef, canvas tap wiring, collapseRef prop
+- `index.css` — safe-area height fixes, MemeFineTune mobile positioning, border-top visibility fix
+
+**Validation:** Swipe dismiss works, canvas tap collapses, haptic fires, iPhone safe areas correct.
 
 ---
 
@@ -172,19 +186,20 @@ Phase 1 (Foundation) ✅
     └── Phase 2 (Tool Rows) ✅
         └── Phase 3 (Active Controls) ✅
 Phase 1 ✅
-    └── Phase 4 (Top Bar) ← NEXT
-Phase 2 + 3 + 4
-    └── Phase 5 (Gestures & Polish)
-        └── Phase 6 (Search Integration)
+    └── Phase 4 (Top Bar) ✅
+Phase 2 + 3 + 4 ✅
+    └── Phase 5 (Gestures & Polish) ✅
+        └── Phase 6 (Search Integration) ← NEXT
             └── Phase 7 (Edge Cases)
 ```
 
 ---
 
-## Files Created (Phases 1-3)
+## Files Created (Phases 1-5)
 
 | File | Purpose |
 |---|---|
+| `components/MobileEditor/MobileTopBar.jsx` | Fixed top bar: Upload/Undo/Redo/Save/⋮ menu |
 | `components/MobileEditor/MobileBottomBar.jsx` | 3-layer system orchestrator |
 | `components/MobileEditor/ToolPill.jsx` | Reusable pill button |
 | `components/MobileEditor/SliderControl.jsx` | Mobile slider wrapper |
@@ -196,13 +211,16 @@ Phase 2 + 3 + 4
 | `components/MobileEditor/layers/StickerToolRow.jsx` | STICKER tab Layer 1 |
 | `components/MobileEditor/layers/QuickToolRow.jsx` | QUICK tab Layer 1 |
 
-## Files Modified (Phases 1-3)
+## Files Modified (Phases 1-5)
 
 | File | Changes |
 |---|---|
-| `components/Layout/Main.jsx` | MobileBottomBar integrated, old mobile sections hidden |
+| `components/Layout/Main.jsx` | MobileTopBar + MobileBottomBar integrated, old mobile sections hidden, `onOpenInstructions` prop, `mobileCollapseRef`, canvas tap collapse |
+| `components/Layout/Header.jsx` | `hidden lg:flex` — invisible on mobile |
+| `App.jsx` | Passes `onOpenInstructions` to `<Main>` |
 | `components/MemeEditor/MemeStickerLibrary.jsx` | Added initialTab/initialQuery/scrollToCategory/focusSearch props |
-| `index.css` | All mobile CSS: tab-bar, tool-row, active-control, tool-pill, draw-color-dot, mobile-canvas-pad |
+| `components/MobileEditor/MobileBottomBar.jsx` | swipe-down dismiss, haptic feedback, `collapseRef` exposure, `collapseLayers` |
+| `index.css` | All mobile CSS: top-bar, tab-bar, tool-row, active-control, tool-pill, draw-color-dot, mobile-canvas-pad, safe-area fixes, MemeFineTune positioning, border-top visibility |
 
 ---
 
@@ -215,6 +233,6 @@ Phase 2 + 3 + 4
 | Draw tools not working | ✅ Fixed: canvasActiveTool threaded from Main.jsx |
 | Sticker categories identical | ✅ Fixed: per-category props + key remount |
 | Touch event conflicts with canvas | Mitigated via stopPropagation in layers |
-| MemeFineTune overlap | ⏳ To address in Phase 5 |
-| Safe area (iPhone notch) | ✅ env(safe-area-inset-bottom) on tab bar |
+| MemeFineTune overlap | ✅ Fixed in Phase 5: fixed above bar via CSS |
+| Safe area (iPhone notch) | ✅ Tab bar height calc, tool row + active control offsets |
 | Export including bottom bar | ✅ data-html2canvas-ignore on MobileBottomBar wrapper |

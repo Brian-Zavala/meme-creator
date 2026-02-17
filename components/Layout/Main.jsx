@@ -40,6 +40,7 @@ const ModeSelector = lazy(() =>
 const ColorControls = lazy(() => import("../MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
 const RemixCarousel = lazy(() => import("../MemeEditor/RemixCarousel"));
+const MobileBottomBar = lazy(() => import("../MobileEditor/MobileBottomBar"));
 
 
 
@@ -4212,7 +4213,7 @@ export default function Main() {
               />
             </Suspense>
 
-            <div className="lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
+            <div className="hidden lg:block lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
               {/* Controls moved to Toolbar */}
 
                 {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
@@ -4230,8 +4231,8 @@ export default function Main() {
               </Suspense>
             </div>
 
-            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
+            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible mobile-canvas-pad">
+              <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
                 <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
                   <ModeSelector
                     mode={meme.mode}
@@ -4262,8 +4263,8 @@ export default function Main() {
                 </Suspense>
               </div>
               <div className="relative flex flex-col shadow-2xl rounded-t-2xl border border-[#2f3336] card-bg overflow-hidden">
-                {/* MemeToolbar - Mobile/Tablet Only (inside card) */}
-                <div className="lg:hidden">
+                {/* MemeToolbar - Hidden on mobile (replaced by MobileBottomBar) */}
+                <div className="hidden">
                   <Suspense fallback={<div className="h-20 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
                     <MemeToolbar
                       meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
@@ -4709,8 +4710,8 @@ export default function Main() {
                 )}
               </div>
 
-              {/* MOBILE: Remix Carousel -> Stickers -> Actions */}
-              <div className="flex flex-col gap-4 lg:hidden">
+              {/* MOBILE: Hidden - replaced by MobileBottomBar */}
+              <div className="hidden">
                 {remixActionControls}
 
                 {remixCarouselControl}
@@ -4762,6 +4763,18 @@ export default function Main() {
                 </div>
               </div>
             </div>
+
+            {/* Mobile Bottom Bar - Samsung-style 3-layer system */}
+            <Suspense fallback={null}>
+              <MobileBottomBar
+                onChaos={handleChaos}
+                onCaptionRemix={handleCaptionRemix}
+                onStyleShuffle={handleStyleShuffle}
+                onRemoveAll={handleReset}
+                onRemoveEffects={handleRemoveEffects}
+                onClearDrawings={handleClearDrawings}
+              />
+            </Suspense>
           </>
         );
       })()}

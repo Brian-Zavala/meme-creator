@@ -828,11 +828,15 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
     texts.forEach((text, index) => {
         if (!text.content) return;
 
+        // Force uppercase to match canvas CSS (className="uppercase")
+        const content = text.content.toUpperCase();
+
         // Apply base user rotation + animations
         let xOffset = 0;
         let yOffset = 0;
         let rotation = (text.rotation || 0) * (Math.PI / 180);
-        let scale = 1;
+        const userScale = text.scale ?? 1;  // User's manual scale (applied to fontSize only)
+        let animScale = 1;  // Animation scale (applied to transform only)
         let opacity = 1;
 
         if (text.animation && text.animation !== 'none') {
@@ -849,7 +853,7 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
                 xOffset = (t.offsetX || 0) * (exportWidth / 800);
                 yOffset = (t.offsetY || 0) * (exportWidth / 800);
                 rotation += (t.rotation || 0) * (Math.PI / 180);
-                scale = t.scale || 1;
+                animScale = t.scale || 1;  // Animation scale separate from user scale
                 opacity = t.opacity ?? 1;
             }
         }
@@ -864,7 +868,7 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
 
         // Base font size scaling relative to exportWidth vs 800px base
         const baseFontSize = (text.fontSize || meme.fontSize || 40);
-        const fontSize = baseFontSize * (exportWidth / 800) * scale;
+        const fontSize = baseFontSize * (exportWidth / 800) * userScale;  // Apply user scale to fontSize
 
         // FIX: Match MemeCanvas stroke width calculation
         // MemeCanvas: stroke = Math.max(1, (fontSize) / 25)
@@ -943,9 +947,44 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
                   const waveScale = 1;
                   // const waveOpacity = 1; // Already handled by globalAlpha?
 
-                  const lines = text.content.split('\n');
+                  const lines = content.split('\n');
                   let globalCharIndex = 0;
                   const lineHeight = fontSize * 1.2;
+                  const letterSpacing = (meme.letterSpacing || 0) * (exportWidth / 800);
+
+                  // Helper to measure line width with letter spacing
+                  const measureLineWidthWithSpacing = (lineStr) => {
+                      if (letterSpacing === 0) {
+                          return ctx.measureText(lineStr).width;
+                      }
+                      let totalWidth = 0;
+                      for (let i = 0; i < lineStr.length; i++) {
+                          totalWidth += ctx.measureText(lineStr[i]).width;
+                          if (i < lineStr.length - 1) totalWidth += letterSpacing;
+                      }
+                      return totalWidth;
+                  };
+
+                  // Draw text background if configured (wave animation path)
+                  const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
+                  if (hasBg) {
+                      const maxLineWidth = Math.max(...lines.map(l => measureLineWidthWithSpacing(l)));
+                      const totalBlockHeight = lines.length * lineHeight;
+
+                      // CSS padding: 0.25em 0.5em
+                      const paddingX = fontSize * 0.5;
+                      const paddingY = fontSize * 0.25;
+
+                      const bgWidth = maxLineWidth + (paddingX * 2);
+                      const bgHeight = totalBlockHeight + (paddingY * 2);
+
+                      // Draw background rectangle (centered at x, y)
+                      ctx.fillStyle = meme.textBgColor;
+                      ctx.fillRect(x - bgWidth / 2, y - bgHeight / 2, bgWidth, bgHeight);
+
+                      // Restore text color
+                      ctx.fillStyle = text.color || meme.textColor || 'white';
+                  }
 
                   lines.forEach((lineStr, lineIdx) => {
                       // Calculate where this line starts vertically
@@ -953,8 +992,8 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
                       const totalBlockHeight = lines.length * lineHeight;
                       const lineYBase = y + (lineIdx * lineHeight) - (totalBlockHeight / 2) + (lineHeight / 2);
 
-                      // Measure total line width to center it horizontally
-                      const lineWidth = ctx.measureText(lineStr).width;
+                      // Measure total line width with letter spacing to center it horizontally
+                      const lineWidth = measureLineWidthWithSpacing(lineStr);
                       let currentX = x - (lineWidth / 2); // Start X for this line
 
                       // Iterate chars
@@ -994,7 +1033,7 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
                           ctx.globalAlpha = opacity * charOpacity;
                           ctx.translate(currentX + (charWidth/2) + waveXOffset + charXOffset, lineYBase + waveYOffset + charYOffset);
                           ctx.rotate(rotation + charRotation); // Add base rotation too?
-                          ctx.scale(scale * charScale, scale * charScale);
+                          ctx.scale(charScale, charScale);  // Only apply per-char animation scale (userScale already in fontSize)
 
                           // Draw Text
                           if (ctx.lineWidth > 0) ctx.strokeText(char, 0, 0);
@@ -1002,7 +1041,7 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
 
                           ctx.restore();
 
-                          currentX += charWidth;
+                          currentX += charWidth + letterSpacing;
                           if (char.trim() !== '') globalCharIndex++;
                       });
                   });
@@ -1014,20 +1053,33 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
                  // Apply Animation Transforms
                  ctx.translate(x + xOffset, y + yOffset);
                  ctx.rotate(rotation);
-                 ctx.scale(scale, scale); // Apply scale here
+                 ctx.scale(animScale, animScale); // Apply animation scale only (userScale already in fontSize)
 
                  // Wrap Text
-                 const maxWidth = (text.maxWidth || 90) / 100 * exportWidth;
+                 const maxWidth = (meme.maxWidth || 100) / 100 * exportWidth;
                  const lineHeight = fontSize * 1.2;
+                 const letterSpacing = (meme.letterSpacing || 0) * (exportWidth / 800);
 
-                 const words = text.content.split(' ');
+                 const words = content.split(' ');
                  let line = '';
                  let lines = [];
 
+                 // Helper to measure line width with letter spacing
+                 const measureLineWidth = (text) => {
+                     if (letterSpacing === 0) {
+                         return ctx.measureText(text).width;
+                     }
+                     let totalWidth = 0;
+                     for (let i = 0; i < text.length; i++) {
+                         totalWidth += ctx.measureText(text[i]).width;
+                         if (i < text.length - 1) totalWidth += letterSpacing;
+                     }
+                     return totalWidth;
+                 };
+
                  for (let n = 0; n < words.length; n++) {
                      const testLine = line + words[n] + ' ';
-                     const metrics = ctx.measureText(testLine);
-                     const testWidth = metrics.width;
+                     const testWidth = measureLineWidth(testLine);
                      if (testWidth > maxWidth && n > 0) {
                          lines.push(line);
                          line = words[n] + ' ';
@@ -1037,17 +1089,55 @@ function drawText(ctx, texts, meme, exportWidth, exportHeight, padding = 0, curr
                  }
                  lines.push(line);
 
+                 // Draw text background if configured (matches CSS: backgroundColor + padding)
+                 const hasBg = meme.textBgColor && meme.textBgColor !== 'transparent';
+                 if (hasBg) {
+                     // Calculate background dimensions
+                     const maxLineWidth = Math.max(...lines.map(l => measureLineWidth(l)));
+                     const totalBlockHeight = lines.length * lineHeight;
+
+                     // CSS padding: 0.25em 0.5em (vertical, horizontal)
+                     const paddingX = fontSize * 0.5;
+                     const paddingY = fontSize * 0.25;
+
+                     const bgWidth = maxLineWidth + (paddingX * 2);
+                     const bgHeight = totalBlockHeight + (paddingY * 2);
+
+                     // Draw background rectangle (centered at origin)
+                     ctx.fillStyle = meme.textBgColor;
+                     ctx.fillRect(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight);
+
+                     // Restore text color for actual text drawing
+                     ctx.fillStyle = text.color || meme.textColor || 'white';
+                 }
+
                  lines.forEach((l, i) => {
                      // Center vertically
                      const lineY = (i - (lines.length - 1) / 2) * lineHeight;
 
-                     // Draw Stroke (Outline)
-                     if (ctx.lineWidth > 0) {
-                          ctx.strokeText(l, 0, lineY);
-                     }
+                     if (letterSpacing === 0) {
+                         // Fast path: no letter spacing, use standard drawing
+                         if (ctx.lineWidth > 0) {
+                              ctx.strokeText(l, 0, lineY);
+                         }
+                         ctx.fillText(l, 0, lineY);
+                     } else {
+                         // Manual character positioning with letter spacing
+                         const totalWidth = measureLineWidth(l);
+                         let currentX = -totalWidth / 2;  // Start from left, centered
 
-                     // Draw Fill
-                     ctx.fillText(l, 0, lineY);
+                         for (let charIdx = 0; charIdx < l.length; charIdx++) {
+                             const char = l[charIdx];
+                             const charWidth = ctx.measureText(char).width;
+
+                             if (ctx.lineWidth > 0) {
+                                 ctx.strokeText(char, currentX + charWidth / 2, lineY);
+                             }
+                             ctx.fillText(char, currentX + charWidth / 2, lineY);
+
+                             currentX += charWidth + letterSpacing;
+                         }
+                     }
                  });
              }
              ctx.restore();

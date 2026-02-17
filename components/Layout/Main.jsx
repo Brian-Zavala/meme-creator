@@ -40,6 +40,8 @@ const ModeSelector = lazy(() =>
 const ColorControls = lazy(() => import("../MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
 const RemixCarousel = lazy(() => import("../MemeEditor/RemixCarousel"));
+const MobileBottomBar = lazy(() => import("../MobileEditor/MobileBottomBar"));
+const MobileTopBar = lazy(() => import("../MobileEditor/MobileTopBar"));
 
 
 
@@ -157,7 +159,7 @@ const safeImport = async (importFn, retries = 3, interval = 1000) => {
   }
 };
 
-export default function Main() {
+export default function Main({ onOpenInstructions }) {
   const [isPending, startTransition] = useTransition();
   // NEW: Track hydration status to prevent overwriting DB with default state
   const [isHydrated, setIsHydrated] = useState(false);
@@ -771,6 +773,7 @@ export default function Main() {
   const [pingKey, setPingKey] = useState(null);
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
   const fineTuneRef = useRef(null);
+  const mobileCollapseRef = useRef(null);
 
   const [isMobileScreen, setIsMobileScreen] = useState(false);
 
@@ -3258,6 +3261,8 @@ export default function Main() {
       setEditingId(null);
     }
     globalLastTapRef.current = 0;
+    // Collapse mobile bottom bar layers on canvas tap
+    mobileCollapseRef.current?.();
   }
 
   function handleFineTune(axis, value) {
@@ -4212,7 +4217,7 @@ export default function Main() {
               />
             </Suspense>
 
-            <div className="lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
+            <div className="hidden lg:block lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
               {/* Controls moved to Toolbar */}
 
                 {/* DESKTOP: Remix Controls ABOVE Upload Image (MemeInputs/MemeActions) */}
@@ -4230,8 +4235,8 @@ export default function Main() {
               </Suspense>
             </div>
 
-            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
+            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible mobile-canvas-pad">
+              <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
                 <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
                   <ModeSelector
                     mode={meme.mode}
@@ -4262,8 +4267,8 @@ export default function Main() {
                 </Suspense>
               </div>
               <div className="relative flex flex-col shadow-2xl rounded-t-2xl border border-[#2f3336] card-bg overflow-hidden">
-                {/* MemeToolbar - Mobile/Tablet Only (inside card) */}
-                <div className="lg:hidden">
+                {/* MemeToolbar - Hidden on mobile (replaced by MobileBottomBar) */}
+                <div className="hidden">
                   <Suspense fallback={<div className="h-20 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
                     <MemeToolbar
                       meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
@@ -4709,8 +4714,8 @@ export default function Main() {
                 )}
               </div>
 
-              {/* MOBILE: Remix Carousel -> Stickers -> Actions */}
-              <div className="flex flex-col gap-4 lg:hidden">
+              {/* MOBILE: Hidden - replaced by MobileBottomBar */}
+              <div className="hidden">
                 {remixActionControls}
 
                 {remixCarouselControl}
@@ -4762,6 +4767,72 @@ export default function Main() {
                 </div>
               </div>
             </div>
+
+            {/* Mobile Top Bar - Upload/Undo/Redo/Save/More */}
+            <Suspense fallback={null}>
+              <MobileTopBar
+                onUndo={undo}
+                onRedo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUpload={handleFileUpload}
+                onDownload={handleDownload}
+                onShare={handleShare}
+                onRemoveAll={handleReset}
+                onRemoveEffects={handleRemoveEffects}
+                onOpenInstructions={onOpenInstructions}
+                layout={meme.layout}
+                onLayoutChange={handleLayoutChange}
+                mode={meme.mode}
+                onModeChange={(modeId) => {
+                  startTransition(() => {
+                    updateState((prev) => ({ ...prev, mode: modeId }));
+                    if (modeId === "image") {
+                      clearSearch();
+                      getMemeImage(modeId);
+                    } else {
+                      if (videoSource === "pexels") {
+                        handleRandomVideo();
+                      } else {
+                        getMemeImage(modeId);
+                      }
+                    }
+                  });
+                }}
+              />
+            </Suspense>
+
+            {/* Mobile Bottom Bar - Samsung-style 3-layer system */}
+            <Suspense fallback={null}>
+              <MobileBottomBar
+                meme={{ ...meme, filters: activePanel?.filters || DEFAULT_FILTERS }}
+                handleStyleChange={handleStyleChange}
+                handleFilterChange={handleFilterChange}
+                handleStyleCommit={handleStyleCommit}
+                onAnimationChange={handleAnimationChange}
+                onStartCrop={handleStartCrop}
+                isCropping={isCropping}
+                onAddSticker={addSticker}
+                canvasActiveTool={activeTool}
+                setCanvasActiveTool={setActiveTool}
+                onChaos={handleChaos}
+                onCaptionRemix={handleCaptionRemix}
+                onStyleShuffle={handleStyleShuffle}
+                onFilterFrenzy={handleFilterFrenzy}
+                onVibeCheck={handleVibeCheck}
+                onExtremeDeepFry={handleExtremeDeepFry}
+                onStickerfy={handleStickerfy}
+                onNuked={handleNuked}
+                onGlitch={handleGlitch}
+                onCursed={handleCursed}
+                onConfettiBlast={handleConfettiBlast}
+                onTimeWarp={handleTimeWarp}
+                onRemoveAll={handleReset}
+                onRemoveEffects={handleRemoveEffects}
+                onClearDrawings={handleClearDrawings}
+                collapseRef={mobileCollapseRef}
+              />
+            </Suspense>
           </>
         );
       })()}

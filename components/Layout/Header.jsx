@@ -5,7 +5,7 @@ export default function Header({ onOpenInstructions }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="header flex items-center justify-between px-6 py-4 bg-brand shadow-lg select-none relative z-[100]">
+    <header className="header hidden lg:flex items-center justify-between px-6 py-4 bg-brand shadow-lg select-none relative z-[100]">
       <div className="flex items-center gap-3 cursor-default">
         <div>
           <h1 className="header--title text-2xl font-black tracking-tighter text-white drop-shadow-md">MEME CREATOR</h1>

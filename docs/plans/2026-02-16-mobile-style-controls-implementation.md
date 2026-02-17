@@ -21,7 +21,8 @@
 | Bug: Layer 1/2 border-top clashes w/ canvas | ✅ Fixed | 51a09d0 |
 | Phase 5: Gestures & Polish | ✅ Done | 10333d5 |
 | Phase 6: Search Integration | ✅ Done | (pre-existing) |
-| Phase 7: Edge Cases & Testing | 🔲 Pending | — |
+| Phase 7: Polish, Bug Fixes & Quick Actions | ✅ Done | bf43a12, e4b51ae |
+| Phase 8: Edge Cases & Testing | 🔲 Pending | — |
 
 ---
 
@@ -75,12 +76,7 @@
 - `MobileBottomBar` has internal `activeTab`/`activeTool` state (UI layer state)
 - `canvasActiveTool`/`setCanvasActiveTool` props are Main.jsx's `activeTool`/`setActiveTool` — needed for draw mode
 - Sticker Layer 2 uses `key={activeTool}` on `MemeStickerLibrary` to force remount on category change
-- `MemeStickerLibrary` now accepts `initialTab`, `initialQuery`, `scrollToCategory`, `focusSearch` props:
-  - search → tenor tab, auto-focus search input
-  - trending → tenor tab, trending GIFs
-  - memes → tenor tab, pre-search "meme"
-  - animals → emoji tab, scroll to "Animals" category
-  - reactions → emoji tab, scroll to "Faces" category
+- `MemeStickerLibrary` accepts `initialTab`, `initialQuery`, `focusSearch` props
 - Mobile bar z-indices: tab-bar=110, tool-row=109, active-control=108 (above canvas overlays at z-100/101)
 
 ---
@@ -153,9 +149,51 @@
 
 ---
 
-### Phase 7: Edge Cases & Testing 🔲 PENDING
+### Phase 7: Polish, Bug Fixes & Quick Actions ✅ DONE
 
-**Goal:** Handle all edge cases and ensure robustness.
+**Goal:** Fix crashes and UX issues found during testing; complete Quick tab with all remix effects; replace emoji icons with lucide-react SVGs throughout.
+
+**Commits:** bf43a12, e4b51ae
+
+**Completed:**
+
+**Bug fixes:**
+- ✅ Layout crash from hamburger menu: `MobileTopBar` LAYOUTS IDs corrected to match `DEFAULT_LAYOUTS` keys (`"grid"`→`"top-bottom"`, `"side"`→`"side-by-side"`, `"quad"`→`"grid-4"`)
+- ✅ Sticker thumbnail 404s: removed wsrv.nl proxy wrapper, use `sticker.shareUrl` directly (Giphy v1 CDN paths incompatible with wsrv.nl)
+- ✅ Draw tab React setState-in-render error: moved `setCanvasActiveTool` calls out of `setActiveTab` updater function; added `activeTabRef` to mirror tab state for synchronous reads
+- ✅ Draw "+" custom color picker non-functional: replaced label/input overlay with ref-triggered hidden input
+- ✅ Color picker rendering outside mobile viewport (Text + Draw): both `ColorSwatchRow` and `DrawToolRow` now render the `<input type="color">` as `position: fixed; bottom: 200px; left: 50%` so the browser's picker popup opens within the viewport
+- ✅ Sticker Animals/Reactions opened emoji grid instead of Giphy: changed both to `initialTab: "tenor"` with `"animals"` and `"reaction"` search queries
+- ✅ Save button text white: `.mobile-top-btn-primary` color changed from `#000` to `#fff`
+
+**Features:**
+- ✅ Quick tab expanded from 5 to 14 actions: added Filter Frenzy, Vibe Check, Extreme Deep Fry, Stickerfy, Nuked, Glitch, Cursed, Confetti Blast, Time Warp; all handlers threaded from Main.jsx → MobileBottomBar → QuickToolRow
+- ✅ All emoji icon strings replaced with lucide-react SVGs across all 5 tool rows (Text, Image, Draw, Sticker, Quick)
+
+**Key implementation notes:**
+- `activeTabRef` mirrors `activeTab` state — prevents setState-in-render when switching to/from Draw tab
+- Color input fixed-positioned at `bottom: 200px` ensures picker opens above the bar area on all devices
+- `sticker.shareUrl` = `fixed_height.url` from Giphy — smaller, display-optimized, avoids CDN hotlink restrictions
+- Quick tab now mirrors full desktop RemixCarousel (12 effects + Remove All + Clear FX = 14 total)
+
+**Files modified:**
+- `components/MobileEditor/MobileTopBar.jsx` — layout IDs fixed
+- `components/MemeEditor/MemeStickerLibrary.jsx` — sticker thumbnail source
+- `components/MobileEditor/ColorSwatchRow.jsx` — fixed-position color input
+- `components/MobileEditor/MobileBottomBar.jsx` — activeTabRef, 9 new Quick handler props, animals/reactions Giphy queries
+- `components/MobileEditor/layers/DrawToolRow.jsx` — lucide icons, fixed-position color input
+- `components/MobileEditor/layers/ImageToolRow.jsx` — lucide icons
+- `components/MobileEditor/layers/QuickToolRow.jsx` — lucide icons, 9 new remix effects
+- `components/MobileEditor/layers/StickerToolRow.jsx` — lucide icons
+- `components/MobileEditor/layers/TextToolRow.jsx` — lucide icons
+- `components/Layout/Main.jsx` — 9 new handler props passed to MobileBottomBar
+- `index.css` — Save button text color
+
+---
+
+### Phase 8: Edge Cases & Testing 🔲 PENDING
+
+**Goal:** Handle remaining edge cases and verify robustness across devices.
 
 **Steps:**
 1. Test caption bars toggle within TEXT tab Layer 2
@@ -183,7 +221,8 @@ Phase 1 ✅
 Phase 2 + 3 + 4 ✅
     └── Phase 5 (Gestures & Polish) ✅
         └── Phase 6 (Search Integration) ✅
-            └── Phase 7 (Edge Cases) ← NEXT
+            └── Phase 7 (Polish, Bug Fixes & Quick Actions) ✅
+                └── Phase 8 (Edge Cases & Testing) ← NEXT
 ```
 
 ---
@@ -196,24 +235,24 @@ Phase 2 + 3 + 4 ✅
 | `components/MobileEditor/MobileBottomBar.jsx` | 3-layer system orchestrator |
 | `components/MobileEditor/ToolPill.jsx` | Reusable pill button |
 | `components/MobileEditor/SliderControl.jsx` | Mobile slider wrapper |
-| `components/MobileEditor/ColorSwatchRow.jsx` | Horizontal color picker |
+| `components/MobileEditor/ColorSwatchRow.jsx` | Horizontal color picker (fixed-position input) |
 | `components/MobileEditor/PillSelector.jsx` | Horizontal pill row |
-| `components/MobileEditor/layers/TextToolRow.jsx` | TEXT tab Layer 1 |
-| `components/MobileEditor/layers/ImageToolRow.jsx` | IMAGE tab Layer 1 |
-| `components/MobileEditor/layers/DrawToolRow.jsx` | DRAW tab Layer 1 |
-| `components/MobileEditor/layers/StickerToolRow.jsx` | STICKER tab Layer 1 |
-| `components/MobileEditor/layers/QuickToolRow.jsx` | QUICK tab Layer 1 |
+| `components/MobileEditor/layers/TextToolRow.jsx` | TEXT tab Layer 1 (lucide icons) |
+| `components/MobileEditor/layers/ImageToolRow.jsx` | IMAGE tab Layer 1 (lucide icons) |
+| `components/MobileEditor/layers/DrawToolRow.jsx` | DRAW tab Layer 1 (lucide icons, custom color picker) |
+| `components/MobileEditor/layers/StickerToolRow.jsx` | STICKER tab Layer 1 (lucide icons) |
+| `components/MobileEditor/layers/QuickToolRow.jsx` | QUICK tab Layer 1 (14 actions, lucide icons) |
 
-## Files Modified (Phases 1-5)
+## Files Modified (All Phases)
 
 | File | Changes |
 |---|---|
-| `components/Layout/Main.jsx` | MobileTopBar + MobileBottomBar integrated, old mobile sections hidden, `onOpenInstructions` prop, `mobileCollapseRef`, canvas tap collapse |
+| `components/Layout/Main.jsx` | MobileTopBar + MobileBottomBar integrated, old mobile sections hidden, `onOpenInstructions` prop, `mobileCollapseRef`, canvas tap collapse, 9 new Quick handler props |
 | `components/Layout/Header.jsx` | `hidden lg:flex` — invisible on mobile |
 | `App.jsx` | Passes `onOpenInstructions` to `<Main>` |
-| `components/MemeEditor/MemeStickerLibrary.jsx` | Added initialTab/initialQuery/scrollToCategory/focusSearch props |
-| `components/MobileEditor/MobileBottomBar.jsx` | swipe-down dismiss, haptic feedback, `collapseRef` exposure, `collapseLayers` |
-| `index.css` | All mobile CSS: top-bar, tab-bar, tool-row, active-control, tool-pill, draw-color-dot, mobile-canvas-pad, safe-area fixes, MemeFineTune positioning, border-top visibility |
+| `components/MemeEditor/MemeStickerLibrary.jsx` | Added initialTab/initialQuery/focusSearch props; sticker thumbnails use shareUrl directly |
+| `components/MobileEditor/MobileBottomBar.jsx` | swipe-down dismiss, haptic, collapseRef, activeTabRef (setState-in-render fix), 9 new Quick handler props, animals/reactions Giphy queries |
+| `index.css` | All mobile CSS; Save button text white |
 
 ---
 
@@ -229,3 +268,7 @@ Phase 2 + 3 + 4 ✅
 | MemeFineTune overlap | ✅ Fixed in Phase 5: fixed above bar via CSS |
 | Safe area (iPhone notch) | ✅ Tab bar height calc, tool row + active control offsets |
 | Export including bottom bar | ✅ data-html2canvas-ignore on MobileBottomBar wrapper |
+| Layout crash on hamburger menu | ✅ Fixed Phase 7: layout IDs corrected |
+| Color picker rendering outside viewport | ✅ Fixed Phase 7: fixed-position input pattern |
+| setState-in-render on Draw tab | ✅ Fixed Phase 7: activeTabRef mirror |
+| Sticker 404s via wsrv.nl | ✅ Fixed Phase 7: direct shareUrl |

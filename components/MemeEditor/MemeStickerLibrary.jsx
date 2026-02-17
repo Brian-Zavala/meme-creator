@@ -85,16 +85,17 @@ const FLATTENED_EMOJIS = (() => {
  * Virtualized emoji categories with headers
  * Uses intersection observer for lazy category loading
  */
-function VirtualizedEmojiCategories({ categories, onAddSticker, onClose }) {
+function VirtualizedEmojiCategories({ categories, onAddSticker, onClose, scrollToCategory }) {
   const containerRef = useRef(null);
-  const [visibleCategories, setVisibleCategories] = useState(new Set(['Faces', 'Gestures'])); // Start with first 2
+  const categoryNames = Object.keys(categories);
+  const initialVisible = new Set(['Faces', 'Gestures']);
+  if (scrollToCategory) initialVisible.add(scrollToCategory);
+  const [visibleCategories, setVisibleCategories] = useState(initialVisible);
 
   // Lazy load categories as user scrolls
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    const categoryNames = Object.keys(categories);
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -121,7 +122,20 @@ function VirtualizedEmojiCategories({ categories, onAddSticker, onClose }) {
     });
 
     return () => observer.disconnect();
-  }, [categories]);
+  }, [categories, categoryNames]);
+
+  // Scroll to target category on mount
+  useEffect(() => {
+    if (!scrollToCategory || !containerRef.current) return;
+    const idx = categoryNames.indexOf(scrollToCategory);
+    if (idx < 0) return;
+    const el = containerRef.current.querySelector(`[data-category-index="${idx}"]`);
+    if (el) {
+      // Small delay to let layout settle
+      const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+      return () => clearTimeout(t);
+    }
+  }, [scrollToCategory, categoryNames]);
 
   const categoryEntries = Object.entries(categories);
 
@@ -276,18 +290,26 @@ const STICKER_CATEGORIES = {
   ]
 };
 
-export default function MemeStickerLibrary({ onAddSticker, onClose }) {
-  const [activeTab, setActiveTab] = useState("tenor"); // 'tenor' | 'emoji'
-  const [query, setQuery] = useState("");
+export default function MemeStickerLibrary({ onAddSticker, onClose, initialTab = "tenor", initialQuery = "", scrollToCategory = null, focusSearch = false }) {
+  const [activeTab, setActiveTab] = useState(initialTab); // 'tenor' | 'emoji'
+  const [query, setQuery] = useState(initialQuery);
   const [tenorStickers, setTenorStickers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const searchInputRef = useRef(null);
 
-  // Auto-fetch trending stickers when switching to Tenor tab
+  // Auto-fetch trending stickers when switching to Tenor tab, or when initialQuery is set
   useEffect(() => {
     if (activeTab === "tenor" && tenorStickers.length === 0) {
-      handleTenorSearch("");
+      handleTenorSearch(initialQuery || "");
     }
   }, [activeTab]);
+
+  // Focus search input when "Search" button was tapped
+  useEffect(() => {
+    if (focusSearch && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
+  }, []);
 
   const handleTenorSearch = async (searchTerm) => {
     setLoading(true);
@@ -412,6 +434,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
           <div className="flex flex-col gap-4">
             <form onSubmit={(e) => { e.preventDefault(); handleTenorSearch(query); }} className="relative mb-2">
               <input
+                ref={searchInputRef}
                 id="sticker-search-input"
                 name="sticker-search"
                 type="text"
@@ -466,6 +489,7 @@ export default function MemeStickerLibrary({ onAddSticker, onClose }) {
             categories={STICKER_CATEGORIES}
             onAddSticker={onAddSticker}
             onClose={onClose}
+            scrollToCategory={scrollToCategory}
           />
         )}
 

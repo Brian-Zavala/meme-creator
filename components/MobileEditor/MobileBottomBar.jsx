@@ -71,9 +71,17 @@ function renderLayer2(activeTab, activeTool, meme, handlers) {
   const filters = meme.filters || {};
 
   if (activeTab === "sticker" && activeTool) {
+    const STICKER_PROPS = {
+      search:    { initialTab: "tenor",  initialQuery: "",     focusSearch: true },
+      trending:  { initialTab: "tenor",  initialQuery: "" },
+      memes:     { initialTab: "tenor",  initialQuery: "meme" },
+      animals:   { initialTab: "emoji",  scrollToCategory: "Animals" },
+      reactions: { initialTab: "emoji",  scrollToCategory: "Faces" },
+    };
+    const stickerProps = STICKER_PROPS[activeTool] || { initialTab: "tenor" };
     return (
       <Suspense fallback={<div className="flex items-center justify-center h-full text-slate-500 text-sm">Loading...</div>}>
-        <MemeStickerLibrary onAddSticker={onAddSticker} onClose={() => {}} />
+        <MemeStickerLibrary key={activeTool} {...stickerProps} onAddSticker={onAddSticker} onClose={() => {}} />
       </Suspense>
     );
   }

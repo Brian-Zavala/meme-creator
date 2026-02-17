@@ -215,6 +215,8 @@ export default function MobileBottomBar({
   onRemoveAll,
   onRemoveEffects,
   // Draw tab
+  canvasActiveTool,
+  setCanvasActiveTool,
   onClearDrawings,
 }) {
   const [activeTab,  setActiveTab]  = useState(null);
@@ -223,13 +225,22 @@ export default function MobileBottomBar({
   const handleTabTap = useCallback((tabId) => {
     setActiveTab((prev) => {
       if (prev === tabId) {
+        // Closing tab — reset canvas tool
+        if (prev === "draw") setCanvasActiveTool("move");
         setActiveTool(null);
         return null;
+      }
+      // Opening draw tab → activate pen on canvas
+      if (tabId === "draw") {
+        setCanvasActiveTool("pen");
+      } else if (prev === "draw") {
+        // Leaving draw tab → back to move
+        setCanvasActiveTool("move");
       }
       setActiveTool(null);
       return tabId;
     });
-  }, []);
+  }, [setCanvasActiveTool]);
 
   const handleToolTap = useCallback((toolId) => {
     // Crop activates immediately — no Layer 2
@@ -238,8 +249,18 @@ export default function MobileBottomBar({
       setActiveTool(null);
       return;
     }
+    // Draw tool pills control the canvas tool
+    if (toolId === "pen" || toolId === "eraser") {
+      setCanvasActiveTool(toolId);
+    }
+    // Draw color dots change the draw color
+    if (typeof toolId === "string" && toolId.startsWith("color-") && toolId !== "color-picker") {
+      const color = toolId.replace("color-", "");
+      handleStyleChange({ currentTarget: { name: "drawColor", value: color } }, true);
+      return; // Don't toggle Layer 2
+    }
     setActiveTool((prev) => (prev === toolId ? null : toolId));
-  }, [onStartCrop]);
+  }, [onStartCrop, setCanvasActiveTool, handleStyleChange]);
 
   const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker };
   const toolRowProps = { activeTool, onToolTap: handleToolTap };
@@ -266,7 +287,12 @@ export default function MobileBottomBar({
           {activeTab === "text"    && <TextToolRow    {...toolRowProps} />}
           {activeTab === "image"   && <ImageToolRow   {...toolRowProps} />}
           {activeTab === "draw"    && (
-            <DrawToolRow {...toolRowProps} onClearDrawings={onClearDrawings} />
+            <DrawToolRow
+              {...toolRowProps}
+              canvasActiveTool={canvasActiveTool}
+              drawColor={meme?.drawColor}
+              onClearDrawings={onClearDrawings}
+            />
           )}
           {activeTab === "sticker" && <StickerToolRow {...toolRowProps} />}
           {activeTab === "quick"   && (

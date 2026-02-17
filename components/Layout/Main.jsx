@@ -4775,6 +4775,8 @@ export default function Main() {
                 onStartCrop={handleStartCrop}
                 isCropping={isCropping}
                 onAddSticker={addSticker}
+                canvasActiveTool={activeTool}
+                setCanvasActiveTool={setActiveTool}
                 onChaos={handleChaos}
                 onCaptionRemix={handleCaptionRemix}
                 onStyleShuffle={handleStyleShuffle}

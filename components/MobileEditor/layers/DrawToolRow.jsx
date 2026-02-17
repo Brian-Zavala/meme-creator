@@ -10,7 +10,7 @@ const COLORS = [
   "#eab308", "#22c55e", "#a855f7",
 ];
 
-export default function DrawToolRow({ activeTool, onToolTap, onClearDrawings }) {
+export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, drawColor, onClearDrawings }) {
   return (
     <>
       {DRAW_TOOLS.map(({ id, label, icon }) => (
@@ -18,7 +18,7 @@ export default function DrawToolRow({ activeTool, onToolTap, onClearDrawings }) 
           key={id}
           icon={<span className="text-sm leading-none">{icon}</span>}
           label={label}
-          isActive={activeTool === id}
+          isActive={canvasActiveTool === id}
           onClick={() => onToolTap(id)}
         />
       ))}
@@ -44,7 +44,11 @@ export default function DrawToolRow({ activeTool, onToolTap, onClearDrawings }) 
           type="button"
           onClick={() => onToolTap(`color-${color}`)}
           className="draw-color-dot flex-shrink-0"
-          style={{ backgroundColor: color }}
+          style={{
+            backgroundColor: color,
+            borderColor: (drawColor || "#ff0000") === color ? "white" : "transparent",
+            outline: (drawColor || "#ff0000") === color ? "2px solid white" : "none",
+          }}
           aria-label={`Draw color ${color}`}
         />
       ))}

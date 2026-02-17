@@ -463,11 +463,10 @@ export default function MemeStickerLibrary({ onAddSticker, onClose, initialTab =
                     style={{ touchAction: 'manipulation' }}
                   >
                     <img
-                      src={`https://wsrv.nl/?url=${encodeURIComponent(sticker.url)}&w=150&h=150&fit=contain&n=-1`}
+                      src={sticker.shareUrl || sticker.url}
                       alt={sticker.name}
                       className="w-full h-full object-contain p-1 transition-transform group-hover:scale-110"
                       loading="lazy"
-                      crossOrigin="anonymous"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = sticker.url;

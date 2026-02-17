@@ -72,11 +72,11 @@ function renderLayer2(activeTab, activeTool, meme, handlers) {
 
   if (activeTab === "sticker" && activeTool) {
     const STICKER_PROPS = {
-      search:    { initialTab: "tenor",  initialQuery: "",     focusSearch: true },
+      search:    { initialTab: "tenor",  initialQuery: "",         focusSearch: true },
       trending:  { initialTab: "tenor",  initialQuery: "" },
       memes:     { initialTab: "tenor",  initialQuery: "meme" },
-      animals:   { initialTab: "emoji",  scrollToCategory: "Animals" },
-      reactions: { initialTab: "emoji",  scrollToCategory: "Faces" },
+      animals:   { initialTab: "tenor",  initialQuery: "animals" },
+      reactions: { initialTab: "tenor",  initialQuery: "reaction" },
     };
     const stickerProps = STICKER_PROPS[activeTool] || { initialTab: "tenor" };
     return (
@@ -227,6 +227,15 @@ export default function MobileBottomBar({
   onChaos,
   onCaptionRemix,
   onStyleShuffle,
+  onFilterFrenzy,
+  onVibeCheck,
+  onExtremeDeepFry,
+  onStickerfy,
+  onNuked,
+  onGlitch,
+  onCursed,
+  onConfettiBlast,
+  onTimeWarp,
   onRemoveAll,
   onRemoveEffects,
   // Draw tab
@@ -238,13 +247,14 @@ export default function MobileBottomBar({
 }) {
   const [activeTab,  setActiveTab]  = useState(null);
   const [activeTool, setActiveTool] = useState(null);
+  // Mirror of activeTab for synchronous reads outside render (avoids setState-in-render)
+  const activeTabRef = useRef(null);
 
   // --- Collapse all layers ---
   const collapseLayers = useCallback(() => {
-    setActiveTab((prev) => {
-      if (prev === "draw") setCanvasActiveTool("move");
-      return null;
-    });
+    if (activeTabRef.current === "draw") setCanvasActiveTool("move");
+    activeTabRef.current = null;
+    setActiveTab(null);
     setActiveTool(null);
   }, [setCanvasActiveTool]);
 
@@ -283,23 +293,19 @@ export default function MobileBottomBar({
 
   const handleTabTap = useCallback((tabId) => {
     haptic();
-    setActiveTab((prev) => {
-      if (prev === tabId) {
-        // Closing tab — reset canvas tool
-        if (prev === "draw") setCanvasActiveTool("move");
-        setActiveTool(null);
-        return null;
-      }
-      // Opening draw tab → activate pen on canvas
-      if (tabId === "draw") {
-        setCanvasActiveTool("pen");
-      } else if (prev === "draw") {
-        // Leaving draw tab → back to move
-        setCanvasActiveTool("move");
-      }
-      setActiveTool(null);
-      return tabId;
-    });
+    const prevTab = activeTabRef.current;
+    const newTab = prevTab === tabId ? null : tabId;
+
+    // Canvas tool side-effects — called OUTSIDE any state updater
+    if (newTab === "draw") {
+      setCanvasActiveTool("pen");
+    } else if (prevTab === "draw") {
+      setCanvasActiveTool("move");
+    }
+
+    activeTabRef.current = newTab;
+    setActiveTab(newTab);
+    setActiveTool(null);
   }, [setCanvasActiveTool]);
 
   const handleToolTap = useCallback((toolId) => {
@@ -361,6 +367,15 @@ export default function MobileBottomBar({
               onChaos={onChaos}
               onCaptionRemix={onCaptionRemix}
               onStyleShuffle={onStyleShuffle}
+              onFilterFrenzy={onFilterFrenzy}
+              onVibeCheck={onVibeCheck}
+              onExtremeDeepFry={onExtremeDeepFry}
+              onStickerfy={onStickerfy}
+              onNuked={onNuked}
+              onGlitch={onGlitch}
+              onCursed={onCursed}
+              onConfettiBlast={onConfettiBlast}
+              onTimeWarp={onTimeWarp}
               onRemoveAll={onRemoveAll}
               onRemoveEffects={onRemoveEffects}
             />

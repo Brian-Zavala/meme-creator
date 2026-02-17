@@ -124,7 +124,7 @@ export default function App() {
 
       <Header onOpenInstructions={openInstructions} />
       <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
-        <Main />
+        <Main onOpenInstructions={openInstructions} />
       </div>
 
       <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />

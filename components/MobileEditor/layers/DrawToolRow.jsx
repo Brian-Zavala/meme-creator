@@ -1,8 +1,10 @@
+import { useRef } from "react";
+import { Pen, Eraser, Trash2 } from "lucide-react";
 import ToolPill from "../ToolPill";
 
 const DRAW_TOOLS = [
-  { id: "pen",    label: "Pen",    icon: "✏" },
-  { id: "eraser", label: "Eraser", icon: "⬜" },
+  { id: "pen",    label: "Pen",    Icon: Pen },
+  { id: "eraser", label: "Eraser", Icon: Eraser },
 ];
 
 const COLORS = [
@@ -11,12 +13,14 @@ const COLORS = [
 ];
 
 export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, drawColor, onClearDrawings }) {
+  const colorInputRef = useRef(null);
+
   return (
     <>
-      {DRAW_TOOLS.map(({ id, label, icon }) => (
+      {DRAW_TOOLS.map(({ id, label, Icon }) => (
         <ToolPill
           key={id}
-          icon={<span className="text-sm leading-none">{icon}</span>}
+          icon={<Icon className="w-4 h-4" />}
           label={label}
           isActive={canvasActiveTool === id}
           onClick={() => onToolTap(id)}
@@ -30,7 +34,7 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
         className="tool-pill"
         style={{ color: "#f87171", borderColor: "#3f1a1a" }}
       >
-        <span className="text-sm leading-none">🗑</span>
+        <Trash2 className="w-4 h-4" />
         <span>Clear</span>
       </button>
 
@@ -53,15 +57,32 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
         />
       ))}
 
-      {/* Custom color picker trigger */}
+      {/* Custom color picker — input fixed at center-bottom so picker opens in viewport */}
       <button
         type="button"
-        onClick={() => onToolTap("color-picker")}
+        onClick={() => colorInputRef.current?.click()}
         className="draw-color-dot flex-shrink-0 flex items-center justify-center bg-[#181818] border border-[#2f3336] text-slate-400 text-xs font-bold"
         aria-label="Custom color"
       >
         +
       </button>
+      <input
+        ref={colorInputRef}
+        type="color"
+        defaultValue={drawColor || "#ff0000"}
+        onChange={(e) => onToolTap(`color-${e.target.value}`)}
+        style={{
+          position: "fixed",
+          bottom: "200px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "1px",
+          height: "1px",
+          opacity: 0,
+          pointerEvents: "none",
+        }}
+        aria-hidden="true"
+      />
     </>
   );
 }

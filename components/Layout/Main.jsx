@@ -4818,6 +4818,15 @@ export default function Main({ onOpenInstructions }) {
                 onChaos={handleChaos}
                 onCaptionRemix={handleCaptionRemix}
                 onStyleShuffle={handleStyleShuffle}
+                onFilterFrenzy={handleFilterFrenzy}
+                onVibeCheck={handleVibeCheck}
+                onExtremeDeepFry={handleExtremeDeepFry}
+                onStickerfy={handleStickerfy}
+                onNuked={handleNuked}
+                onGlitch={handleGlitch}
+                onCursed={handleCursed}
+                onConfettiBlast={handleConfettiBlast}
+                onTimeWarp={handleTimeWarp}
                 onRemoveAll={handleReset}
                 onRemoveEffects={handleRemoveEffects}
                 onClearDrawings={handleClearDrawings}

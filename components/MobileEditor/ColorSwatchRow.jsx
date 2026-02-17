@@ -1,9 +1,13 @@
+import { useRef } from "react";
+
 const PRESET_COLORS = [
   "#ffffff", "#000000", "#ef4444", "#f97316",
   "#eab308", "#22c55e", "#3b82f6", "#a855f7",
 ];
 
 export default function ColorSwatchRow({ name, value, onChange, allowTransparent = false }) {
+  const colorInputRef = useRef(null);
+
   const safeHex = (c) => {
     if (!c || c === "transparent") return "#000000";
     return c.startsWith("#") ? c.substring(0, 7) : "#000000";
@@ -48,21 +52,32 @@ export default function ColorSwatchRow({ name, value, onChange, allowTransparent
         );
       })}
 
-      {/* Custom color picker */}
-      <div className="relative shrink-0 draw-color-dot overflow-hidden">
-        <div
-          className="w-full h-full"
-          style={{ background: "linear-gradient(135deg,#f00 0%,#ff0 25%,#0f0 50%,#0ff 75%,#00f 100%)" }}
-        />
-        <input
-          type="color"
-          value={safeHex(value)}
-          onChange={handleNativePick}
-          onBlur={handleNativeCommit}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          aria-label="Custom color"
-        />
-      </div>
+      {/* Custom color picker — input fixed at center-bottom so picker opens in viewport */}
+      <button
+        type="button"
+        onClick={() => colorInputRef.current?.click()}
+        className="draw-color-dot shrink-0 overflow-hidden"
+        style={{ background: "linear-gradient(135deg,#f00 0%,#ff0 25%,#0f0 50%,#0ff 75%,#00f 100%)" }}
+        aria-label="Custom color"
+      />
+      <input
+        ref={colorInputRef}
+        type="color"
+        value={safeHex(value)}
+        onChange={handleNativePick}
+        onBlur={handleNativeCommit}
+        style={{
+          position: "fixed",
+          bottom: "200px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "1px",
+          height: "1px",
+          opacity: 0,
+          pointerEvents: "none",
+        }}
+        aria-hidden="true"
+      />
     </div>
   );
 }

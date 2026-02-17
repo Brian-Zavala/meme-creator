@@ -1311,7 +1311,7 @@ body {
   width: auto;
   padding: 0 14px;
   background: var(--color-brand);
-  color: #000;
+  color: #fff;
   font-weight: 700;
   border-radius: 20px;
 }

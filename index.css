@@ -1265,7 +1265,7 @@ body {
   left: 0;
   right: 0;
   height: 56px;
-  z-index: 50;
+  z-index: 110;
   display: flex;
   align-items: center;
   justify-content: space-around;
@@ -1321,7 +1321,7 @@ body {
   left: 0;
   right: 0;
   height: 48px;
-  z-index: 49;
+  z-index: 109;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1367,7 +1367,7 @@ body {
   bottom: 104px; /* above tab bar (56px) + tool row (48px) */
   left: 0;
   right: 0;
-  z-index: 48;
+  z-index: 108;
   background: #0f0f0f;
   border-top: 1px solid #2f3336;
   display: grid;

@@ -1426,13 +1426,14 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 56px;
+  height: calc(56px + env(safe-area-inset-bottom));
   z-index: 110;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-around;
   background: #0f0f0f;
   border-top: 1px solid #2f3336;
+  padding-top: 4px;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -1479,7 +1480,7 @@ body {
 
 .mobile-tool-row {
   position: fixed;
-  bottom: 56px;
+  bottom: calc(56px + env(safe-area-inset-bottom));
   left: 0;
   right: 0;
   height: 48px;
@@ -1527,7 +1528,7 @@ body {
 
 .mobile-active-control {
   position: fixed;
-  bottom: 104px; /* above tab bar (56px) + tool row (48px) */
+  bottom: calc(104px + env(safe-area-inset-bottom)); /* above tab bar (56px) + tool row (48px) + safe area */
   left: 0;
   right: 0;
   z-index: 108;
@@ -1553,5 +1554,17 @@ body {
   .mobile-canvas-pad {
     padding-top: calc(48px + env(safe-area-inset-top));
     padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+
+  /* MemeFineTune floats above mobile bottom bar */
+  [data-fine-tuner] {
+    position: fixed;
+    bottom: calc(56px + env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    z-index: 107;
+    padding: 8px 12px;
+    background: #0f0f0f;
+    border-top: 1px solid #2f3336;
   }
 }

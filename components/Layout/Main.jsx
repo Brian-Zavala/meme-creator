@@ -41,6 +41,7 @@ const ColorControls = lazy(() => import("../MemeEditor/ColorControls"));
 const MemeFineTune = lazy(() => import("../MemeEditor/MemeFineTune"));
 const RemixCarousel = lazy(() => import("../MemeEditor/RemixCarousel"));
 const MobileBottomBar = lazy(() => import("../MobileEditor/MobileBottomBar"));
+const MobileTopBar = lazy(() => import("../MobileEditor/MobileTopBar"));
 
 
 
@@ -158,7 +159,7 @@ const safeImport = async (importFn, retries = 3, interval = 1000) => {
   }
 };
 
-export default function Main() {
+export default function Main({ onOpenInstructions }) {
   const [isPending, startTransition] = useTransition();
   // NEW: Track hydration status to prevent overwriting DB with default state
   const [isHydrated, setIsHydrated] = useState(false);
@@ -772,6 +773,7 @@ export default function Main() {
   const [pingKey, setPingKey] = useState(null);
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
   const fineTuneRef = useRef(null);
+  const mobileCollapseRef = useRef(null);
 
   const [isMobileScreen, setIsMobileScreen] = useState(false);
 
@@ -3259,6 +3261,8 @@ export default function Main() {
       setEditingId(null);
     }
     globalLastTapRef.current = 0;
+    // Collapse mobile bottom bar layers on canvas tap
+    mobileCollapseRef.current?.();
   }
 
   function handleFineTune(axis, value) {
@@ -4764,6 +4768,40 @@ export default function Main() {
               </div>
             </div>
 
+            {/* Mobile Top Bar - Upload/Undo/Redo/Save/More */}
+            <Suspense fallback={null}>
+              <MobileTopBar
+                onUndo={undo}
+                onRedo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUpload={handleFileUpload}
+                onDownload={handleDownload}
+                onShare={handleShare}
+                onRemoveAll={handleReset}
+                onRemoveEffects={handleRemoveEffects}
+                onOpenInstructions={onOpenInstructions}
+                layout={meme.layout}
+                onLayoutChange={handleLayoutChange}
+                mode={meme.mode}
+                onModeChange={(modeId) => {
+                  startTransition(() => {
+                    updateState((prev) => ({ ...prev, mode: modeId }));
+                    if (modeId === "image") {
+                      clearSearch();
+                      getMemeImage(modeId);
+                    } else {
+                      if (videoSource === "pexels") {
+                        handleRandomVideo();
+                      } else {
+                        getMemeImage(modeId);
+                      }
+                    }
+                  });
+                }}
+              />
+            </Suspense>
+
             {/* Mobile Bottom Bar - Samsung-style 3-layer system */}
             <Suspense fallback={null}>
               <MobileBottomBar
@@ -4783,6 +4821,7 @@ export default function Main() {
                 onRemoveAll={handleReset}
                 onRemoveEffects={handleRemoveEffects}
                 onClearDrawings={handleClearDrawings}
+                collapseRef={mobileCollapseRef}
               />
             </Suspense>
           </>

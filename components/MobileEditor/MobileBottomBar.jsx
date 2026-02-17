@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from "react";
 import { Type, ImageIcon, Pencil, Smile, Zap } from "lucide-react";
 import ToolPill from "./ToolPill";
 import SliderControl from "./SliderControl";
@@ -204,6 +204,13 @@ function renderLayer2(activeTab, activeTool, meme, handlers) {
   return null;
 }
 
+/** Light haptic tap — no-op if unsupported */
+function haptic() {
+  try { navigator.vibrate?.(8); } catch {}
+}
+
+const SWIPE_THRESHOLD = 30; // px vertical to trigger collapse
+
 export default function MobileBottomBar({
   // Meme state (passed as { ...meme, filters: activePanel?.filters })
   meme,
@@ -226,11 +233,56 @@ export default function MobileBottomBar({
   canvasActiveTool,
   setCanvasActiveTool,
   onClearDrawings,
+  // Collapse ref — Main writes a ref, we populate it with collapse()
+  collapseRef,
 }) {
   const [activeTab,  setActiveTab]  = useState(null);
   const [activeTool, setActiveTool] = useState(null);
 
+  // --- Collapse all layers ---
+  const collapseLayers = useCallback(() => {
+    setActiveTab((prev) => {
+      if (prev === "draw") setCanvasActiveTool("move");
+      return null;
+    });
+    setActiveTool(null);
+  }, [setCanvasActiveTool]);
+
+  // Expose collapse function to parent via ref
+  useEffect(() => {
+    if (collapseRef) collapseRef.current = collapseLayers;
+  }, [collapseRef, collapseLayers]);
+
+  // --- Swipe-down dismiss (PointerEvent) ---
+  const swipeStartY = useRef(null);
+
+  const onSwipePointerDown = useCallback((e) => {
+    swipeStartY.current = e.clientY;
+  }, []);
+
+  const onSwipePointerMove = useCallback((e) => {
+    if (swipeStartY.current === null) return;
+    const dy = e.clientY - swipeStartY.current;
+    if (dy > SWIPE_THRESHOLD) {
+      swipeStartY.current = null;
+      haptic();
+      collapseLayers();
+    }
+  }, [collapseLayers]);
+
+  const onSwipePointerUp = useCallback(() => {
+    swipeStartY.current = null;
+  }, []);
+
+  const swipeHandlers = {
+    onPointerDown: onSwipePointerDown,
+    onPointerMove: onSwipePointerMove,
+    onPointerUp: onSwipePointerUp,
+    onPointerCancel: onSwipePointerUp,
+  };
+
   const handleTabTap = useCallback((tabId) => {
+    haptic();
     setActiveTab((prev) => {
       if (prev === tabId) {
         // Closing tab — reset canvas tool
@@ -251,6 +303,7 @@ export default function MobileBottomBar({
   }, [setCanvasActiveTool]);
 
   const handleToolTap = useCallback((toolId) => {
+    haptic();
     // Crop activates immediately — no Layer 2
     if (toolId === "crop" && onStartCrop) {
       onStartCrop();
@@ -281,7 +334,7 @@ export default function MobileBottomBar({
   return (
     <div className="lg:hidden" data-html2canvas-ignore="true">
       {/* Layer 2: Active Control — expands above Layer 1 */}
-      <div className="mobile-active-control" data-visible={layer2Content ? true : undefined}>
+      <div className="mobile-active-control" data-visible={layer2Content ? true : undefined} {...swipeHandlers}>
         <div className="mobile-active-control-inner">
           <div className={isStickerLayer2 ? "h-[50vh] max-h-[400px] overflow-y-auto" : "flex items-center h-[52px]"}>
             {layer2Content}
@@ -290,7 +343,7 @@ export default function MobileBottomBar({
       </div>
 
       {/* Layer 1: Tool Row — slides up when a tab is active */}
-      <div className="mobile-tool-row" data-visible={activeTab ? true : undefined}>
+      <div className="mobile-tool-row" data-visible={activeTab ? true : undefined} {...swipeHandlers}>
         <Suspense fallback={null}>
           {activeTab === "text"    && <TextToolRow    {...toolRowProps} />}
           {activeTab === "image"   && <ImageToolRow   {...toolRowProps} />}

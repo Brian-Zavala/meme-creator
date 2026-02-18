@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Image as ImageIcon, Video } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export function ModeSelector({ mode, onModeChange }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,12 +31,9 @@ export function ModeSelector({ mode, onModeChange }) {
         aria-label="Select Content Mode"
         className={`w-full select-trigger px-4 py-3 flex items-center justify-center relative ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
       >
-        <div className="flex items-center gap-3">
-            {mode === "image" ? <ImageIcon className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" /> : <Video className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" />}
-            <span className="font-bold text-lg animate-text-shimmer whitespace-nowrap">
-            {mode === "image" ? "Images" : "Videos"}
-            </span>
-        </div>
+        <span className="font-bold text-lg animate-text-shimmer whitespace-nowrap">
+          {mode === "image" ? "Images" : "Videos"}
+        </span>
         <ChevronDown className={`absolute right-4 w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand' : ''}`} />
       </button>
 
@@ -50,26 +47,30 @@ export function ModeSelector({ mode, onModeChange }) {
                 onClick={() => handleSelect("image")}
                 role="option"
                 aria-selected={mode === "image"}
-                className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors group ${mode === "image" ? "bg-[#222222]" : "hover:bg-brand"}`}
+                className={`relative flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors group ${mode === "image" ? "bg-[#2f3336]" : "hover:bg-white/5 hover:text-slate-300"}`}
             >
-                <ImageIcon className={`w-5 h-5 shrink-0 ${mode === "image" ? "text-brand" : "text-slate-400 group-hover:text-white"}`} />
-                <span className={`font-bold whitespace-nowrap ${mode === "image" ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
+                {mode === "image" && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent rounded-lg border border-brand/20 pointer-events-none" />
+                )}
+                <span className={`relative z-10 font-bold whitespace-nowrap ${mode === "image" ? "text-white" : "text-slate-400 group-hover:text-slate-300"}`}>
                     Images
                 </span>
-                {mode === "image" && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
+                {mode === "image" && <div className="relative z-10 ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
             </button>
 
             <button
                 onClick={() => handleSelect("video")}
                 role="option"
                 aria-selected={mode === "video"}
-                className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors group ${mode === "video" ? "bg-[#222222]" : "hover:bg-brand"}`}
+                className={`relative flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors group ${mode === "video" ? "bg-[#2f3336]" : "hover:bg-white/5 hover:text-slate-300"}`}
             >
-                <Video className={`w-5 h-5 shrink-0 ${mode === "video" ? "text-brand" : "text-slate-400 group-hover:text-white"}`} />
-                <span className={`font-bold whitespace-nowrap ${mode === "video" ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
+                {mode === "video" && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent rounded-lg border border-brand/20 pointer-events-none" />
+                )}
+                <span className={`relative z-10 font-bold whitespace-nowrap ${mode === "video" ? "text-white" : "text-slate-400 group-hover:text-slate-300"}`}>
                     Videos
                 </span>
-                {mode === "video" && <div className="ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
+                {mode === "video" && <div className="relative z-10 ml-auto w-2 h-2 rounded-full bg-brand shrink-0 mr-2" />}
             </button>
         </div>
       )}

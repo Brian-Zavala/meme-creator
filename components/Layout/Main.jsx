@@ -4298,6 +4298,31 @@ export default function Main({ onOpenInstructions }) {
 
                 {/* --- DYNAMIC SEARCH BAR (Switches based on Mode) --- */}
 
+                {/* Mobile-only: Mode selector above source tabs */}
+                <div className="lg:hidden px-3 pt-3 pb-1">
+                  <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
+                    <ModeSelector
+                      mode={meme.mode}
+                      onModeChange={(e) => {
+                        const m = e.target.value;
+                        startTransition(() => {
+                          updateState((prev) => ({ ...prev, mode: m }));
+                          if (m === "image") {
+                            clearSearch();
+                            getMemeImage(m);
+                          } else {
+                            if (videoSource === "pexels") {
+                              handleRandomVideo();
+                            } else {
+                              getMemeImage(m);
+                            }
+                          }
+                        });
+                      }}
+                    />
+                  </Suspense>
+                </div>
+
                 {/* CASE 1: VIDEO MODE (GIFs or Pexels) */}
                 {meme.mode === "video" && (
                   <div className="relative border-b border-[#2f3336]">

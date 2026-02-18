@@ -3298,6 +3298,9 @@ export default function Main({ onOpenInstructions }) {
       });
       setEditingId(null);
     }
+    // Deselect any selected shape when clicking on non-shape canvas area.
+    // Shape tool clicks stop propagation in handleDrawStart so they won't reach here.
+    setSelectedShapeId(null);
     globalLastTapRef.current = 0;
     // Collapse mobile bottom bar layers on canvas tap
     mobileCollapseRef.current?.();

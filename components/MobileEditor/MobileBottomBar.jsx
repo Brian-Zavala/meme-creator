@@ -340,6 +340,11 @@ export default function MobileBottomBar({
     if (toolId === "pen" || toolId === "eraser") {
       setCanvasActiveTool(toolId);
     }
+    // "More shapes" button opens Layer 2 picker — must be checked before startsWith('shape-')
+    if (toolId === "shape-menu") {
+      setActiveTool((prev) => (prev === "shape-menu" ? null : "shape-menu"));
+      return;
+    }
     // Shape tool pills control the canvas tool
     if (typeof toolId === "string" && toolId.startsWith("shape-")) {
       setCanvasActiveTool(toolId);

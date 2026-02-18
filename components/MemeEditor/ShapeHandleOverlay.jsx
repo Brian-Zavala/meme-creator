@@ -1,271 +1,179 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { Trash2, RotateCw } from 'lucide-react';
 
-/**
- * ShapeHandleOverlay - DOM overlay for manipulating selected shapes
- * Renders 8 resize handles (corners + edges) + rotation handle + delete button
- *
- * Props:
- *   shape - The selected shape object { id, x, y, w, h, rotation, ... }
- *   canvasWidth - Pixel width of canvas container
- *   canvasHeight - Pixel height of canvas container
- *   onMove - (newShape) => void
- *   onResize - (newShape) => void
- *   onRotate - (newShape) => void
- *   onDelete - () => void
- */
 export default function ShapeHandleOverlay({ shape, canvasWidth, canvasHeight, onMove, onResize, onRotate, onDelete }) {
   const dragStateRef = useRef(null);
+  const containerRef = useRef(null);
 
-  // Convert normalized coords (0-1) to pixels
-  const shapePixels = {
-    x: shape.x * canvasWidth,
-    y: shape.y * canvasHeight,
-    w: shape.w * canvasWidth,
-    h: shape.h * canvasHeight,
-  };
+  // Canvas-local pixel bounds
+  const px = shape.x * canvasWidth;
+  const py = shape.y * canvasHeight;
+  const pw = shape.w * canvasWidth;
+  const ph = shape.h * canvasHeight;
+  const cx = px + pw / 2;
+  const cy = py + ph / 2;
 
-  const center = {
-    x: shapePixels.x + shapePixels.w / 2,
-    y: shapePixels.y + shapePixels.h / 2,
-  };
+  // Rotation handle sits 36px above the top-center
+  const rotHandleLocalX = cx;
+  const rotHandleLocalY = py - 36;
 
-  // Handle positions (relative to container)
-  const handles = {
-    tl: { x: shapePixels.x, y: shapePixels.y },                              // top-left
-    tr: { x: shapePixels.x + shapePixels.w, y: shapePixels.y },              // top-right
-    bl: { x: shapePixels.x, y: shapePixels.y + shapePixels.h },              // bottom-left
-    br: { x: shapePixels.x + shapePixels.w, y: shapePixels.y + shapePixels.h }, // bottom-right
-    t: { x: shapePixels.x + shapePixels.w / 2, y: shapePixels.y },           // top
-    b: { x: shapePixels.x + shapePixels.w / 2, y: shapePixels.y + shapePixels.h }, // bottom
-    l: { x: shapePixels.x, y: shapePixels.y + shapePixels.h / 2 },           // left
-    r: { x: shapePixels.x + shapePixels.w, y: shapePixels.y + shapePixels.h / 2 }, // right
-  };
-
-  const rotationHandle = {
-    x: center.x,
-    y: shapePixels.y - 40, // Above the shape
-  };
-
-  const handlePointerDown = (e, type, handle) => {
+  const startDrag = (e, type, handle) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startShape = { ...shape };
+    // Convert canvas-local center → viewport coords using container rect
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    const centerViewport = containerRect
+      ? { x: containerRect.left + cx, y: containerRect.top + cy }
+      : { x: cx, y: cy };
 
-    dragStateRef.current = { type, handle, startX, startY, startShape };
+    dragStateRef.current = {
+      type,
+      handle,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startShape: { ...shape },
+      centerViewport,
+    };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const handlePointerMove = (e) => {
-    if (!dragStateRef.current) return;
+  const onPointerMove = (e) => {
+    const state = dragStateRef.current;
+    if (!state) return;
 
-    const { type, startX, startY, startShape } = dragStateRef.current;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-
-    // Convert to normalized coords
+    const { type, handle, startClientX, startClientY, startShape, centerViewport } = state;
+    const dx = e.clientX - startClientX;
+    const dy = e.clientY - startClientY;
     const ndx = dx / canvasWidth;
     const ndy = dy / canvasHeight;
-
-    let newShape = { ...startShape };
+    let next = { ...startShape };
 
     if (type === 'move') {
-      // Move entire shape
-      newShape.x = startShape.x + ndx;
-      newShape.y = startShape.y + ndy;
-      onMove(newShape);
+      next.x = startShape.x + ndx;
+      next.y = startShape.y + ndy;
+      onMove(next);
+
     } else if (type === 'resize') {
-      // Handle-based resize
-      const handle = dragStateRef.current.handle;
-      let newX = startShape.x;
-      let newY = startShape.y;
-      let newW = startShape.w;
-      let newH = startShape.h;
-
-      if (handle === 'tl') {
-        newX = startShape.x + ndx;
-        newY = startShape.y + ndy;
-        newW = startShape.w - ndx;
-        newH = startShape.h - ndy;
-      } else if (handle === 'tr') {
-        newY = startShape.y + ndy;
-        newW = startShape.w + ndx;
-        newH = startShape.h - ndy;
-      } else if (handle === 'bl') {
-        newX = startShape.x + ndx;
-        newW = startShape.w - ndx;
-        newH = startShape.h + ndy;
-      } else if (handle === 'br') {
-        newW = startShape.w + ndx;
-        newH = startShape.h + ndy;
-      } else if (handle === 't') {
-        newY = startShape.y + ndy;
-        newH = startShape.h - ndy;
-      } else if (handle === 'b') {
-        newH = startShape.h + ndy;
-      } else if (handle === 'l') {
-        newX = startShape.x + ndx;
-        newW = startShape.w - ndx;
-      } else if (handle === 'r') {
-        newW = startShape.w + ndx;
+      let { x, y, w, h } = startShape;
+      if (handle === 'tl') { x += ndx; y += ndy; w -= ndx; h -= ndy; }
+      else if (handle === 'tr') { y += ndy; w += ndx; h -= ndy; }
+      else if (handle === 'bl') { x += ndx; w -= ndx; h += ndy; }
+      else if (handle === 'br') { w += ndx; h += ndy; }
+      else if (handle === 't')  { y += ndy; h -= ndy; }
+      else if (handle === 'b')  { h += ndy; }
+      else if (handle === 'l')  { x += ndx; w -= ndx; }
+      else if (handle === 'r')  { w += ndx; }
+      if (w > 0.01 && h > 0.01) {
+        next = { ...startShape, x, y, w, h };
+        onResize(next);
       }
 
-      // Prevent negative dimensions
-      if (newW > 0.01 && newH > 0.01) {
-        newShape = { ...startShape, x: newX, y: newY, w: newW, h: newH };
-        onResize(newShape);
-      }
     } else if (type === 'rotate') {
-      // Rotation: calculate angle from center to current mouse position
-      const cx = center.x;
-      const cy = center.y;
-
-      const startAngle = Math.atan2(startY - cy, startX - cx);
-      const currentAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
-      const deltaAngle = (currentAngle - startAngle) * (180 / Math.PI);
-
-      newShape.rotation = ((startShape.rotation || 0) + deltaAngle) % 360;
-      onRotate(newShape);
+      // Both angles measured from shape center in viewport coords
+      const startAngle   = Math.atan2(startClientY - centerViewport.y, startClientX - centerViewport.x);
+      const currentAngle = Math.atan2(e.clientY    - centerViewport.y, e.clientX    - centerViewport.x);
+      const delta = (currentAngle - startAngle) * (180 / Math.PI);
+      next.rotation = ((startShape.rotation || 0) + delta + 360) % 360;
+      onRotate(next);
     }
   };
 
-  const handlePointerUp = () => {
-    dragStateRef.current = null;
-  };
+  const onPointerUp = () => { dragStateRef.current = null; };
 
   useEffect(() => {
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
     return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
     };
-  }, [shape, canvasWidth, canvasHeight, onMove, onResize, onRotate]);
+  }, [shape, canvasWidth, canvasHeight]);
 
-  const handleSize = 12;
-  const handleOffset = handleSize / 2;
+  // Shared handle dot style
+  const dot = (x, y, cursor, handle) => (
+    <div
+      key={handle}
+      className="absolute w-3 h-3 bg-white rounded-sm pointer-events-auto z-50 transition-transform hover:scale-150"
+      style={{
+        left: x - 6,
+        top:  y - 6,
+        cursor,
+        border: '2px solid var(--color-brand)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+      }}
+      onPointerDown={(e) => startDrag(e, 'resize', handle)}
+    />
+  );
 
   return (
     <div
+      ref={containerRef}
       data-html2canvas-ignore="true"
       className="absolute inset-0 pointer-events-none select-none"
-      style={{
-        width: canvasWidth,
-        height: canvasHeight,
-      }}
     >
-      {/* Rotation Handle */}
+      {/* ── Move zone (transparent, over the shape bounds) ── */}
       <div
-        className="absolute w-8 h-8 flex items-center justify-center bg-blue-500 border border-blue-300 rounded-full cursor-grab active:cursor-grabbing pointer-events-auto transition-transform hover:scale-125 z-40"
+        className="absolute pointer-events-auto cursor-move"
+        style={{ left: px, top: py, width: pw, height: ph }}
+        onPointerDown={(e) => startDrag(e, 'move', null)}
+      />
+
+      {/* ── Marching ants border ── */}
+      <svg className="absolute pointer-events-none overflow-visible"
+        style={{ left: px - 3, top: py - 3, width: pw + 6, height: ph + 6 }}>
+        <rect x="3" y="3" width={pw} height={ph}
+          fill="none" stroke="var(--color-brand)" strokeWidth="2"
+          strokeDasharray="8 4" className="animate-march"/>
+      </svg>
+
+      {/* ── Rotation stem line ── */}
+      <svg className="absolute pointer-events-none"
+        style={{ left: 0, top: 0, width: canvasWidth, height: canvasHeight }}>
+        <line x1={cx} y1={py} x2={rotHandleLocalX} y2={rotHandleLocalY}
+          stroke="var(--color-brand)" strokeWidth="1.5"
+          strokeDasharray="4 3" opacity="0.6"/>
+      </svg>
+
+      {/* ── Rotation handle ── */}
+      <div
+        className="absolute w-7 h-7 flex items-center justify-center bg-[#1a1a2e] border border-brand/70 rounded-full pointer-events-auto cursor-grab active:cursor-grabbing z-50 hover:bg-brand/20 transition-colors"
         style={{
-          left: `${rotationHandle.x - 16}px`,
-          top: `${rotationHandle.y - 16}px`,
+          left: rotHandleLocalX - 14,
+          top:  rotHandleLocalY - 14,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
         }}
-        onPointerDown={(e) => handlePointerDown(e, 'rotate', null)}
-        title="Rotate"
+        onPointerDown={(e) => startDrag(e, 'rotate', null)}
+        title="Drag to rotate"
       >
-        <RotateCw className="w-4 h-4 text-white" />
+        <RotateCw className="w-3.5 h-3.5 text-brand" />
       </div>
 
-      {/* Rotation Line (from shape center to rotation handle) */}
-      <svg
-        className="absolute pointer-events-none"
-        style={{
-          left: 0,
-          top: 0,
-          width: canvasWidth,
-          height: canvasHeight,
-        }}
-      >
-        <line
-          x1={center.x}
-          y1={center.y}
-          x2={rotationHandle.x}
-          y2={rotationHandle.y}
-          stroke="var(--color-brand)"
-          strokeWidth="2"
-          strokeDasharray="6 4"
-          opacity="0.7"
-        />
-      </svg>
+      {/* ── Corner handles ── */}
+      {dot(px,      py,      'nwse-resize', 'tl')}
+      {dot(px + pw, py,      'nesw-resize', 'tr')}
+      {dot(px,      py + ph, 'nesw-resize', 'bl')}
+      {dot(px + pw, py + ph, 'nwse-resize', 'br')}
 
-      {/* Corner Handles */}
-      {['tl', 'tr', 'bl', 'br'].map((corner) => (
-        <div
-          key={corner}
-          className="absolute w-3 h-3 bg-white border-2 border-var(--color-brand) rounded cursor-nwse-resize pointer-events-auto hover:scale-150 transition-transform z-40"
-          style={{
-            left: `${handles[corner].x - handleOffset}px`,
-            top: `${handles[corner].y - handleOffset}px`,
-            borderColor: 'var(--color-brand)',
-            cursor: corner === 'tl' || corner === 'br' ? 'nwse-resize' : 'nesw-resize',
-          }}
-          onPointerDown={(e) => handlePointerDown(e, 'resize', corner)}
-          title={`Resize ${corner}`}
-        />
-      ))}
+      {/* ── Edge handles ── */}
+      {dot(cx,      py,      'ns-resize',  't')}
+      {dot(cx,      py + ph, 'ns-resize',  'b')}
+      {dot(px,      cy,      'ew-resize',  'l')}
+      {dot(px + pw, cy,      'ew-resize',  'r')}
 
-      {/* Edge Handles */}
-      {['t', 'b', 'l', 'r'].map((edge) => (
-        <div
-          key={edge}
-          className="absolute bg-white border border-var(--color-brand) pointer-events-auto hover:scale-150 transition-transform z-40"
-          style={{
-            width: edge === 't' || edge === 'b' ? '24px' : '6px',
-            height: edge === 't' || edge === 'b' ? '6px' : '24px',
-            left: `${handles[edge].x - (edge === 't' || edge === 'b' ? 12 : 3)}px`,
-            top: `${handles[edge].y - (edge === 't' || edge === 'b' ? 3 : 12)}px`,
-            borderColor: 'var(--color-brand)',
-            cursor: edge === 't' || edge === 'b' ? 'ns-resize' : 'ew-resize',
-          }}
-          onPointerDown={(e) => handlePointerDown(e, 'resize', edge)}
-          title={`Resize ${edge}`}
-        />
-      ))}
-
-      {/* Delete Button */}
+      {/* ── Delete button ── */}
       <button
-        className="absolute w-8 h-8 flex items-center justify-center bg-red-500 border border-red-300 rounded-full pointer-events-auto hover:scale-125 transition-transform active:scale-90 z-40"
+        className="absolute w-6 h-6 flex items-center justify-center bg-red-600 border border-red-400/60 rounded-full pointer-events-auto z-50 hover:bg-red-500 active:scale-90 transition-all"
         style={{
-          left: `${shapePixels.x + shapePixels.w - 16}px`,
-          top: `${shapePixels.y - 16}px`,
+          left: px + pw - 12,
+          top:  py - 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
         }}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onDelete();
-        }}
-        title="Delete Shape"
+        onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+        title="Delete shape"
       >
-        <Trash2 className="w-4 h-4 text-white" />
+        <Trash2 className="w-3 h-3 text-white" />
       </button>
-
-      {/* Marching Ants Border */}
-      <svg
-        className="absolute pointer-events-none"
-        style={{
-          left: `${shapePixels.x - 3}px`,
-          top: `${shapePixels.y - 3}px`,
-          width: `${shapePixels.w + 6}px`,
-          height: `${shapePixels.h + 6}px`,
-          overflow: 'visible',
-        }}
-      >
-        <rect
-          x="3"
-          y="3"
-          width={shapePixels.w}
-          height={shapePixels.h}
-          fill="none"
-          stroke="var(--color-brand)"
-          strokeWidth="2"
-          strokeDasharray="8 4"
-          className="animate-march"
-        />
-      </svg>
     </div>
   );
 }

@@ -328,13 +328,27 @@ const MemeCanvas = forwardRef(({
   const drawRectRef = useRef(null);
 
   const handleDrawStart = (e) => {
-    // Shape creation gesture
+    // Shape tool: first hit-test existing shapes, then create on drag
     if (isShapeTool(activeTool)) {
+      e.stopPropagation(); // Prevent handleCanvasPointerDown from clearing shape selection
       const canvas = drawCanvasRef.current;
       drawRectRef.current = canvas.getBoundingClientRect();
       const rect = drawRectRef.current;
-      const nx = (e.clientX - rect.left) / rect.width;
-      const ny = (e.clientY - rect.top) / rect.height;
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+
+      // Click on existing shape → select it, don't create
+      for (const s of (meme.shapes || [])) {
+        if (hitTestShape(s, px, py, rect.width, rect.height)) {
+          onShapeIdSelect(s.id);
+          return;
+        }
+      }
+
+      // No hit → deselect any selection, then start creation gesture
+      onShapeIdSelect(null);
+      const nx = px / rect.width;
+      const ny = py / rect.height;
       shapeAnchorRef.current = { x: nx, y: ny };
       shapePreviewRef.current = {
         type: shapeTypeFromTool(activeTool),
@@ -348,23 +362,18 @@ const MemeCanvas = forwardRef(({
       return;
     }
 
-    // Shape selection (hit-test existing shapes)
-    if (!isShapeTool(activeTool) && !isCreatingShapeRef.current) {
+    // Non-shape tool: hit-test to select/deselect shapes
+    if (!isCreatingShapeRef.current) {
       const canvas = drawCanvasRef.current;
       const rect = canvas.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
-
-      // Test each shape for hit
-      for (const shape of (meme.shapes || [])) {
-        if (hitTestShape(shape, px, py, rect.width, rect.height)) {
-          onShapeIdSelect(shape.id);
-          e.currentTarget.setPointerCapture(e.pointerId);
+      for (const s of (meme.shapes || [])) {
+        if (hitTestShape(s, px, py, rect.width, rect.height)) {
+          onShapeIdSelect(s.id);
           return;
         }
       }
-
-      // No hit: deselect
       onShapeIdSelect(null);
     }
 
@@ -394,8 +403,8 @@ const MemeCanvas = forwardRef(({
       let w = Math.abs(nx - anchor.x);
       let h = Math.abs(ny - anchor.y);
 
-      // Shift key or constrainShape: constrain to square
-      if (e.shiftKey) {
+      // Shift key or circle tool: constrain to square
+      if (e.shiftKey || shapeTypeFromTool(activeTool) === 'circle') {
         const side = Math.max(w, h);
         w = side;
         h = side;
@@ -873,25 +882,29 @@ const MemeCanvas = forwardRef(({
           ref={drawCanvasRef}
           role="img"
           aria-label="Drawing Canvas Layer"
-          className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' ? 'cursor-pen pointer-events-auto' : activeTool === 'eraser' ? 'cursor-eraser pointer-events-auto' : 'pointer-events-none'}`}
+          className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' ? 'cursor-pen pointer-events-auto' : activeTool === 'eraser' ? 'cursor-eraser pointer-events-auto' : activeTool?.startsWith('shape-') ? 'cursor-crosshair pointer-events-auto' : 'pointer-events-none'}`}
           onPointerDown={handleDrawStart}
           onPointerMove={handleDrawMove}
           onPointerUp={handleDrawEnd}
           onPointerLeave={handleDrawEnd}
         />
 
-        {/* Shape Handle Overlay - shows when a shape is selected */}
-        {selectedShapeId && containerWidth && (
-          <ShapeHandleOverlay
-            shape={meme.shapes?.find(s => s.id === selectedShapeId)}
-            canvasWidth={containerWidth}
-            canvasHeight={containerWidth * totalHeightInWidthUnits}
-            onMove={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
-            onResize={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
-            onRotate={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
-            onDelete={() => onDeleteShape(selectedShapeId)}
-          />
-        )}
+        {/* Shape Handle Overlay - shows when a shape is selected and found */}
+        {(() => {
+          const selectedShape = selectedShapeId ? meme.shapes?.find(s => s.id === selectedShapeId) : null;
+          if (!selectedShape || !containerWidth) return null;
+          return (
+            <ShapeHandleOverlay
+              shape={selectedShape}
+              canvasWidth={containerWidth}
+              canvasHeight={containerWidth * totalHeightInWidthUnits}
+              onMove={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
+              onResize={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
+              onRotate={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
+              onDelete={() => onDeleteShape(selectedShapeId)}
+            />
+          );
+        })()}
 
         {(meme.stickers || []).map((sticker) => {
           // Map animation IDs to CSS class names

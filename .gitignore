@@ -53,3 +53,6 @@ launch_assets/
 # Design docs & markdown
 *.md
 docs/
+
+# Git worktrees
+.worktrees/

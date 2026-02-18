@@ -25,7 +25,85 @@ self.onmessage = async function (e) {
     }
 };
 
+// Google Fonts URL matching index.html to ensure consistency
+const GOOG_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Bebas+Neue&family=Lato:wght@400;700;900&family=Montserrat:wght@400;700;900&family=Archivo+Black&family=Black+Ops+One&family=Bungee&family=Carter+One&family=Cinzel:wght@400;700&family=Comic+Neue:wght@400;700&family=Creepster&family=Fredoka:wght@400;700&family=Luckiest+Guy&family=Oswald:wght@400;700&family=Pacifico&family=Permanent+Marker&family=Press+Start+2P&family=Righteous&family=Rubik+Mono+One&family=Russo+One&family=Special+Elite&display=swap';
+
+async function loadWorkerFonts(meme, texts) {
+    // 1. Identify used fonts
+    const usedFonts = new Set();
+    if (meme.fontFamily) usedFonts.add(meme.fontFamily);
+    if (texts && texts.length > 0) {
+        texts.forEach(t => {
+            if (t.fontFamily) usedFonts.add(t.fontFamily);
+        });
+    }
+
+    // Always add default if needed, though usually covered by meme.fontFamily
+    if (usedFonts.size === 0) return;
+
+    console.log("[Worker] Loading fonts:", [...usedFonts]);
+
+    try {
+        // 2. Fetch CSS
+        const response = await fetch(GOOG_FONTS_URL);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const cssText = await response.text();
+
+        // 3. Parse and Load
+        // We only load fonts that are actually used to save bandwidth/memory
+        // Regex to find @font-face blocks
+        // The regex captures the content inside {}
+        const fontFaceRegex = /@font-face\s*{([^}]+)}/g;
+        let match;
+        const promises = [];
+
+        while ((match = fontFaceRegex.exec(cssText)) !== null) {
+            const block = match[1];
+            const familyMatch = block.match(/font-family:\s*['"]?([^'";]+)['"]?/);
+            const srcMatch = block.match(/src:\s*url\(([^)]+)\)/);
+            const weightMatch = block.match(/font-weight:\s*(\d+)/);
+            const styleMatch = block.match(/font-style:\s*(\w+)/);
+
+            if (familyMatch && srcMatch) {
+                const family = familyMatch[1];
+                // Check if this font family is one we need
+                // Note: Google Fonts might return "Roboto" or "'Roboto'"
+                // We check if our used font name is part of the CSS family name
+                if ([...usedFonts].some(used => family.includes(used) || used.includes(family))) {
+                    const src = srcMatch[1];
+                    const weight = weightMatch ? weightMatch[1] : '400';
+                    const style = styleMatch ? styleMatch[1] : 'normal';
+
+                    // console.log(`[Worker] Loading ${family} (${weight} ${style})`);
+
+                    const font = new FontFace(family, `url(${src})`, {
+                        weight,
+                        style
+                    });
+
+                    promises.push(font.load().then(loadedFont => {
+                        self.fonts.add(loadedFont);
+                        // console.log(`[Worker] Added ${family} to worker fonts`);
+                    }).catch(e => {
+                        console.warn(`[Worker] Failed to load font ${family}:`, e);
+                    }));
+                }
+            }
+        }
+
+        await Promise.all(promises);
+        console.log("[Worker] Font loading complete");
+
+    } catch (e) {
+        console.warn("[Worker] Font loading failed (check internet connection):", e);
+    }
+}
+
 async function startExport({ meme, texts, stickers, quality, format, action, videoProxyPort }) {
+    // 0. Load Fonts FIRST
+    self.postMessage({ type: 'PROGRESS', payload: { progress: 5, message: "Loading fonts..." } });
+    await loadWorkerFonts(meme, texts);
+
     // 1. Load Assets
     self.postMessage({ type: 'PROGRESS', payload: { progress: 10, message: "Loading assets (Worker)..." } });
 

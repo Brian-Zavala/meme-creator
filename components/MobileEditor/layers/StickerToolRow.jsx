@@ -1,8 +1,7 @@
-import { Search, Clock, TrendingUp, Laugh, PawPrint, SmilePlus } from "lucide-react";
+import { Search, TrendingUp, Laugh, PawPrint, SmilePlus } from "lucide-react";
 import ToolPill from "../ToolPill";
 
 const CATEGORIES = [
-  { id: "recent",    label: "Recent",    Icon: Clock },
   { id: "trending",  label: "Trending",  Icon: TrendingUp },
   { id: "memes",     label: "Memes",     Icon: Laugh },
   { id: "animals",   label: "Animals",   Icon: PawPrint },

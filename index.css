@@ -1486,9 +1486,10 @@ body {
 }
 
 .tool-pill[data-active] {
-  background: var(--color-brand);
-  border-color: var(--color-brand);
-  color: #000;
+  background: linear-gradient(135deg, oklch(53% 0.187 39 / 0.20) 0%, transparent 100%), #2f3336;
+  border-color: oklch(53% 0.187 39 / 0.20);
+  color: #fff;
+  box-shadow: 0 4px 6px -1px oklch(53% 0.187 39 / 0.10);
 }
 
 .mobile-tab-pill {
@@ -1501,9 +1502,10 @@ body {
 }
 
 .mobile-tab-pill[data-active] {
-  background: color-mix(in srgb, var(--color-brand) 15%, transparent);
-  border-color: transparent;
-  color: var(--color-brand);
+  background: linear-gradient(135deg, oklch(53% 0.187 39 / 0.20) 0%, transparent 100%), #2f3336;
+  border-color: oklch(53% 0.187 39 / 0.20);
+  color: #fff;
+  box-shadow: 0 4px 6px -1px oklch(53% 0.187 39 / 0.10);
 }
 
 /* AI Magic pill — accented glow */

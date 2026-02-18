@@ -49,3 +49,7 @@ Desktop.ini
 
 # Launch Assets
 launch_assets/
+
+# Design docs & markdown
+*.md
+docs/

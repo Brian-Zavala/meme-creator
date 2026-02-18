@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 
 const ACTIONS = [
+  { id: "removeAll",     label: "Remove All",     Icon: Trash2,    danger: true },
+  { id: "removeEffects", label: "Clear FX",       Icon: Sparkles,  teal: true },
   { id: "chaos",         label: "Chaos",          Icon: Shuffle },
   { id: "captionRemix",  label: "Caption",        Icon: MessageSquare },
   { id: "styleShuffle",  label: "Style",          Icon: Paintbrush },
@@ -28,8 +30,6 @@ const ACTIONS = [
   { id: "cursed",        label: "Cursed",         Icon: Skull },
   { id: "confetti",      label: "Confetti",       Icon: PartyPopper },
   { id: "timeWarp",      label: "Time Warp",      Icon: Timer },
-  { id: "removeAll",     label: "Remove All",     Icon: Trash2,    danger: true },
-  { id: "removeEffects", label: "Clear FX",       Icon: Sparkles,  teal: true },
 ];
 
 export default function QuickToolRow({

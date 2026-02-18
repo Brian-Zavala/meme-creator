@@ -43,8 +43,6 @@ export default function MobileTopBar({
   onModeChange,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [layoutExpanded, setLayoutExpanded] = useState(false);
-  const [modeExpanded, setModeExpanded] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -75,8 +73,6 @@ export default function MobileTopBar({
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
-    setLayoutExpanded(false);
-    setModeExpanded(false);
   }, []);
 
   return (
@@ -173,27 +169,17 @@ export default function MobileTopBar({
 
 
               {/* Layout */}
-              <button
-                type="button"
-                className="mobile-more-item"
-                onClick={() => {
-                  setLayoutExpanded((p) => !p);
-                  setModeExpanded(false);
-                }}
-              >
-                <LayoutGrid className="w-4 h-4" />
-                <span>Layout</span>
-                <span className="ml-auto text-slate-500 text-xs">
-                  {LAYOUTS.find((l) => l.id === layout)?.label || "Single"}
-                </span>
-              </button>
-              {layoutExpanded && (
-                <div className="mobile-more-sub">
+              <div className="mobile-more-section">
+                <div className="mobile-more-section-label">
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Layout</span>
+                </div>
+                <div className="mobile-more-segment">
                   {LAYOUTS.map((l) => (
                     <button
                       key={l.id}
                       type="button"
-                      className="mobile-more-sub-item"
+                      className="mobile-more-segment-btn"
                       data-active={l.id === layout || undefined}
                       onClick={() => {
                         onLayoutChange?.(l.id);
@@ -204,30 +190,20 @@ export default function MobileTopBar({
                     </button>
                   ))}
                 </div>
-              )}
+              </div>
 
               {/* Mode */}
-              <button
-                type="button"
-                className="mobile-more-item"
-                onClick={() => {
-                  setModeExpanded((p) => !p);
-                  setLayoutExpanded(false);
-                }}
-              >
-                <Film className="w-4 h-4" />
-                <span>Mode</span>
-                <span className="ml-auto text-slate-500 text-xs">
-                  {MODES.find((m) => m.id === mode)?.label || "Images"}
-                </span>
-              </button>
-              {modeExpanded && (
-                <div className="mobile-more-sub">
+              <div className="mobile-more-section">
+                <div className="mobile-more-section-label">
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Mode</span>
+                </div>
+                <div className="mobile-more-segment">
                   {MODES.map((m) => (
                     <button
                       key={m.id}
                       type="button"
-                      className="mobile-more-sub-item"
+                      className="mobile-more-segment-btn"
                       data-active={m.id === mode || undefined}
                       onClick={() => {
                         onModeChange?.(m.id);
@@ -238,7 +214,7 @@ export default function MobileTopBar({
                     </button>
                   ))}
                 </div>
-              )}
+              </div>
 
               <div className="mobile-more-divider" />
 

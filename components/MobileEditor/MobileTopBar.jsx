@@ -137,11 +137,20 @@ export default function MobileTopBar({
         <button
           type="button"
           onClick={onDownload}
-          className="mobile-top-btn mobile-top-btn-primary"
+          className="mobile-top-btn"
           aria-label="Save"
         >
-          <Download className="w-4 h-4" />
-          <span className="text-xs font-semibold">Save</span>
+          <Download className="w-5 h-5" />
+        </button>
+
+        {/* Share */}
+        <button
+          type="button"
+          onClick={onShare}
+          className="mobile-top-btn"
+          aria-label="Share"
+        >
+          <Share2 className="w-5 h-5" />
         </button>
 
         {/* More menu */}

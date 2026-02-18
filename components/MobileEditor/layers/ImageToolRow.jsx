@@ -13,6 +13,7 @@ import {
 import ToolPill from "../ToolPill";
 
 const TOOLS = [
+  { id: "crop",       label: "Crop",     Icon: Scissors },
   { id: "brightness", label: "Bright",   Icon: Sun },
   { id: "contrast",   label: "Contrast", Icon: Contrast },
   { id: "blur",       label: "Blur",     Icon: Waves },
@@ -22,7 +23,6 @@ const TOOLS = [
   { id: "sepia",      label: "Sepia",    Icon: Clock },
   { id: "invert",     label: "Invert",   Icon: ArrowUpDown },
   { id: "deepfry",    label: "Deep Fry", Icon: Flame },
-  { id: "crop",       label: "Crop",     Icon: Scissors },
 ];
 
 export default function ImageToolRow({ activeTool, onToolTap }) {

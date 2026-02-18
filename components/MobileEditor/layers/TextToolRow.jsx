@@ -1,4 +1,5 @@
 import {
+  PlusCircle,
   ALargeSmall,
   ArrowUpDown,
   Palette,
@@ -23,9 +24,17 @@ const TOOLS = [
   { id: "caption", label: "Caption", Icon: Subtitles },
 ];
 
-export default function TextToolRow({ activeTool, onToolTap }) {
+export default function TextToolRow({ activeTool, onToolTap, onAddText }) {
   return (
     <>
+      <button
+        type="button"
+        onClick={onAddText}
+        className="tool-pill add-text-pill"
+      >
+        <PlusCircle className="w-4 h-4" />
+        <span>Add</span>
+      </button>
       {TOOLS.map(({ id, label, Icon }) => (
         <ToolPill
           key={id}

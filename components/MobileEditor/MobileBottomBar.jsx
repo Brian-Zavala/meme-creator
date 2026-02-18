@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from "react";
-import { Type, ImageIcon, Pencil, Smile, Zap } from "lucide-react";
+import { Wand2, Type, ImageIcon, Zap, Pencil, Smile } from "lucide-react";
 import ToolPill from "./ToolPill";
 import SliderControl from "./SliderControl";
 import ColorSwatchRow from "./ColorSwatchRow";
@@ -7,6 +7,7 @@ import PillSelector from "./PillSelector";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
 
 const MemeStickerLibrary = lazy(() => import("../MemeEditor/MemeStickerLibrary"));
+const AiToolRow      = lazy(() => import("./layers/AiToolRow"));
 const TextToolRow    = lazy(() => import("./layers/TextToolRow"));
 const ImageToolRow   = lazy(() => import("./layers/ImageToolRow"));
 const DrawToolRow    = lazy(() => import("./layers/DrawToolRow"));
@@ -14,11 +15,12 @@ const StickerToolRow = lazy(() => import("./layers/StickerToolRow"));
 const QuickToolRow   = lazy(() => import("./layers/QuickToolRow"));
 
 const TABS = [
+  { id: "ai",      label: "AI",      icon: Wand2 },
   { id: "text",    label: "Text",    icon: Type },
   { id: "image",   label: "Image",   icon: ImageIcon },
+  { id: "quick",   label: "Quick",   icon: Zap },
   { id: "draw",    label: "Draw",    icon: Pencil },
   { id: "sticker", label: "Sticker", icon: Smile },
-  { id: "quick",   label: "Quick",   icon: Zap },
 ];
 
 const FONTS = [
@@ -221,6 +223,11 @@ export default function MobileBottomBar({
   onAnimationChange,
   onStartCrop,
   isCropping,
+  // AI tab
+  onMagicCaption,
+  isMagicGenerating,
+  // Text tab
+  onAddText,
   // Sticker tab
   onAddSticker,
   // Quick tab actions
@@ -351,7 +358,8 @@ export default function MobileBottomBar({
       {/* Layer 1: Tool Row — slides up when a tab is active */}
       <div className="mobile-tool-row" data-visible={activeTab ? true : undefined} {...swipeHandlers}>
         <Suspense fallback={null}>
-          {activeTab === "text"    && <TextToolRow    {...toolRowProps} />}
+          {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} />}
+          {activeTab === "text"    && <TextToolRow    {...toolRowProps} onAddText={onAddText} />}
           {activeTab === "image"   && <ImageToolRow   {...toolRowProps} />}
           {activeTab === "draw"    && (
             <DrawToolRow

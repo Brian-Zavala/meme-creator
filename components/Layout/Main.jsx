@@ -4812,6 +4812,9 @@ export default function Main({ onOpenInstructions }) {
                 onAnimationChange={handleAnimationChange}
                 onStartCrop={handleStartCrop}
                 isCropping={isCropping}
+                onMagicCaption={generateMagicCaption}
+                isMagicGenerating={isMagicGenerating}
+                onAddText={() => addTextAtPosition(50, 50)}
                 onAddSticker={addSticker}
                 canvasActiveTool={activeTool}
                 setCanvasActiveTool={setActiveTool}

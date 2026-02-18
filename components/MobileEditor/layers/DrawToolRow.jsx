@@ -1,6 +1,7 @@
 import { useRef } from "react";
-import { Pen, Eraser, Trash2 } from "lucide-react";
+import { Pen, Eraser, Trash2, Square, Circle, Triangle } from "lucide-react";
 import ToolPill from "../ToolPill";
+import { SHAPES } from "../../../utils/shapeConstants.js";
 
 const DRAW_TOOLS = [
   { id: "pen",    label: "Pen",    Icon: Pen },
@@ -12,7 +13,7 @@ const COLORS = [
   "#eab308", "#22c55e", "#a855f7",
 ];
 
-export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, drawColor, onClearDrawings }) {
+export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, drawColor, onClearDrawings, shapeStroke, shapeFill }) {
   const colorInputRef = useRef(null);
 
   return (
@@ -40,6 +41,51 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
 
       {/* Divider */}
       <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
+
+      {/* Shape Tools (first 4 shapes inline) */}
+      {SHAPES.slice(0, 4).map(shape => (
+        <ToolPill
+          key={`shape-${shape.id}`}
+          icon={<span className="text-base">{shape.icon}</span>}
+          label={shape.label}
+          isActive={canvasActiveTool === `shape-${shape.id}`}
+          onClick={() => onToolTap(`shape-${shape.id}`)}
+        />
+      ))}
+
+      {/* More Shapes Button (remaining 6 shapes) */}
+      <ToolPill
+        icon={<span className="text-base">⋯</span>}
+        label="More"
+        isActive={canvasActiveTool?.startsWith('shape-') && !canvasActiveTool.match(/shape-(rectangle|circle|triangle|line)/)}
+        onClick={() => onToolTap('shape-menu')}
+      />
+
+      {/* Divider */}
+      <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
+
+      {/* Shape-specific Stroke Color dots (only when shape tool active) */}
+      {canvasActiveTool?.startsWith('shape-') && (
+        <>
+          {COLORS.map((color) => (
+            <button
+              key={`stroke-${color}`}
+              type="button"
+              onClick={() => onToolTap(`shapeStroke-${color}`)}
+              className="draw-color-dot flex-shrink-0"
+              style={{
+                backgroundColor: color,
+                borderColor: (shapeStroke || "#ff0000") === color ? "white" : "transparent",
+                outline: (shapeStroke || "#ff0000") === color ? "2px solid white" : "none",
+              }}
+              aria-label={`Stroke color ${color}`}
+            />
+          ))}
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
+        </>
+      )}
 
       {/* Color dots */}
       {COLORS.map((color) => (

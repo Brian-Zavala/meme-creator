@@ -5,6 +5,7 @@ import SliderControl from "./SliderControl";
 import ColorSwatchRow from "./ColorSwatchRow";
 import PillSelector from "./PillSelector";
 import { TEXT_ANIMATIONS } from "../../constants/textAnimations";
+import { SHAPES } from "../../utils/shapeConstants.js";
 
 const MemeStickerLibrary = lazy(() => import("../MemeEditor/MemeStickerLibrary"));
 const AiToolRow      = lazy(() => import("./layers/AiToolRow"));
@@ -69,7 +70,7 @@ const TEXT_SLIDER_CONFIGS = {
 };
 
 function renderLayer2(activeTab, activeTool, meme, handlers) {
-  const { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker, closeLayer2 } = handlers;
+  const { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker, closeLayer2, handleToolTap } = handlers;
   const filters = meme.filters || {};
 
   if (activeTab === "sticker" && activeTool) {
@@ -203,6 +204,18 @@ function renderLayer2(activeTab, activeTool, meme, handlers) {
     }
   }
 
+  if (activeTab === "draw" && activeTool === "shape-menu") {
+    return (
+      <PillSelector
+        items={SHAPES.slice(4)}
+        value={null}
+        getId={(s) => s.id}
+        getLabel={(s) => s.label}
+        onSelect={(s) => handleToolTap(`shape-${s.id}`)}
+      />
+    );
+  }
+
   return null;
 }
 
@@ -327,16 +340,32 @@ export default function MobileBottomBar({
     if (toolId === "pen" || toolId === "eraser") {
       setCanvasActiveTool(toolId);
     }
+    // "More shapes" button opens Layer 2 picker — must be checked before startsWith('shape-')
+    if (toolId === "shape-menu") {
+      setActiveTool((prev) => (prev === "shape-menu" ? null : "shape-menu"));
+      return;
+    }
+    // Shape tool pills control the canvas tool
+    if (typeof toolId === "string" && toolId.startsWith("shape-")) {
+      setCanvasActiveTool(toolId);
+      return;
+    }
     // Draw color dots change the draw color
     if (typeof toolId === "string" && toolId.startsWith("color-") && toolId !== "color-picker") {
       const color = toolId.replace("color-", "");
       handleStyleChange({ currentTarget: { name: "drawColor", value: color } }, true);
       return; // Don't toggle Layer 2
     }
+    // Shape stroke color dots change the shape stroke color
+    if (typeof toolId === "string" && toolId.startsWith("shapeStroke-")) {
+      const color = toolId.replace("shapeStroke-", "");
+      handleStyleChange({ currentTarget: { name: "shapeStroke", value: color } }, true);
+      return;
+    }
     setActiveTool((prev) => (prev === toolId ? null : toolId));
   }, [onStartCrop, setCanvasActiveTool, handleStyleChange]);
 
-  const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker, closeLayer2: () => setActiveTool(null) };
+  const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker, closeLayer2: () => setActiveTool(null), handleToolTap };
   const toolRowProps = { activeTool, onToolTap: handleToolTap };
 
   const isStickerLayer2 = activeTab === "sticker" && activeTool;
@@ -367,6 +396,8 @@ export default function MobileBottomBar({
               canvasActiveTool={canvasActiveTool}
               drawColor={meme?.drawColor}
               onClearDrawings={onClearDrawings}
+              shapeStroke={meme?.shapeStroke}
+              shapeFill={meme?.shapeFill}
             />
           )}
           {activeTab === "sticker" && <StickerToolRow {...toolRowProps} />}

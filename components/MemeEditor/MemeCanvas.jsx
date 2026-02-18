@@ -1,7 +1,9 @@
-import { forwardRef, useRef, useEffect, useLayoutEffect, useState, memo } from "react";
+import { forwardRef, useRef, useEffect, useLayoutEffect, useState, useCallback, memo } from "react";
+import { drawShape, hitTestShape } from '../../utils/drawShape.js';
 import { Loader2, Plus, Image as ImageIcon, Video, Upload, X, Trash2, Settings2 } from "lucide-react";
 import { getAnimationById } from "../../constants/textAnimations";
 import CountdownOverlay from "./CountdownOverlay";
+import ShapeHandleOverlay from "./ShapeHandleOverlay";
 
 /**
  * Optimized Wave Animation Text Component
@@ -75,7 +77,15 @@ const MemeCanvas = forwardRef(({
   onHoverChange,
   isCropping,
   onCropCancel,
-  snapGuides
+  snapGuides,
+  selectedShapeId,
+  onShapeIdSelect,
+  onAddShape,
+  onUpdateShape,
+  onDeleteShape,
+  shapeFill,
+  shapeStroke,
+  shapeStrokeWidth,
 }, ref) => {
   const description = `Meme editor with ${meme.panels?.length || 1} panels`;
   const drawCanvasRef = useRef(null);
@@ -85,6 +95,11 @@ const MemeCanvas = forwardRef(({
   const [isDrawing, setIsDrawing] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(1); // Global Aspect Ratio (usually driven by first panel or default)
   const currentPathRef = useRef([]);
+  // Shape creation refs
+  const shapePreviewRef = useRef(null);   // { type, x, y, w, h } of in-progress shape
+  const shapeAnchorRef = useRef(null);    // { x, y } normalized anchor point on pointerdown
+  const isCreatingShapeRef = useRef(false);
+  const [shapePreviewVersion, setShapePreviewVersion] = useState(0);
   const [dragOverPanel, setDragOverPanel] = useState(null);
   const [draggingPanel, setDraggingPanel] = useState(null);
   const [isHoveringElement, setIsHoveringElement] = useState(false); // Track text/sticker hover
@@ -272,12 +287,96 @@ const MemeCanvas = forwardRef(({
     });
 
     ctx.globalCompositeOperation = 'source-over';
-  }, [meme.drawings, meme.paddingTop, meme.paddingBottom, containerWidth]);
+
+    // Draw committed shapes
+    (meme.shapes || []).forEach((shape) => {
+      drawShape(ctx, shape, canvas.width, canvas.height);
+    });
+
+    // Draw in-progress shape preview (if any)
+    if (shapePreviewRef.current) {
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      drawShape(ctx, shapePreviewRef.current, canvas.width, canvas.height);
+      ctx.restore();
+    }
+  }, [meme.drawings, meme.shapes, meme.paddingTop, meme.paddingBottom, containerWidth, shapePreviewVersion]);
+
+  // Shape keyboard handlers (Delete to remove, Escape to deselect)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!selectedShapeId) return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        onDeleteShape(selectedShapeId);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onShapeIdSelect(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedShapeId, onDeleteShape, onShapeIdSelect]);
+
+  // Shape tool helpers
+  const isShapeTool = (tool) => typeof tool === 'string' && tool.startsWith('shape-');
+  const shapeTypeFromTool = (tool) => tool?.replace('shape-', '');
 
   // Cache draw rect to avoid forced layout reflow on every pointermove
   const drawRectRef = useRef(null);
 
   const handleDrawStart = (e) => {
+    // Shape tool: first hit-test existing shapes, then create on drag
+    if (isShapeTool(activeTool)) {
+      e.stopPropagation(); // Prevent handleCanvasPointerDown from clearing shape selection
+      const canvas = drawCanvasRef.current;
+      drawRectRef.current = canvas.getBoundingClientRect();
+      const rect = drawRectRef.current;
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+
+      // Click on existing shape → select it, don't create
+      for (const s of (meme.shapes || [])) {
+        if (hitTestShape(s, px, py, rect.width, rect.height)) {
+          onShapeIdSelect(s.id);
+          return;
+        }
+      }
+
+      // No hit → deselect any selection, then start creation gesture
+      onShapeIdSelect(null);
+      const nx = px / rect.width;
+      const ny = py / rect.height;
+      shapeAnchorRef.current = { x: nx, y: ny };
+      shapePreviewRef.current = {
+        type: shapeTypeFromTool(activeTool),
+        x: nx, y: ny, w: 0, h: 0,
+        stroke: shapeStroke || '#ff0000',
+        fill: shapeFill || null,
+        strokeWidth: shapeStrokeWidth || 3,
+      };
+      isCreatingShapeRef.current = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    // Non-shape tool: hit-test to select/deselect shapes
+    if (!isCreatingShapeRef.current) {
+      const canvas = drawCanvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      for (const s of (meme.shapes || [])) {
+        if (hitTestShape(s, px, py, rect.width, rect.height)) {
+          onShapeIdSelect(s.id);
+          return;
+        }
+      }
+      onShapeIdSelect(null);
+    }
+
     if (activeTool !== 'pen' && activeTool !== 'eraser') return;
     e.stopPropagation();
     setIsDrawing(true);
@@ -291,6 +390,37 @@ const MemeCanvas = forwardRef(({
   };
 
   const handleDrawMove = (e) => {
+    // Shape creation preview
+    if (isCreatingShapeRef.current && shapeAnchorRef.current) {
+      const rect = drawRectRef.current;
+      if (!rect) return;
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+      const anchor = shapeAnchorRef.current;
+
+      let x = Math.min(anchor.x, nx);
+      let y = Math.min(anchor.y, ny);
+      let w = Math.abs(nx - anchor.x);
+      let h = Math.abs(ny - anchor.y);
+
+      // Shift key or circle tool: constrain to square
+      if (e.shiftKey || shapeTypeFromTool(activeTool) === 'circle') {
+        const side = Math.max(w, h);
+        w = side;
+        h = side;
+      }
+
+      shapePreviewRef.current = {
+        type: shapeTypeFromTool(activeTool),
+        x, y, w, h,
+        stroke: shapeStroke || '#ff0000',
+        fill: shapeFill || null,
+        strokeWidth: shapeStrokeWidth || 3,
+      };
+      setShapePreviewVersion(v => v + 1);
+      return;
+    }
+
     if (!isDrawing) return;
     e.stopPropagation();
 
@@ -319,6 +449,35 @@ const MemeCanvas = forwardRef(({
   };
 
   const handleDrawEnd = (e) => {
+    // Shape creation commit
+    if (isCreatingShapeRef.current) {
+      isCreatingShapeRef.current = false;
+      const preview = shapePreviewRef.current;
+      shapePreviewRef.current = null;
+      shapeAnchorRef.current = null;
+      setShapePreviewVersion(v => v + 1); // clear preview
+
+      // Discard if too small (< 2% in both dimensions)
+      if (!preview || (preview.w < 0.02 && preview.h < 0.02)) return;
+
+      const newShape = {
+        id: `shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        type: preview.type,
+        x: preview.x,
+        y: preview.y,
+        w: preview.w,
+        h: preview.h,
+        rotation: 0,
+        stroke: shapeStroke || '#ff0000',
+        fill: shapeFill || null,
+        strokeWidth: shapeStrokeWidth || 3,
+        starPoints: 5,
+        tailX: 0.25,
+      };
+      onAddShape(newShape);
+      return;
+    }
+
     if (!isDrawing) return;
     setIsDrawing(false);
     e.stopPropagation();
@@ -723,13 +882,29 @@ const MemeCanvas = forwardRef(({
           ref={drawCanvasRef}
           role="img"
           aria-label="Drawing Canvas Layer"
-          className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' ? 'cursor-pen pointer-events-auto' : activeTool === 'eraser' ? 'cursor-eraser pointer-events-auto' : 'pointer-events-none'}`}
+          className={`absolute inset-0 w-full h-full z-20 touch-none ${activeTool === 'pen' ? 'cursor-pen pointer-events-auto' : activeTool === 'eraser' ? 'cursor-eraser pointer-events-auto' : activeTool?.startsWith('shape-') ? 'cursor-crosshair pointer-events-auto' : 'pointer-events-none'}`}
           onPointerDown={handleDrawStart}
           onPointerMove={handleDrawMove}
           onPointerUp={handleDrawEnd}
           onPointerLeave={handleDrawEnd}
         />
 
+        {/* Shape Handle Overlay - shows when a shape is selected and found */}
+        {(() => {
+          const selectedShape = selectedShapeId ? meme.shapes?.find(s => s.id === selectedShapeId) : null;
+          if (!selectedShape || !containerWidth) return null;
+          return (
+            <ShapeHandleOverlay
+              shape={selectedShape}
+              canvasWidth={containerWidth}
+              canvasHeight={containerWidth * totalHeightInWidthUnits}
+              onMove={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
+              onResize={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
+              onRotate={(updatedShape) => onUpdateShape(selectedShapeId, updatedShape)}
+              onDelete={() => onDeleteShape(selectedShapeId)}
+            />
+          );
+        })()}
 
         {(meme.stickers || []).map((sticker) => {
           // Map animation IDs to CSS class names

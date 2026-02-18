@@ -50,7 +50,7 @@ const CountdownOverlay = ({ x, y, duration = 1700 }) => {
       </div>
 
       {/* Countdown Number Window */}
-      <div className="relative w-24 h-24 flex items-center justify-center">
+      <div className="relative w-14 h-14 sm:w-24 sm:h-24 flex items-center justify-center">
         {/* Pulsing Background */}
          <div
             className="absolute inset-0 rounded-2xl bg-black/40 backdrop-blur-xl border-2 border-brand/30 shadow-[0_0_30px_rgba(0,0,0,0.5)] animate-pulse"
@@ -62,7 +62,7 @@ const CountdownOverlay = ({ x, y, duration = 1700 }) => {
 
          {/* The Number */}
          <span
-            className="text-6xl font-black italic relative z-10"
+            className="text-4xl sm:text-6xl font-black italic relative z-10"
             style={{
                 color: 'oklch(53% 0.187 39)',
                 textShadow: '0 4px 12px rgba(0,0,0,0.5)',

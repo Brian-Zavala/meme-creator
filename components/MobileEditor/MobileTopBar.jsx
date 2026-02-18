@@ -171,20 +171,6 @@ export default function MobileTopBar({
               <div className="mobile-more-app-title">MEME CREATOR</div>
               <div className="mobile-more-divider" />
 
-              {/* Share */}
-              <button
-                type="button"
-                className="mobile-more-item"
-                onClick={() => {
-                  closeMenu();
-                  onShare?.();
-                }}
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Share</span>
-              </button>
-
-              <div className="mobile-more-divider" />
 
               {/* Layout */}
               <button

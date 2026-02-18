@@ -708,6 +708,9 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                   drawWidth={meme.drawWidth}
                   onStyleChange={handleStyleChange}
                   onClearDrawings={onClearDrawings}
+                  shapeFill={meme.shapeFill}
+                  shapeStroke={meme.shapeStroke}
+                  shapeStrokeWidth={meme.shapeStrokeWidth}
                 />
               </Suspense>
             )}

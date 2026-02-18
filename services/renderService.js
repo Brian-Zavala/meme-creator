@@ -1,6 +1,7 @@
 
 import { GifReader } from 'omggif';
 import { getAnimationById, hasAnimatedText, calculateGifLoopDuration } from '../constants/textAnimations';
+import { drawShape } from '../utils/drawShape.js';
 
 /* =========================================================================================
    ENV HELPERS
@@ -1379,6 +1380,12 @@ export async function renderMemeFrame(ctx, meme, stickers, texts, frameIndex, as
         ctx.restore();
     }
 
+    // Render shapes (drawn shapes like rectangles, circles, arrows, etc.)
+    if (meme.shapes && meme.shapes.length > 0) {
+        meme.shapes.forEach(shape => {
+            drawShape(ctx, shape, exportWidth, exportHeight);
+        });
+    }
 
     // Use scaleFactor based on exportWidth / baseWidth (same as MemeCanvas uses containerWidth / 800)
     const scaleFactor = exportWidth / baseWidth;

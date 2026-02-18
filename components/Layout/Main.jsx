@@ -416,6 +416,13 @@ export default function Main({ onOpenInstructions }) {
     }, 1500); // Delay slightly so it doesn't overlap with action toast
   }, []);
 
+  // Deselect shape when switching to a tool that's not compatible with shape manipulation
+  useEffect(() => {
+    if (activeTool === 'pen' || activeTool === 'eraser' || (activeTool && activeTool.startsWith('shape-'))) {
+      setSelectedShapeId(null);
+    }
+  }, [activeTool]);
+
   const [imageDeck, setImageDeck] = useState([]);
   const [videoDeck, setVideoDeck] = useState([]);
   const [showExportModal, setShowExportModal] = useState(false);

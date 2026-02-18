@@ -1270,9 +1270,6 @@ body {
   right: 0;
   height: 48px;
   z-index: 110;
-  display: flex;
-  align-items: center;
-  gap: 4px;
   padding: 0 8px;
   padding-top: env(safe-area-inset-top);
   background: rgba(15, 15, 15, 0.92);

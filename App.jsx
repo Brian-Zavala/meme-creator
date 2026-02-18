@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { preload } from "react-dom";
-import toast, { Toaster, useToasterStore } from "react-hot-toast";
+import toast, { Toaster, ToastBar, useToasterStore } from "react-hot-toast";
 import { ExportRecoveryManager } from './components/ExportRecoveryManager';
 import Header from "./components/Layout/Header";
 import Main from "./components/Layout/Main";
@@ -118,7 +118,23 @@ export default function App() {
           right: 16,
         }}
         gutter={8}
-      />
+      >
+        {(t) => (
+          <div
+            onClick={() => toast.dismiss(t.id)}
+            style={{
+              cursor: "pointer",
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+            }}
+            title="Tap to dismiss"
+          >
+            {/* Render the default toast bar via react-hot-toast's internal renderer */}
+            <ToastBar toast={t} />
+          </div>
+        )}
+      </Toaster>
       <ToastLimiter />
       <ExportRecoveryManager />
 

@@ -84,7 +84,7 @@ export default function MobileTopBar({
         />
       )}
 
-      <div className="mobile-top-bar lg:hidden" data-html2canvas-ignore="true">
+      <div className="mobile-top-bar flex items-center gap-1 lg:hidden" data-html2canvas-ignore="true">
         {/* Upload */}
         <button
           type="button"

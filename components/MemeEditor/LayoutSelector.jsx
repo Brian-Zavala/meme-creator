@@ -17,7 +17,7 @@ export function LayoutSelector({ layout, onLayoutChange }) {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target) && 
+      if (containerRef.current && !containerRef.current.contains(event.target) &&
           !event.target.closest('[data-layout-dropdown]')) {
         setIsOpen(false);
       }
@@ -55,7 +55,7 @@ export function LayoutSelector({ layout, onLayoutChange }) {
         className={`w-full select-trigger px-4 py-3 flex items-center justify-center relative ${isOpen ? 'ring-2 ring-brand border-transparent' : 'hover:bg-white/5'}`}
       >
         <div className="flex items-center gap-3">
-            <LayoutTemplate className="w-5 h-5 text-brand shrink-0 lg:absolute lg:left-2" />
+            {/* Icon removed as per user request */}
             <span className="font-bold text-lg whitespace-nowrap">
                 {activeLayout.label}
             </span>

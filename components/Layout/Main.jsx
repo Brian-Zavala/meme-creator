@@ -194,7 +194,7 @@ export default function Main({ onOpenInstructions }) {
              const validHistory = {
                past: Array.isArray(saved.past) ? saved.past : [],
                // STRICT MERGE: Ensure present has all default fields (Arrays!)
-               present: { ...defaultState, ...saved.present, stickers: saved.present.stickers || [], drawings: saved.present.drawings || [], texts: saved.present.texts || [] },
+               present: { ...defaultState, ...saved.present, stickers: saved.present.stickers || [], drawings: saved.present.drawings || [], shapes: saved.present.shapes || [], texts: saved.present.texts || [] },
                future: Array.isArray(saved.future) ? saved.future : []
              };
              hydrateHistory(validHistory);
@@ -310,6 +310,10 @@ export default function Main({ onOpenInstructions }) {
     ],
     stickers: [],
     drawings: [],
+    shapes: [],
+    shapeFill: null,
+    shapeStroke: '#ff0000',
+    shapeStrokeWidth: 3,
     selectedId: null,
   }), []);
 
@@ -366,6 +370,7 @@ export default function Main({ onOpenInstructions }) {
 
   const [draggedId, setDraggedId] = useState(null);
   const [activeTool, setActiveTool] = useState("move");
+  const [selectedShapeId, setSelectedShapeId] = useState(null);
   const [flashColor, setFlashColor] = useState(null);
   const [editingId, setEditingId] = useState(null); // Track actively edited text (shows blinking cursor)
   const hoverBorderRef = useRef(null); // Direct DOM ref for hover border overlay
@@ -2673,6 +2678,31 @@ export default function Main({ onOpenInstructions }) {
     });
   }
 
+  function handleAddShape(newShape) {
+    startTransition(() => {
+      updateState((prev) => ({
+        ...prev,
+        shapes: [...(prev.shapes || []), newShape],
+      }));
+    });
+    setSelectedShapeId(newShape.id);
+  }
+
+  function handleUpdateShape(id, updates) {
+    updateState((prev) => ({
+      ...prev,
+      shapes: (prev.shapes || []).map((s) => (s.id === id ? { ...s, ...(typeof updates === 'function' ? updates(s) : updates) } : s)),
+    }));
+  }
+
+  function handleDeleteShape(id) {
+    updateState((prev) => ({
+      ...prev,
+      shapes: (prev.shapes || []).filter((s) => s.id !== id),
+    }));
+    setSelectedShapeId(null);
+  }
+
   function handleClearDrawings() {
     startTransition(() => {
       updateState((prev) => ({ ...prev, drawings: [] }));
@@ -3126,6 +3156,7 @@ export default function Main({ onOpenInstructions }) {
         ],
         stickers: [],
         drawings: [],
+        shapes: [],
         fontSize: 40,
         fontFamily: "Impact",
         paddingTop: 0,
@@ -4722,6 +4753,14 @@ export default function Main({ onOpenInstructions }) {
                       isCropping={isCropping}
                       onCropCancel={handleCropCancel}
                       snapGuides={draggedId ? snapGuidesRef.current : null}
+                      selectedShapeId={selectedShapeId}
+                      onShapeIdSelect={setSelectedShapeId}
+                      onAddShape={handleAddShape}
+                      onUpdateShape={handleUpdateShape}
+                      onDeleteShape={handleDeleteShape}
+                      shapeFill={meme.shapeFill}
+                      shapeStroke={meme.shapeStroke}
+                      shapeStrokeWidth={meme.shapeStrokeWidth}
                     />
                   </Suspense>
                 </div>

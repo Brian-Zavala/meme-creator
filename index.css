@@ -1634,4 +1634,9 @@ body {
     background: #0f0f0f;
     border-top: 1px solid #2f3336;
   }
+
+  /* Extra bottom clearance when fine-tune panel is open (fine-tune panel ≈ 4 rows × 36px + borders/padding ≈ 170px) */
+  .mobile-canvas-pad[data-finetune-active] {
+    padding-bottom: calc(56px + 170px + env(safe-area-inset-bottom));
+  }
 }

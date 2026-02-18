@@ -967,7 +967,7 @@ export default function Main({ onOpenInstructions }) {
       // Small delay to allow the layout to settle/render (selection modal opening)
       const timer = setTimeout(() => {
         if (canvasContainerRef.current) {
-          const yCoord = canvasContainerRef.current.getBoundingClientRect().top + window.scrollY - 32;
+          const yCoord = canvasContainerRef.current.getBoundingClientRect().top + window.scrollY - 56; // 48px mobile top bar + 8px breathing room
           window.scroll({
             top: Math.max(0, yCoord),
             behavior: 'smooth'
@@ -3136,19 +3136,6 @@ export default function Main({ onOpenInstructions }) {
     }
   }, []);
 
-  // Auto-scroll to fine tuner when element is selected
-  useEffect(() => {
-    if (meme.selectedId) {
-      // Small delay to ensure the FineTune component has mounted and layout is updated
-      const timer = setTimeout(() => {
-        if (fineTuneRef.current) {
-          fineTuneRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [meme.selectedId]);
-
   function handleReset() {
     triggerFlash("red");
     setActiveTool("move");
@@ -4276,7 +4263,10 @@ export default function Main({ onOpenInstructions }) {
               </Suspense>
             </div>
 
-            <div className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible mobile-canvas-pad">
+            <div
+              className="lg:col-span-4 order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-8 self-start overflow-visible mobile-canvas-pad"
+              data-finetune-active={isMobileScreen && !!selectedText || undefined}
+            >
               <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible">
                 <Suspense fallback={<div className="h-12 w-full bg-slate-900/50 animate-pulse rounded-xl" />}>
                   <ModeSelector

@@ -52,8 +52,6 @@ export default function MobileTopBar({
     function handleClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
-        setLayoutExpanded(false);
-        setModeExpanded(false);
       }
     }
     document.addEventListener("pointerdown", handleClick, true);

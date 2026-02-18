@@ -69,7 +69,7 @@ const TEXT_SLIDER_CONFIGS = {
 };
 
 function renderLayer2(activeTab, activeTool, meme, handlers) {
-  const { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker } = handlers;
+  const { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker, closeLayer2 } = handlers;
   const filters = meme.filters || {};
 
   if (activeTab === "sticker" && activeTool) {
@@ -83,7 +83,7 @@ function renderLayer2(activeTab, activeTool, meme, handlers) {
     const stickerProps = STICKER_PROPS[activeTool] || { initialTab: "tenor" };
     return (
       <Suspense fallback={<div className="flex items-center justify-center h-full text-slate-500 text-sm">Loading...</div>}>
-        <MemeStickerLibrary key={activeTool} {...stickerProps} onAddSticker={onAddSticker} onClose={() => {}} />
+        <MemeStickerLibrary key={activeTool} {...stickerProps} onAddSticker={onAddSticker} onClose={closeLayer2} />
       </Suspense>
     );
   }
@@ -336,7 +336,7 @@ export default function MobileBottomBar({
     setActiveTool((prev) => (prev === toolId ? null : toolId));
   }, [onStartCrop, setCanvasActiveTool, handleStyleChange]);
 
-  const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker };
+  const handlers = { handleStyleChange, handleFilterChange, handleStyleCommit, onAnimationChange, onAddSticker, closeLayer2: () => setActiveTool(null) };
   const toolRowProps = { activeTool, onToolTap: handleToolTap };
 
   const isStickerLayer2 = activeTab === "sticker" && activeTool;

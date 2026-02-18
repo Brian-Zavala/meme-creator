@@ -1,3 +1,4 @@
+import { RotateCcw } from "lucide-react";
 import OptimizedSlider from "../ui/OptimizedSlider";
 
 export default function SliderControl({
@@ -42,14 +43,20 @@ export default function SliderControl({
       <span className="text-xs font-mono text-slate-300 w-8 text-center shrink-0 tabular-nums">
         {displayValue}
       </span>
-      {defaultValue !== undefined && Number(value) !== Number(defaultValue) && (
+      {defaultValue !== undefined && (
         <button
           type="button"
           onClick={handleReset}
-          className="text-slate-500 hover:text-white text-sm shrink-0 leading-none"
+          disabled={Number(value) === Number(defaultValue)}
+          className={`w-8 h-8 flex items-center justify-center rounded-full shrink-0 transition-all duration-200 ease-out ${
+            Number(value) !== Number(defaultValue)
+              ? "opacity-100 scale-100 text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/20 pointer-events-auto"
+              : "opacity-0 scale-75 pointer-events-none"
+          }`}
           aria-label="Reset to default"
+          tabIndex={Number(value) !== Number(defaultValue) ? 0 : -1}
         >
-          ↺
+          <RotateCcw size={15} />
         </button>
       )}
     </div>

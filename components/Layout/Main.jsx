@@ -2712,9 +2712,10 @@ export default function Main({ onOpenInstructions }) {
 
   function handleClearDrawings() {
     startTransition(() => {
-      updateState((prev) => ({ ...prev, drawings: [] }));
+      updateState((prev) => ({ ...prev, drawings: [], shapes: [] }));
+      setSelectedShapeId(null);
     });
-    toast.success("Drawings cleared");
+    toast.success("Drawings & Shapes cleared");
   }
 
   // Crop handlers

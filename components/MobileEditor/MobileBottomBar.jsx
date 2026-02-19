@@ -337,8 +337,13 @@ export default function MobileBottomBar({
       return;
     }
     // Draw tool pills control the canvas tool
-    if (toolId === "pen" || toolId === "eraser") {
+    if (toolId === "pen" || toolId === "eraser" || toolId === "move") {
       setCanvasActiveTool(toolId);
+      return;
+    }
+    if (toolId === "edit") {
+      setCanvasActiveTool(null);
+      return;
     }
     // "More shapes" button opens Layer 2 picker — must be checked before startsWith('shape-')
     if (toolId === "shape-menu") {

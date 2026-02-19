@@ -1,5 +1,5 @@
 import { useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Hand, MousePointer2 } from "lucide-react";
 import OptimizedSlider from "../ui/OptimizedSlider";
 
 // Crisp inline SVG icons for each shape — 20×20 viewport, stroke-only, no fill
@@ -116,6 +116,24 @@ export default function DrawToolsPanel({
           <img src="/images/canvas/eraser_32.png" className="w-5 h-5 object-contain" alt="Eraser" loading="lazy"/>
           <span className="text-[10px] font-semibold tracking-wide">Eraser</span>
         </button>
+
+        <button
+          onClick={() => setActiveTool("move")}
+          className={`${btnBase} ${activeTool === "move" ? btnActive : btnInactive} min-w-[60px]`}
+          title="Move Shapes"
+        >
+          <Hand className="w-5 h-5" />
+          <span className="text-[10px] font-semibold tracking-wide">Move</span>
+        </button>
+
+        {/* <button
+          onClick={() => setActiveTool(null)}
+          className={`${btnBase} ${!activeTool ? btnActive : btnInactive} min-w-[60px]`}
+          title="Edit / Select"
+        >
+          <MousePointer2 className="w-5 h-5" />
+          <span className="text-[10px] font-semibold tracking-wide">Edit</span>
+        </button> */}
 
         <button
           onClick={() => startTransition(() => onClearDrawings())}

@@ -166,7 +166,7 @@ export default function ShapeHandleOverlay({ shape, canvasWidth, canvasHeight, o
         className="absolute w-6 h-6 flex items-center justify-center bg-red-600 border border-red-400/60 rounded-full pointer-events-auto z-50 hover:bg-red-500 active:scale-90 transition-all"
         style={{
           left: px + pw - 12,
-          top:  py - 12,
+          top:  py - 36,
           boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
         }}
         onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}

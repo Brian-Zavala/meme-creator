@@ -99,6 +99,7 @@ const MemeCanvas = forwardRef(({
   const shapePreviewRef = useRef(null);   // { type, x, y, w, h } of in-progress shape
   const shapeAnchorRef = useRef(null);    // { x, y } normalized anchor point on pointerdown
   const isCreatingShapeRef = useRef(false);
+  const dragShapeRef = useRef(null); // { id, startX, startY, originalX, originalY } for immediate move
   const [shapePreviewVersion, setShapePreviewVersion] = useState(0);
   const [dragOverPanel, setDragOverPanel] = useState(null);
   const [draggingPanel, setDraggingPanel] = useState(null);
@@ -236,7 +237,7 @@ const MemeCanvas = forwardRef(({
 
   const handlePanelPointerDown = (e, panel) => {
     // Check conditions: Not single mode, No text selected, Not drawing
-    const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser'].includes(activeTool);
+    const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser', 'move'].includes(activeTool);
 
     // Also trigger long-press start (timer will be cancelled if drag moves too far)
     handleCanvasLongPressStart(e);
@@ -371,10 +372,30 @@ const MemeCanvas = forwardRef(({
       for (const s of (meme.shapes || [])) {
         if (hitTestShape(s, px, py, rect.width, rect.height)) {
           onShapeIdSelect(s.id);
+
+          // IMMEDIATE DRAG START (Move tool only)
+          if (activeTool === 'move') {
+            dragShapeRef.current = {
+              id: s.id,
+              startX: e.clientX,
+              startY: e.clientY,
+              originalX: s.x,
+              originalY: s.y,
+              canvasWidth: rect.width,
+              canvasHeight: rect.height
+            };
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }
           return;
         }
       }
       onShapeIdSelect(null);
+    }
+
+    // If move tool, we just want selection (handled above), no drawing
+    if (activeTool === 'move') {
+      e.stopPropagation();
+      return;
     }
 
     if (activeTool !== 'pen' && activeTool !== 'eraser') return;
@@ -421,6 +442,25 @@ const MemeCanvas = forwardRef(({
       return;
     }
 
+    // IMMEDIATE DRAG MOVE
+    if (dragShapeRef.current) {
+      e.stopPropagation();
+      const { id, startX, startY, originalX, originalY, canvasWidth, canvasHeight } = dragShapeRef.current;
+
+      const dx = (e.clientX - startX) / canvasWidth;
+      const dy = (e.clientY - startY) / canvasHeight;
+
+      const shape = meme.shapes?.find(s => s.id === id);
+      if (shape) {
+        onUpdateShape(id, {
+          ...shape,
+          x: originalX + dx,
+          y: originalY + dy
+        });
+      }
+      return;
+    }
+
     if (!isDrawing) return;
     e.stopPropagation();
 
@@ -449,6 +489,12 @@ const MemeCanvas = forwardRef(({
   };
 
   const handleDrawEnd = (e) => {
+    // IMMEDIATE DRAG END
+    if (dragShapeRef.current) {
+      dragShapeRef.current = null;
+      e.stopPropagation();
+      return;
+    }
     // Shape creation commit
     if (isCreatingShapeRef.current) {
       isCreatingShapeRef.current = false;
@@ -493,6 +539,59 @@ const MemeCanvas = forwardRef(({
     currentPathRef.current = [];
   };
 
+  // Shape Hitbox Handlers
+  const handleShapePointerDown = (e, shapeId) => {
+    onShapeIdSelect(shapeId);
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Immediate Drag (Move Tool only)
+    if (activeTool === 'move') {
+      const shape = meme.shapes?.find(s => s.id === shapeId);
+      const canvas = drawCanvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+
+      if (shape && rect) {
+        dragShapeRef.current = {
+          id: shapeId,
+          startX: e.clientX,
+          startY: e.clientY,
+          originalX: shape.x,
+          originalY: shape.y,
+          canvasWidth: rect.width,
+          canvasHeight: rect.height
+        };
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }
+    }
+  };
+
+  const handleShapePointerMove = (e) => {
+    if (dragShapeRef.current) {
+      e.stopPropagation();
+      const { id, startX, startY, originalX, originalY, canvasWidth, canvasHeight } = dragShapeRef.current;
+
+      const dx = (e.clientX - startX) / canvasWidth;
+      const dy = (e.clientY - startY) / canvasHeight;
+
+      const shape = meme.shapes?.find(s => s.id === id);
+      if (shape) {
+        onUpdateShape(id, {
+          ...shape,
+          x: originalX + dx,
+          y: originalY + dy
+        });
+      }
+    }
+  };
+
+  const handleShapePointerUp = (e) => {
+    if (dragShapeRef.current) {
+      e.stopPropagation();
+      dragShapeRef.current = null;
+    }
+  };
+
   const handleGhostClick = (e, panelId, isActive) => {
     e.stopPropagation();
     if (isActive) {
@@ -517,7 +616,7 @@ const MemeCanvas = forwardRef(({
   // Long-press to add text handlers
   const handleCanvasLongPressStart = (e) => {
     // Don't trigger if drawing, if there's already a selected element, or if in editing mode
-    if (activeTool === 'pen' || activeTool === 'eraser' || selectedId || editingId) return;
+    if (activeTool === 'pen' || activeTool === 'eraser' || activeTool === 'move' || selectedId || editingId) return;
 
     // Check if we're on the canvas area using closest() to handle clicks on panels
     const canvasElement = e.target.closest('[data-meme-canvas]');
@@ -742,7 +841,7 @@ const MemeCanvas = forwardRef(({
           {(meme.panels || []).map((panel) => {
             const isActive = panel.id === activePanelId;
             const showUrl = panel.processedImage || panel.url;
-            const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser'].includes(activeTool) && showUrl;
+            const canDrag = meme.layout !== 'single' && !selectedId && !['pen', 'eraser', 'move'].includes(activeTool) && showUrl;
 
             return (
               <div
@@ -888,6 +987,26 @@ const MemeCanvas = forwardRef(({
           onPointerUp={handleDrawEnd}
           onPointerLeave={handleDrawEnd}
         />
+
+        {/* SHAPE HITBOXES - Overlay for selecting/moving shapes */}
+        {/* Only show when NOT drawing/erasing to avoid interference */}
+        {(!['pen', 'eraser'].includes(activeTool)) && (meme.shapes || []).map((shape) => (
+          <div
+            key={`hitbox-${shape.id}`}
+            className={`absolute z-25 ${activeTool === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} touch-none pointer-events-auto`}
+            style={{
+              left: `${shape.x * 100}%`,
+              top: `${shape.y * 100}%`,
+              width: `${shape.w * 100}%`,
+              height: `${shape.h * 100}%`,
+              transform: `rotate(${shape.rotation || 0}deg)`,
+              // Debugging: 'border: 1px solid rgba(255,0,0,0.3)'
+            }}
+            onPointerDown={(e) => handleShapePointerDown(e, shape.id)}
+            onPointerMove={handleShapePointerMove}
+            onPointerUp={handleShapePointerUp}
+          />
+        ))}
 
         {/* Shape Handle Overlay - shows when a shape is selected and found */}
         {(() => {

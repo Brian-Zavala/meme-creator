@@ -1,11 +1,13 @@
 import { useRef } from "react";
-import { Pen, Eraser, Trash2, Square, Circle, Triangle } from "lucide-react";
+import { Pen, Eraser, Trash2, Square, Circle, Triangle, Hand, MousePointer2 } from "lucide-react";
 import ToolPill from "../ToolPill";
 import { SHAPES } from "../../../utils/shapeConstants.js";
 
 const DRAW_TOOLS = [
   { id: "pen",    label: "Pen",    Icon: Pen },
   { id: "eraser", label: "Eraser", Icon: Eraser },
+  { id: "move",   label: "Move",   Icon: Hand },
+  // { id: "edit",   label: "Edit",   Icon: MousePointer2 },
 ];
 
 const COLORS = [
@@ -23,7 +25,7 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
           key={id}
           icon={<Icon className="w-4 h-4" />}
           label={label}
-          isActive={canvasActiveTool === id}
+          isActive={id === 'edit' ? !canvasActiveTool : canvasActiveTool === id}
           onClick={() => onToolTap(id)}
         />
       ))}

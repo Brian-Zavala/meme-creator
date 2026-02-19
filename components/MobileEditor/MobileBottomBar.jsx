@@ -244,6 +244,8 @@ export default function MobileBottomBar({
   isVibeShifting,
   onAutoLayout,
   isAutoLayouting,
+  onMemeIQ,
+  isMemeIQing,
   // Text tab
   onAddText,
   // Sticker tab
@@ -397,7 +399,7 @@ export default function MobileBottomBar({
       {/* Layer 1: Tool Row — slides up when a tab is active */}
       <div className="mobile-tool-row" data-visible={activeTab ? true : undefined} {...swipeHandlers}>
         <Suspense fallback={null}>
-          {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} onVibeShift={onVibeShift} isVibeShifting={isVibeShifting} onAutoLayout={onAutoLayout} isAutoLayouting={isAutoLayouting} />}
+          {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} onVibeShift={onVibeShift} isVibeShifting={isVibeShifting} onAutoLayout={onAutoLayout} isAutoLayouting={isAutoLayouting} onMemeIQ={onMemeIQ} isMemeIQing={isMemeIQing} />}
           {activeTab === "text"    && <TextToolRow    {...toolRowProps} onAddText={onAddText} />}
           {activeTab === "image"   && <ImageToolRow   {...toolRowProps} />}
           {activeTab === "draw"    && (

@@ -15,7 +15,10 @@ import { hasAnimatedText } from "../../constants/textAnimations";
 import { deepFryImage } from "../../services/imageProcessor";
 import { processFileInWorker } from "../../services/fileLoader";
 import { MEME_QUOTES } from "../../constants/memeQuotes";
+import { TEMPLATE_KEYWORDS, TRENDING_TEMPLATES, MEME_IQ_THRESHOLD } from "../../constants/memeIQKeywords";
 import { STICKER_KEYWORDS } from "../../constants/stickerKeywords";
+import { TONE_BANK, TONE_NAMES, TONE_LABELS } from "../../constants/toneBank";
+import { computeAutoLayout } from "../../services/autoLayoutService";
 import { saveState, loadState } from "../../services/storage"; // moved up from below
 
 // Lazy load heavy components to reduce initial bundle size
@@ -784,6 +787,10 @@ export default function Main({ onOpenInstructions }) {
 
   const [pingKey, setPingKey] = useState(null);
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
+  const [isVibeShifting, setIsVibeShifting] = useState(false);
+  const [isAutoLayouting, setIsAutoLayouting] = useState(false);
+  const [isMemeIQing, setIsMemeIQing] = useState(false);
+  const vibeShiftIndexRef = useRef(0);
   const fineTuneRef = useRef(null);
   const mobileCollapseRef = useRef(null);
 
@@ -3402,6 +3409,146 @@ export default function Main({ onOpenInstructions }) {
     }, 800);
   }
 
+  function handleVibeShift() {
+    setIsVibeShifting(true);
+
+    setTimeout(() => {
+      const toneKey = TONE_NAMES[vibeShiftIndexRef.current % TONE_NAMES.length];
+      vibeShiftIndexRef.current++;
+      const captions = TONE_BANK[toneKey];
+      const randomIndex = Math.floor(Math.random() * captions.length);
+      const picked = captions[randomIndex];
+
+      updateState((prev) => {
+        const newTexts = prev.texts.map((t, i) => ({
+          ...t,
+          content: picked[i] || "",
+        }));
+
+        const lastText = newTexts[newTexts.length - 1];
+        if (lastText && lastText.content.trim().length > 0) {
+          newTexts.push({
+            id: crypto.randomUUID(),
+            content: "",
+            x: 50,
+            y: 50,
+          });
+        }
+
+        return { ...prev, texts: newTexts };
+      });
+
+      toast(`Vibe shifted to ${TONE_LABELS[toneKey]}`, {
+        duration: 2000,
+        icon: <ToastIcon src="/animations/vibe-check-toast.json" />,
+        id: "vibe-shift"
+      });
+      setIsVibeShifting(false);
+      showLongPressHint();
+    }, 600);
+  }
+
+  function handleAutoLayout() {
+    const url = activePanel?.url;
+    if (!url) {
+      toast.error("Load an image first", { id: "auto-layout-err" });
+      return;
+    }
+
+    if (activePanel?.isVideo) {
+      toast.error("Auto Layout works on images only", { id: "auto-layout-err" });
+      return;
+    }
+
+    const filledTexts = (meme.texts || []).filter(t => (t.content || "").trim().length > 0);
+    if (filledTexts.length === 0) {
+      toast.error("Add some text first", { id: "auto-layout-err" });
+      return;
+    }
+
+    setIsAutoLayouting(true);
+
+    setTimeout(async () => {
+      try {
+        const positions = await computeAutoLayout(url, filledTexts.length, meme.textColor || "#ffffff");
+
+        updateState((prev) => {
+          const filled = prev.texts.filter(t => (t.content || "").trim().length > 0);
+          const empty = prev.texts.filter(t => (t.content || "").trim().length === 0);
+
+          const repositioned = filled.map((t, i) => ({
+            ...t,
+            x: positions[i]?.x ?? t.x,
+            y: positions[i]?.y ?? t.y,
+          }));
+
+          return { ...prev, texts: [...repositioned, ...empty] };
+        });
+
+        toast("Layout optimized", {
+          duration: 2000,
+          icon: <ToastIcon src="/animations/filter-frenzy.json" />,
+          id: "auto-layout"
+        });
+      } catch (err) {
+        console.warn("Auto layout failed:", err);
+        toast.error("Could not analyze image", { id: "auto-layout-err" });
+      } finally {
+        setIsAutoLayouting(false);
+      }
+    }, 500);
+  }
+
+  function handleMemeIQ() {
+    setIsMemeIQing(true);
+
+    setTimeout(() => {
+      // 1. Collect & tokenize all text content
+      const allText = (meme.texts || [])
+        .map(t => (t.content || "").toLowerCase())
+        .join(" ");
+      const tokens = new Set(allText.split(/\W+/).filter(Boolean));
+
+      // 2. Score each template in our keyword map against user text
+      let topTemplate = null;
+      let topScore = 0;
+      for (const [templateName, keywords] of Object.entries(TEMPLATE_KEYWORDS)) {
+        const score = keywords.filter(kw => {
+          // Support multi-word keywords too
+          return kw.includes(" ") ? allText.includes(kw) : tokens.has(kw);
+        }).length;
+        if (score > topScore) { topScore = score; topTemplate = templateName; }
+      }
+
+      const isMatch = topScore >= MEME_IQ_THRESHOLD && topTemplate !== null;
+      const suggestionName = isMatch
+        ? topTemplate
+        : TRENDING_TEMPLATES[Math.floor(Math.random() * TRENDING_TEMPLATES.length)];
+
+      const message = isMatch
+        ? `Meme IQ says: This caption is perfect for "${suggestionName}"`
+        : `This would slap on "${suggestionName}"\u2014just saying`;
+
+      // 3. Find the matching template from the already-loaded allMemes list
+      const templateMeme = allMemes.find(m =>
+        m.name.toLowerCase() === suggestionName.toLowerCase()
+      );
+
+      toast(message, {
+        duration: 5000,
+        icon: "\uD83E\uDDE0",
+        id: "meme-iq",
+      });
+
+      // 4. Auto-load the suggested template
+      if (templateMeme) {
+        loadSelectedMeme(templateMeme);
+      }
+
+      setIsMemeIQing(false);
+    }, 700);
+  }
+
   const handlePointerDown = useCallback(
     (e, id) => {
       e.stopPropagation();
@@ -4319,6 +4466,12 @@ export default function Main({ onOpenInstructions }) {
                       onAddSticker={addSticker}
                       onMagicCaption={generateMagicCaption}
                       isMagicGenerating={isMagicGenerating}
+                      onVibeShift={handleVibeShift}
+                      isVibeShifting={isVibeShifting}
+                      onAutoLayout={handleAutoLayout}
+                      isAutoLayouting={isAutoLayouting}
+                      onMemeIQ={handleMemeIQ}
+                      isMemeIQing={isMemeIQing}
                       onChaos={handleChaos}
                       onExportStickers={handleExportStickers}
                       onEditingChange={setEditingId}
@@ -4822,6 +4975,12 @@ export default function Main({ onOpenInstructions }) {
                       onAddSticker={addSticker}
                       onMagicCaption={generateMagicCaption}
                       isMagicGenerating={isMagicGenerating}
+                      onVibeShift={handleVibeShift}
+                      isVibeShifting={isVibeShifting}
+                      onAutoLayout={handleAutoLayout}
+                      isAutoLayouting={isAutoLayouting}
+                      onMemeIQ={handleMemeIQ}
+                      isMemeIQing={isMemeIQing}
                       onChaos={handleChaos}
                       onExportStickers={handleExportStickers}
                       onEditingChange={setEditingId}
@@ -4879,6 +5038,12 @@ export default function Main({ onOpenInstructions }) {
                 isCropping={isCropping}
                 onMagicCaption={generateMagicCaption}
                 isMagicGenerating={isMagicGenerating}
+                onVibeShift={handleVibeShift}
+                isVibeShifting={isVibeShifting}
+                onAutoLayout={handleAutoLayout}
+                isAutoLayouting={isAutoLayouting}
+                onMemeIQ={handleMemeIQ}
+                isMemeIQing={isMemeIQing}
                 onAddText={() => addTextAtPosition(50, 50)}
                 onAddSticker={addSticker}
                 canvasActiveTool={activeTool}

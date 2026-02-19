@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useTransition } from "react";
-import { Type, Loader2 } from "lucide-react";
+import { Type, Loader2, RefreshCw, LayoutGrid, Brain } from "lucide-react";
 import toast from "react-hot-toast";
 import { MemeStickerSection } from "./MemeStickerSection";
 import LottieAnimation from "../Animations/LottieAnimation";
@@ -7,7 +7,7 @@ import LottieAnimation from "../Animations/LottieAnimation";
 // Preload the animation JSON to prevent pop-in on re-render
 const WALKING_PENCIL_SRC = "/animations/walking-pencil.json";
 
-export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
+export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAddSticker, onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
   const [isPending, startTransition] = useTransition();
 
   // Preload animation on mount to ensure it's cached
@@ -54,11 +54,11 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
         <div className="flex items-center gap-2 text-slate-400 uppercase text-xs font-bold tracking-wider" aria-hidden="true">
           <Type className="w-4 h-4" /> Content
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-full">
           <button
             onClick={() => startTransition(() => onMagicCaption())}
             disabled={isMagicGenerating}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-all active:scale-90 border border-brand/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-all active:scale-90 border border-brand/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Generate Magic Caption"
             aria-label="Generate Magic Caption with AI"
           >
@@ -69,6 +69,60 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
             )}
             <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">
               {isMagicGenerating ? "Generating..." : "Magic AI"}
+            </span>
+          </button>
+
+          {/* Vibe Shift */}
+          <button
+            onClick={() => startTransition(() => onVibeShift())}
+            disabled={isVibeShifting}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all active:scale-90 border border-purple-500/20 group ${isVibeShifting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Cycle caption tones"
+            aria-label="Shift caption vibe"
+          >
+            {isVibeShifting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-300" aria-hidden="true" />
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
+              {isVibeShifting ? "Shifting..." : "Vibe Shift"}
+            </span>
+          </button>
+
+          {/* Auto Layout */}
+          <button
+            onClick={() => startTransition(() => onAutoLayout())}
+            disabled={isAutoLayouting}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-all active:scale-90 border border-cyan-500/20 group ${isAutoLayouting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Auto-position text"
+            aria-label="Auto layout text based on image"
+          >
+            {isAutoLayouting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <LayoutGrid className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" aria-hidden="true" />
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+              {isAutoLayouting ? "Analyzing..." : "Auto Layout"}
+            </span>
+          </button>
+
+          {/* Meme IQ */}
+          <button
+            onClick={() => startTransition(() => onMemeIQ())}
+            disabled={isMemeIQing}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-90 border border-emerald-500/20 group ${isMemeIQing ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Suggest best meme template for your caption"
+            aria-label="Meme IQ template suggestion"
+          >
+            {isMemeIQing ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Brain className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" aria-hidden="true" />
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+              {isMemeIQing ? "Thinking..." : "Meme IQ"}
             </span>
           </button>
         </div>

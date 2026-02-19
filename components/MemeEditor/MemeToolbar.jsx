@@ -92,7 +92,7 @@ function AnimationButton({ anim, isActive, onClick, variant = 'text' }) {
 
 export default function MemeToolbar({ meme, activeTool, setActiveTool, handleStyleChange, handleFilterChange, handleStyleCommit, onResetFilters, onClearDrawings, onDrawerExpand, onAnimationChange, onStickerAnimationChange, editingId,
   // New props for MemeInputs
-  handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onChaos, onExportStickers, onEditingChange,
+  handleTextChange, onAddSticker, onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onChaos, onExportStickers, onEditingChange,
   // Crop props
   onStartCrop, isCropping,
   className = ""
@@ -469,6 +469,12 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                           onAddSticker={onAddSticker}
                           onMagicCaption={onMagicCaption}
                           isMagicGenerating={isMagicGenerating}
+                          onVibeShift={onVibeShift}
+                          isVibeShifting={isVibeShifting}
+                          onAutoLayout={onAutoLayout}
+                          isAutoLayouting={isAutoLayouting}
+                          onMemeIQ={onMemeIQ}
+                          isMemeIQing={isMemeIQing}
                           onChaos={onChaos}
                           hasStickers={hasStickers}
                           onExportStickers={onExportStickers}

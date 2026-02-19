@@ -1586,6 +1586,51 @@ body {
   border-color: rgba(255, 255, 255, 0.6);
 }
 
+/* Remove / clear color button (✕) inside ColorSwatchRow */
+.color-remove-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  background: rgba(239, 68, 68, 0.10);
+  border: 1.5px solid rgba(239, 68, 68, 0.55);
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  outline: none;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 120ms ease;
+}
+
+.color-remove-dot:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+}
+
+.color-remove-dot:active {
+  transform: scale(0.88);
+  background: rgba(239, 68, 68, 0.30);
+}
+
+/* Active / "cleared" state — white ring to show style is disabled */
+.color-remove-dot[data-active] {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #ef4444;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px rgba(239, 68, 68, 0.55);
+}
+
 /* ===== Layer 2: Active Control ===== */
 
 .mobile-active-control {

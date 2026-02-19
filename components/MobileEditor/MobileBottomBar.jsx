@@ -147,7 +147,7 @@ function renderLayer2(activeTab, activeTool, meme, handlers) {
 
     if (activeTool === "color") {
       return (
-        <ColorSwatchRow name="textColor" value={meme.textColor} onChange={handleStyleChange} />
+        <ColorSwatchRow name="textColor" value={meme.textColor} onChange={handleStyleChange} allowRemove removeValue="transparent" />
       );
     }
 
@@ -157,14 +157,15 @@ function renderLayer2(activeTab, activeTool, meme, handlers) {
           name="textBgColor"
           value={meme.textBgColor}
           onChange={handleStyleChange}
-          allowTransparent
+          allowRemove
+          removeValue="transparent"
         />
       );
     }
 
     if (activeTool === "shadow") {
       return (
-        <ColorSwatchRow name="textShadow" value={meme.textShadow} onChange={handleStyleChange} />
+        <ColorSwatchRow name="textShadow" value={meme.textShadow} onChange={handleStyleChange} allowRemove removeValue="transparent" />
       );
     }
 
@@ -239,6 +240,10 @@ export default function MobileBottomBar({
   // AI tab
   onMagicCaption,
   isMagicGenerating,
+  onVibeShift,
+  isVibeShifting,
+  onAutoLayout,
+  isAutoLayouting,
   // Text tab
   onAddText,
   // Sticker tab
@@ -392,7 +397,7 @@ export default function MobileBottomBar({
       {/* Layer 1: Tool Row — slides up when a tab is active */}
       <div className="mobile-tool-row" data-visible={activeTab ? true : undefined} {...swipeHandlers}>
         <Suspense fallback={null}>
-          {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} />}
+          {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} onVibeShift={onVibeShift} isVibeShifting={isVibeShifting} onAutoLayout={onAutoLayout} isAutoLayouting={isAutoLayouting} />}
           {activeTab === "text"    && <TextToolRow    {...toolRowProps} onAddText={onAddText} />}
           {activeTab === "image"   && <ImageToolRow   {...toolRowProps} />}
           {activeTab === "draw"    && (

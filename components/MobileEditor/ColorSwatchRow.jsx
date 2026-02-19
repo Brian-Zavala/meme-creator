@@ -5,11 +5,27 @@ const PRESET_COLORS = [
   "#eab308", "#22c55e", "#3b82f6", "#a855f7",
 ];
 
-export default function ColorSwatchRow({ name, value, onChange, allowTransparent = false }) {
+/**
+ * ColorSwatchRow
+ *
+ * Props:
+ *   name            – style key to emit
+ *   value           – current color value
+ *   onChange        – (syntheticEvent, commit) => void
+ *   allowRemove     – show a red ✕ "remove / clear" button as the first swatch
+ *   removeValue     – value to emit when remove is clicked (default: "transparent")
+ */
+export default function ColorSwatchRow({
+  name,
+  value,
+  onChange,
+  allowRemove = false,
+  removeValue = "transparent",
+}) {
   const colorInputRef = useRef(null);
 
   const safeHex = (c) => {
-    if (!c || c === "transparent") return "#000000";
+    if (!c || c === "transparent" || c === "") return "#000000";
     return c.startsWith("#") ? c.substring(0, 7) : "#000000";
   };
 
@@ -25,15 +41,28 @@ export default function ColorSwatchRow({ name, value, onChange, allowTransparent
     onChange({ currentTarget: { name, value: e.target.value } }, true);
   };
 
-  const colors = allowTransparent ? ["transparent", ...PRESET_COLORS] : PRESET_COLORS;
+  // ✕ is "active" (outlined) when value is truly off — empty or transparent.
+  // We intentionally exclude real hex reset values (e.g. #ffffff) to avoid false highlight.
+  const isRemoved = !value || value === "" || value === "transparent";
 
   return (
     <div className="flex items-center gap-2 w-full overflow-x-auto h-full px-2 scrollbar-none">
-      {colors.map((color) => {
-        const isActive = color === "transparent"
-          ? value === "transparent" || !value
-          : safeHex(value) === color;
+      {/* Remove / clear button */}
+      {allowRemove && (
+        <button
+          type="button"
+          onClick={() => handlePreset(removeValue)}
+          className="color-remove-dot"
+          data-active={isRemoved || undefined}
+          aria-label="Remove color"
+          title="Remove / clear style"
+        >
+          ✕
+        </button>
+      )}
 
+      {PRESET_COLORS.map((color) => {
+        const isActive = !isRemoved && safeHex(value) === color;
         return (
           <button
             key={color}
@@ -41,18 +70,16 @@ export default function ColorSwatchRow({ name, value, onChange, allowTransparent
             onClick={() => handlePreset(color)}
             className="draw-color-dot shrink-0"
             style={{
-              background: color === "transparent"
-                ? "repeating-linear-gradient(45deg,#555 0px,#555 5px,#333 5px,#333 10px)"
-                : color,
+              background: color,
               borderColor: isActive ? "white" : "transparent",
               outline: isActive ? "2px solid white" : "none",
             }}
-            aria-label={color === "transparent" ? "Transparent" : color}
+            aria-label={color}
           />
         );
       })}
 
-      {/* Custom color picker — input fixed at center-bottom so picker opens in viewport */}
+      {/* Custom color picker */}
       <button
         type="button"
         onClick={() => colorInputRef.current?.click()}

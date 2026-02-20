@@ -763,7 +763,7 @@ const MemeCanvas = forwardRef(({
       onPointerDown={onCanvasPointerDown}
       onContextMenu={(e) => e.preventDefault()}
       className="relative group flex items-center justify-center min-h-[400px] lg:min-h-[600px] animate-pop-in bg-black border-2 border-dashed border-[#2f3336]/60 w-full select-none rounded-none overflow-hidden"
-      style={{ touchAction: (['pen', 'eraser', 'move'].includes(activeTool) || activeTool?.startsWith('shape-')) ? 'none' : 'pan-y' }}
+      style={{ touchAction: activeTool === 'pen' ? 'none' : 'pan-y' }}
       role="img"
       aria-label={description}
     >

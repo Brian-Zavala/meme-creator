@@ -1734,31 +1734,35 @@ export default function Main({ onOpenInstructions }) {
     let currentPreset;
 
     if (topScore > 0 && topStyleId && STYLE_DNA_PRESETS[topStyleId]) {
-      // We have a match! Cycle through the variations of this specific category.
+      // Pick a random variation from the matching category, but ensure it's not the same as the last one!
       const categoryPresets = STYLE_DNA_PRESETS[topStyleId];
+      let randomIndex = Math.floor(Math.random() * categoryPresets.length);
 
-      // We use the styleDnaIndexRef to cycle through the category's variations predictably,
-      // ensuring we don't randomly get the same style twice in a row if the user keeps clicking.
-      currentPreset = categoryPresets[styleDnaIndexRef.current % categoryPresets.length];
-      styleDnaIndexRef.current += 1;
+      // Prevent picking the exact same variation twice in a row
+      if (categoryPresets.length > 1 && randomIndex === styleDnaIndexRef.current) {
+        randomIndex = (randomIndex + 1) % categoryPresets.length;
+      }
+
+      currentPreset = categoryPresets[randomIndex];
+      styleDnaIndexRef.current = randomIndex;
     }
 
     if (!currentPreset) {
-      // Fallback: If absolutely no keywords match (score = 0), we ONLY cycle through a safe, curated list
-      // of versatile styles, rather than every single extreme style.
+      // Fallback: Randomly pick from a safe, versatile list of categories, AND a random variation inside it.
       const safeFallbackIds = ['retro-vhs', 'corporate-minimal', 'cinematic', 'vintage-polaroid', 'neon-noir', 'lofi-late-night'];
 
-      // Pull only the FIRST variation from each of the safe fallback categories to keep the cycle tight and distinct.
-      // If the user clicks 6 times on a non-matched image, they see 6 completely different vibes.
-      const fallbackPresets = safeFallbackIds.map(id => STYLE_DNA_PRESETS[id]?.[0]).filter(Boolean);
-
-      if (fallbackPresets.length > 0) {
-          currentPreset = fallbackPresets[styleDnaIndexRef.current % fallbackPresets.length];
-          styleDnaIndexRef.current += 1;
-      } else {
-          // Absolute fallback if everything fails
-          currentPreset = STYLE_DNA_PRESETS["retro-vhs"][0];
+      let randomCatIndex = Math.floor(Math.random() * safeFallbackIds.length);
+      // Prevent picking the exact same fallback category twice in a row
+      if (randomCatIndex === styleDnaIndexRef.current) {
+        randomCatIndex = (randomCatIndex + 1) % safeFallbackIds.length;
       }
+      styleDnaIndexRef.current = randomCatIndex;
+
+      const fallbackCategoryId = safeFallbackIds[randomCatIndex];
+      const fallbackPresets = STYLE_DNA_PRESETS[fallbackCategoryId] || STYLE_DNA_PRESETS["retro-vhs"];
+
+      // Pick a random variation from that randomly chosen safe category
+      currentPreset = fallbackPresets[Math.floor(Math.random() * fallbackPresets.length)];
     }
 
     // Trigger visual shimmer effect immediately

@@ -1733,24 +1733,32 @@ export default function Main({ onOpenInstructions }) {
     // 3. Select the best preset, or fallback to cycling
     let currentPreset;
 
-    // If the last clicked effect was ALSO styledna, and we already applied the matching one,
-    // we should let them cycle through the rest so they aren't stuck on just one style.
-    // However, for the FIRST click, we give them the metadata-matched style.
-    if (topScore > 0 && topStyleId && styleDnaIndexRef.current === 0) {
-      currentPreset = STYLE_DNA_PRESETS.find(p => p.id === topStyleId);
-      // Set the index so the next click cycles starting from the one AFTER the matched one
-      const matchedIndex = STYLE_DNA_PRESETS.findIndex(p => p.id === topStyleId);
-      if (matchedIndex !== -1) {
-          styleDnaIndexRef.current = matchedIndex + 1;
-      } else {
-          styleDnaIndexRef.current += 1;
-      }
+    if (topScore > 0 && topStyleId && STYLE_DNA_PRESETS[topStyleId]) {
+      // We have a match! Cycle through the variations of this specific category.
+      const categoryPresets = STYLE_DNA_PRESETS[topStyleId];
+
+      // We use the styleDnaIndexRef to cycle through the category's variations predictably,
+      // ensuring we don't randomly get the same style twice in a row if the user keeps clicking.
+      currentPreset = categoryPresets[styleDnaIndexRef.current % categoryPresets.length];
+      styleDnaIndexRef.current += 1;
     }
 
     if (!currentPreset) {
-      // Fallback: cycle sequentially
-      currentPreset = STYLE_DNA_PRESETS[styleDnaIndexRef.current % STYLE_DNA_PRESETS.length];
-      styleDnaIndexRef.current += 1;
+      // Fallback: If absolutely no keywords match (score = 0), we ONLY cycle through a safe, curated list
+      // of versatile styles, rather than every single extreme style.
+      const safeFallbackIds = ['retro-vhs', 'corporate-minimal', 'cinematic', 'vintage-polaroid', 'neon-noir', 'lofi-late-night'];
+
+      // Pull only the FIRST variation from each of the safe fallback categories to keep the cycle tight and distinct.
+      // If the user clicks 6 times on a non-matched image, they see 6 completely different vibes.
+      const fallbackPresets = safeFallbackIds.map(id => STYLE_DNA_PRESETS[id]?.[0]).filter(Boolean);
+
+      if (fallbackPresets.length > 0) {
+          currentPreset = fallbackPresets[styleDnaIndexRef.current % fallbackPresets.length];
+          styleDnaIndexRef.current += 1;
+      } else {
+          // Absolute fallback if everything fails
+          currentPreset = STYLE_DNA_PRESETS["retro-vhs"][0];
+      }
     }
 
     // Trigger visual shimmer effect immediately
@@ -1761,6 +1769,10 @@ export default function Main({ onOpenInstructions }) {
     startTransition(() => {
         // Apply global text properties and text animation
         updateState((prev) => {
+            // Check if active panel is video or gif to allow animation
+            const activePanel = prev.panels.find(p => p.id === prev.activePanelId) || prev.panels[0];
+            const isAnimatedMeme = activePanel?.isVideo || activePanel?.isGif;
+
             return {
                 ...prev,
                 fontFamily: currentPreset.fontFamily,
@@ -1768,10 +1780,23 @@ export default function Main({ onOpenInstructions }) {
                 textBgColor: currentPreset.textBgColor,
                 textShadow: currentPreset.textShadow,
                 letterSpacing: currentPreset.letterSpacing,
-                texts: prev.texts.map(t => ({
-                  ...t,
-                  animation: t.content.trim() ? (currentPreset.animation === 'none' ? null : currentPreset.animation) : t.animation
-                })),
+                texts: prev.texts.map(t => {
+                  let assignedAnimation = t.animation;
+                  if (t.content.trim()) {
+                      if (currentPreset.animation === 'none') {
+                          assignedAnimation = null;
+                      } else if (isAnimatedMeme) {
+                          assignedAnimation = currentPreset.animation;
+                      }
+                      // If it's a static image and the preset has an animation, we just leave it as null (or whatever it was)
+                      // This ensures we don't apply new animations to static images via Style DNA.
+                  }
+
+                  return {
+                      ...t,
+                      animation: assignedAnimation
+                  };
+                }),
                 // Apply Image filters to ALL panels
                 panels: prev.panels.map(p => ({
                     ...p,
@@ -1783,7 +1808,10 @@ export default function Main({ onOpenInstructions }) {
         });
     });
 
-    toast(`Style DNA applied: ${currentPreset.name}`, {
+    // Remove variation numbers (e.g. "Retro VHS 1" -> "Retro VHS")
+    const displayName = currentPreset.name.replace(/\s+\d+$/, '');
+
+    toast(`Style DNA applied: ${displayName}`, {
       icon: <ToastIcon src="/animations/performing-arts.json" />,
       id: "styledna",
       duration: 2000

@@ -49,84 +49,115 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
 
   return (
     <div className={`flex flex-col relative transition-all duration-300 z-40 overflow-visible ${embedded ? '' : 'card-bg rounded-2xl border border-white/5 shadow-xl backdrop-blur-sm'}`}>
-      {/* Header with Magic AI */}
-      <div className="flex items-center justify-between p-6 pb-2">
-        <div className="flex items-center gap-2 text-slate-400 uppercase text-xs font-bold tracking-wider" aria-hidden="true">
-          <Type className="w-4 h-4" /> Content
-        </div>
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-full">
-          <button
-            onClick={() => startTransition(() => onMagicCaption())}
-            disabled={isMagicGenerating}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-all active:scale-90 border border-brand/20 group ${isMagicGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title="Generate Magic Caption"
-            aria-label="Generate Magic Caption with AI"
-          >
-            {isMagicGenerating ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <span className="text-sm group-hover:rotate-12 transition-transform select-none" aria-hidden="true">👾</span>
-            )}
-            <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">
-              {isMagicGenerating ? "Generating..." : "Magic AI"}
-            </span>
-          </button>
+      {/* AI Creative Toolbar - Premium Frosted Glass Panel */}
+      <div className="mx-6 mt-4 p-1.5 rounded-2xl bg-[#0f0f0f]/50 border border-white/5 backdrop-blur-xl shadow-2xl flex flex-wrap gap-2 items-center justify-between relative overflow-hidden group/ai-bar">
+        {/* Subtle animated background sheen */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover/ai-bar:animate-shimmer pointer-events-none" />
 
+        {/* Left Side: Magic AI (Hero Button) */}
+        <button
+          onClick={() => startTransition(() => onMagicCaption())}
+          disabled={isMagicGenerating}
+          className={`relative flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 group/magic overflow-hidden ${
+            isMagicGenerating
+              ? 'bg-neutral-800 cursor-not-allowed opacity-80'
+              : 'bg-brand hover:bg-brand-dark hover:scale-[1.02] hover:shadow-[0_0_20px_oklch(53%_0.187_39_/_0.4)] active:scale-[0.98]'
+          }`}
+          title="Generate Magic Caption with AI"
+        >
+          {/* Animated Noise Texture Overlay */}
+          <div className="absolute inset-0 opacity-20 bg-[url('/images/noise.png')] mix-blend-overlay pointer-events-none" />
+
+          {/* Button Content */}
+          <div className="relative z-10 flex items-center gap-2">
+            {isMagicGenerating ? (
+              <Loader2 className="w-4 h-4 text-white/70 animate-spin" />
+            ) : (
+              <span className="text-xl group-hover/magic:rotate-12 transition-transform duration-300 filter drop-shadow-md">👾</span>
+            )}
+            <div className="flex flex-col items-start leading-none">
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isMagicGenerating ? 'text-neutral-400' : 'text-yellow-300'}`}>
+                {isMagicGenerating ? "Thinking..." : "Magic AI"}
+              </span>
+              {!isMagicGenerating && (
+                <span className="text-[10px] font-medium text-white/90">Auto-Caption</span>
+              )}
+            </div>
+          </div>
+
+          {/* Shine effect */}
+          {!isMagicGenerating && (
+            <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover/magic:animate-shine" />
+          )}
+        </button>
+
+        {/* Right Side: Tool Actions Group (Dynamic Flex) */}
+        <div className="flex-1 flex items-center gap-1.5 p-1 bg-black/20 rounded-xl border border-white/5 min-w-[200px]">
           {/* Vibe Shift */}
           <button
             onClick={() => startTransition(() => onVibeShift())}
             disabled={isVibeShifting}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all active:scale-90 border border-purple-500/20 group ${isVibeShifting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title="Cycle caption tones"
-            aria-label="Shift caption vibe"
+            className={`relative flex-1 flex items-center justify-center gap-2 h-10 px-2 rounded-lg transition-all group/vibe ${
+              isVibeShifting
+                ? 'opacity-50'
+                : 'hover:bg-purple-500/20 text-slate-400 hover:text-purple-400 hover:scale-[1.02] active:scale-[0.98]'
+            }`}
+            title="Vibe Shift (Remix Tone)"
           >
-            {isVibeShifting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+             {isVibeShifting ? (
+              <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
             ) : (
-              <RefreshCw className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-300" aria-hidden="true" />
+              <RefreshCw className="w-5 h-5 group-hover/vibe:rotate-180 transition-transform duration-500" />
             )}
-            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
-              {isVibeShifting ? "Shifting..." : "Vibe Shift"}
-            </span>
+            {/* Show label on larger screens for better UX since we have space */}
+            <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Vibe Shift</span>
           </button>
+
+          <div className="w-px h-5 bg-white/10 shrink-0" />
 
           {/* Auto Layout */}
           <button
             onClick={() => startTransition(() => onAutoLayout())}
             disabled={isAutoLayouting}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-all active:scale-90 border border-cyan-500/20 group ${isAutoLayouting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title="Auto-position text"
-            aria-label="Auto layout text based on image"
+            className={`relative flex-1 flex items-center justify-center gap-2 h-10 px-2 rounded-lg transition-all group/layout ${
+              isAutoLayouting
+                ? 'opacity-50'
+                : 'hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 hover:scale-[1.02] active:scale-[0.98]'
+            }`}
+            title="Auto Layout Text"
           >
-            {isAutoLayouting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+             {isAutoLayouting ? (
+              <Loader2 className="w-5 h-5 animate-spin text-cyan-500" />
             ) : (
-              <LayoutGrid className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" aria-hidden="true" />
+              <LayoutGrid className="w-5 h-5 group-hover/layout:rotate-90 transition-transform duration-300" />
             )}
-            <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-              {isAutoLayouting ? "Analyzing..." : "Auto Layout"}
-            </span>
+             <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Auto Layout</span>
           </button>
+
+          <div className="w-px h-5 bg-white/10 shrink-0" />
 
           {/* Meme IQ */}
           <button
             onClick={() => startTransition(() => onMemeIQ())}
             disabled={isMemeIQing}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-90 border border-emerald-500/20 group ${isMemeIQing ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title="Suggest best meme template for your caption"
-            aria-label="Meme IQ template suggestion"
+            className={`relative flex-1 flex items-center justify-center gap-2 h-10 px-2 rounded-lg transition-all group/iq ${
+              isMemeIQing
+                ? 'opacity-50'
+                : 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 hover:scale-[1.02] active:scale-[0.98]'
+            }`}
+            title="Meme IQ Suggestion"
           >
-            {isMemeIQing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+             {isMemeIQing ? (
+              <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
             ) : (
-              <Brain className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" aria-hidden="true" />
+              <Brain className="w-5 h-5 group-hover/iq:scale-110 transition-transform duration-300" />
             )}
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-              {isMemeIQing ? "Thinking..." : "Meme IQ"}
-            </span>
+             <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Meme IQ</span>
           </button>
         </div>
       </div>
+
+
 
       {/* Scrolling Text Inputs area */}
       <div className="px-6 py-2 space-y-4 max-h-[300px] overflow-y-auto pr-4 scrollbar-thin mb-4" role="group" aria-label="Text Inputs">

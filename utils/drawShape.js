@@ -129,26 +129,71 @@ export function drawShape(ctx, shape, width, height) {
     }
 
     case 'thought-bubble': {
-      // Main ellipse
-      ctx.ellipse(cx, sy + sh * 0.38, sw * 0.48, sh * 0.35, 0, 0, Math.PI * 2);
-      ctx.stroke();
+      // Cloud body composed of 4 overlapping circles (puffs)
+      const puffW = sw * 0.5;
+      const puffH = sh * 0.5;
+
+      // Define centers for the puffs relative to bounding box
+      // Top-Left, Top-Right, Bottom-Right, Bottom-Left
+      const cx1 = sx + sw * 0.35;
+      const cy1 = sy + sh * 0.35;
+      const cx2 = sx + sw * 0.65;
+      const cy2 = sy + sh * 0.35;
+      const cx3 = sx + sw * 0.7;
+      const cy3 = sy + sh * 0.6;
+      const cx4 = sx + sw * 0.3;
+      const cy4 = sy + sh * 0.6;
+
       ctx.beginPath();
-      // Three small circles as tail
-      const tailBaseX = cx - sw * 0.2;
-      const tailBaseY = sy + sh * 0.73;
-      ctx.ellipse(tailBaseX, tailBaseY, sw * 0.07, sh * 0.07, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(tailBaseX - sw * 0.09, tailBaseY + sh * 0.1, sw * 0.05, sh * 0.05, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(tailBaseX - sw * 0.16, tailBaseY + sh * 0.18, sw * 0.035, sh * 0.035, 0, 0, Math.PI * 2);
+      // Start tracing the cloud outline
+      // We'll draw 4 arcs connecting to each other.
+      // This is a simplified "fluffy" cloud.
+
+      // Top-Left Puff
+      ctx.arc(cx1, cy1, sw * 0.25, Math.PI * 0.8, Math.PI * 1.7);
+
+      // Top-Right Puff (connecting)
+      ctx.arc(cx2, cy2, sw * 0.25, Math.PI * 1.3, Math.PI * 2.2);
+
+      // Bottom-Right Puff
+      ctx.arc(cx3, cy3, sw * 0.22, Math.PI * 1.8, Math.PI * 0.7);
+
+      // Bottom-Left Puff
+      ctx.arc(cx4, cy4, sw * 0.22, Math.PI * 0.3, Math.PI * 1.2);
+
+      ctx.closePath();
+
       if (shape.fill) {
         ctx.fill();
       }
       ctx.stroke();
+
+      // Tail bubbles (drawn separately for "pop" effect, or same style)
+      // We keep them separate paths so they can have their own stroke/fill
+      // without merging into the main cloud if we want that "detached" look.
+
+      const tailBaseX = sx + sw * 0.2;
+      const tailBaseY = sy + sh * 0.85;
+      const bubbleSizes = [0.08, 0.05, 0.03]; // decreasing size
+
+      // Draw 3 bubbles leading to/from the source
+      ctx.beginPath();
+      ctx.ellipse(tailBaseX, tailBaseY, sw * bubbleSizes[0], sh * bubbleSizes[0], 0, 0, Math.PI * 2);
+      if (shape.fill) ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(tailBaseX - sw * 0.1, tailBaseY + sh * 0.12, sw * bubbleSizes[1], sh * bubbleSizes[1], 0, 0, Math.PI * 2);
+      if (shape.fill) ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(tailBaseX - sw * 0.18, tailBaseY + sh * 0.22, sw * bubbleSizes[2], sh * bubbleSizes[2], 0, 0, Math.PI * 2);
+      if (shape.fill) ctx.fill();
+      ctx.stroke();
+
       ctx.restore();
-      return; // Early return — thought bubble handles its own strokes
+      return;
     }
 
     default:

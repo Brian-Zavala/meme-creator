@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { Pen, Eraser, Trash2, Square, Circle, Triangle, Hand, MousePointer2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Pen, Eraser, Trash2, Square, Circle, Triangle, Hand, MousePointer2, PaintBucket } from "lucide-react";
 import ToolPill from "../ToolPill";
 import { SHAPES } from "../../../utils/shapeConstants.js";
 
@@ -15,8 +15,32 @@ const COLORS = [
   "#eab308", "#22c55e", "#a855f7",
 ];
 
-export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, drawColor, onClearDrawings, shapeStroke, shapeFill }) {
+export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, drawColor, onClearDrawings, shapeStroke, shapeFill, selectedShapeId }) {
   const colorInputRef = useRef(null);
+  const [isFillMode, setIsFillMode] = useState(false);
+
+  const isShapeActive = canvasActiveTool?.startsWith('shape-') || selectedShapeId;
+
+  const handleColorTap = (color) => {
+    if (isShapeActive) {
+      if (isFillMode) {
+        onToolTap(`shapeFill-${color}`);
+      } else {
+        onToolTap(`shapeStroke-${color}`);
+      }
+    } else {
+      onToolTap(`color-${color}`);
+    }
+  };
+
+  const getActiveColor = () => {
+    if (isShapeActive) {
+      return isFillMode ? (shapeFill || "transparent") : (shapeStroke || "#ff0000");
+    }
+    return drawColor || "#ff0000";
+  };
+
+  const activeColor = getActiveColor();
 
   return (
     <>
@@ -66,42 +90,61 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
       {/* Divider */}
       <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
 
-      {/* Shape-specific Stroke Color dots (only when shape tool active) */}
-      {canvasActiveTool?.startsWith('shape-') && (
+      {/* Shape Fill Toggle (Only visible when shape is active) */}
+      {isShapeActive && (
         <>
-          {COLORS.map((color) => (
-            <button
-              key={`stroke-${color}`}
-              type="button"
-              onClick={() => onToolTap(`shapeStroke-${color}`)}
-              className="draw-color-dot flex-shrink-0"
-              style={{
-                backgroundColor: color,
-                borderColor: (shapeStroke || "#ff0000") === color ? "white" : "transparent",
-                outline: (shapeStroke || "#ff0000") === color ? "2px solid white" : "none",
-              }}
-              aria-label={`Stroke color ${color}`}
-            />
-          ))}
+          <button
+            type="button"
+            onClick={() => {
+              const nextMode = !isFillMode;
+              setIsFillMode(nextMode);
+              // UX Improvement: If switching to Fill mode and no fill is set, auto-set it to stroke color
+              if (nextMode && (!shapeFill || shapeFill === 'transparent')) {
+                const defaultFill = shapeStroke || '#ef4444';
+                onToolTap(`shapeFill-${defaultFill}`);
+              }
+            }}
+            className={`tool-pill border transition-all duration-300 ${
+              isFillMode
+                ? '!bg-red-500/20 !border-red-500 !text-red-400 hover:!bg-red-500/30'
+                : '!bg-green-500/20 !border-green-500 !text-green-400 hover:!bg-green-500/30'
+            }`}
+            title={isFillMode ? "Editing Fill Color" : "Editing Stroke Color"}
+          >
+            <PaintBucket className={`w-4 h-4 transition-transform duration-300 ${isFillMode ? 'rotate-12 scale-110' : ''}`} />
+            <span className="text-xs font-bold uppercase tracking-wider min-w-[40px] text-center">
+              {isFillMode ? "Fill" : "Stroke"}
+            </span>
+          </button>
 
-          {/* Divider */}
           <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
         </>
       )}
 
-      {/* Color dots */}
+      {/* Consolidated Color dots */}
+      <button
+        type="button"
+        onClick={() => handleColorTap("transparent")}
+        className="color-remove-dot flex-shrink-0"
+        data-active={activeColor === "transparent" || !activeColor ? true : undefined}
+        aria-label="No Color (Transparent)"
+        title="No Color"
+      >
+        ✕
+      </button>
+
       {COLORS.map((color) => (
         <button
           key={color}
           type="button"
-          onClick={() => onToolTap(`color-${color}`)}
+          onClick={() => handleColorTap(color)}
           className="draw-color-dot flex-shrink-0"
           style={{
             backgroundColor: color,
-            borderColor: (drawColor || "#ff0000") === color ? "white" : "transparent",
-            outline: (drawColor || "#ff0000") === color ? "2px solid white" : "none",
+            borderColor: activeColor === color ? "white" : "transparent",
+            outline: activeColor === color ? "2px solid white" : "none",
           }}
-          aria-label={`Draw color ${color}`}
+          aria-label={`Color ${color}`}
         />
       ))}
 
@@ -117,8 +160,8 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
       <input
         ref={colorInputRef}
         type="color"
-        defaultValue={drawColor || "#ff0000"}
-        onChange={(e) => onToolTap(`color-${e.target.value}`)}
+        defaultValue={activeColor === "transparent" ? "#ff0000" : activeColor}
+        onChange={(e) => handleColorTap(e.target.value)}
         style={{
           position: "fixed",
           bottom: "200px",

@@ -269,6 +269,7 @@ export default function MobileBottomBar({
   canvasActiveTool,
   setCanvasActiveTool,
   onClearDrawings,
+  selectedShapeId,
   // Collapse ref — Main writes a ref, we populate it with collapse()
   collapseRef,
 }) {
@@ -374,6 +375,12 @@ export default function MobileBottomBar({
       handleStyleChange({ currentTarget: { name: "shapeStroke", value: color } }, true);
       return;
     }
+    // Shape fill color dots change the shape fill color
+    if (typeof toolId === "string" && toolId.startsWith("shapeFill-")) {
+      const color = toolId.replace("shapeFill-", "");
+      handleStyleChange({ currentTarget: { name: "shapeFill", value: color } }, true);
+      return;
+    }
     setActiveTool((prev) => (prev === toolId ? null : toolId));
   }, [onStartCrop, setCanvasActiveTool, handleStyleChange]);
 
@@ -410,6 +417,7 @@ export default function MobileBottomBar({
               onClearDrawings={onClearDrawings}
               shapeStroke={meme?.shapeStroke}
               shapeFill={meme?.shapeFill}
+              selectedShapeId={selectedShapeId}
             />
           )}
           {activeTab === "sticker" && <StickerToolRow {...toolRowProps} />}

@@ -2651,6 +2651,35 @@ export default function Main({ onOpenInstructions }) {
 
   function handleStyleChange(event, shouldCommit = false) {
     const { value, name } = event.currentTarget;
+
+    // If we have a selected shape and we're changing shape properties, update it directly
+    if (selectedShapeId && (name === 'shapeFill' || name === 'shapeStroke' || name === 'shapeStrokeWidth')) {
+       // Also update global state so next shape uses this too
+       const shapeUpdate = (prev) => {
+         const updatedShapes = (prev.shapes || []).map(s =>
+           s.id === selectedShapeId
+             ? {
+                 ...s,
+                 // Map the global property name to the shape property (e.g. shapeFill -> fill)
+                 stroke: name === 'shapeStroke' ? value : s.stroke,
+                 fill: name === 'shapeFill' ? value : s.fill,
+                 strokeWidth: name === 'shapeStrokeWidth' ? parseInt(value) : s.strokeWidth
+               }
+             : s
+         );
+         return { ...prev, [name]: value, shapes: updatedShapes };
+       };
+
+       if (shouldCommit) {
+         updateState(shapeUpdate);
+       } else {
+         startTransition(() => {
+           updateTransient(shapeUpdate);
+         });
+       }
+       return;
+    }
+
     if (shouldCommit) {
       updateState((prev) => ({ ...prev, [name]: value }));
     } else {
@@ -2697,9 +2726,35 @@ export default function Main({ onOpenInstructions }) {
       updateState((prev) => ({
         ...prev,
         shapes: [...(prev.shapes || []), newShape],
+        // Also update global styles to match the new shape (so next one matches)
+        shapeStroke: newShape.stroke,
+        shapeFill: newShape.fill,
+        shapeStrokeWidth: newShape.strokeWidth,
       }));
+      // Auto-select the new shape
+      setSelectedShapeId(newShape.id);
     });
-    setSelectedShapeId(newShape.id);
+  }
+
+  function handleShapeSelect(shapeId) {
+    if (!shapeId) {
+      setSelectedShapeId(null);
+      return;
+    }
+
+    const shape = meme.shapes?.find(s => s.id === shapeId);
+    if (shape) {
+      // Sync global state to match selected shape so UI controls reflect it
+      startTransition(() => {
+        updateTransient((prev) => ({
+          ...prev,
+          shapeStroke: shape.stroke,
+          shapeFill: shape.fill,
+          shapeStrokeWidth: shape.strokeWidth
+        }));
+      });
+    }
+    setSelectedShapeId(shapeId);
   }
 
   function handleUpdateShape(id, updates) {
@@ -4908,7 +4963,7 @@ export default function Main({ onOpenInstructions }) {
                       onCropCancel={handleCropCancel}
                       snapGuides={draggedId ? snapGuidesRef.current : null}
                       selectedShapeId={selectedShapeId}
-                      onShapeIdSelect={setSelectedShapeId}
+                      onShapeIdSelect={handleShapeSelect}
                       onAddShape={handleAddShape}
                       onUpdateShape={handleUpdateShape}
                       onDeleteShape={handleDeleteShape}
@@ -5063,6 +5118,7 @@ export default function Main({ onOpenInstructions }) {
                 onRemoveAll={handleReset}
                 onRemoveEffects={handleRemoveEffects}
                 onClearDrawings={handleClearDrawings}
+                selectedShapeId={selectedShapeId}
                 collapseRef={mobileCollapseRef}
               />
             </Suspense>

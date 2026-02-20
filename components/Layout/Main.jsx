@@ -26,6 +26,7 @@ const MemeCanvas = lazy(() => import("../MemeEditor/MemeCanvas"));
 const MemeDropdownGrid = lazy(() => import("../MemeEditor/MemeDropdownGrid"));
 const ImageSourceTabs = lazy(() => import("../MemeEditor/ImageSourceTabs"));
 const MemeToolbar = lazy(() => import("../MemeEditor/MemeToolbar"));
+import { STYLE_DNA_PRESETS, STYLE_KEYWORDS } from "../../constants/styleDna";
 
 const LayoutSelector = lazy(() => import("../MemeEditor/LayoutSelector").then(module => ({ default: module.LayoutSelector })));
 import { ShareQualityModal } from "../Modals/ShareQualityModal";
@@ -788,9 +789,11 @@ export default function Main({ onOpenInstructions }) {
   const [pingKey, setPingKey] = useState(null);
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
   const [isVibeShifting, setIsVibeShifting] = useState(false);
+  const [isStyleDnaing, setIsStyleDnaing] = useState(false);
   const [isAutoLayouting, setIsAutoLayouting] = useState(false);
   const [isMemeIQing, setIsMemeIQing] = useState(false);
   const vibeShiftIndexRef = useRef(0);
+  const styleDnaIndexRef = useRef(0);
   const fineTuneRef = useRef(null);
   const mobileCollapseRef = useRef(null);
 
@@ -1707,6 +1710,89 @@ export default function Main({ onOpenInstructions }) {
       id: "remix-style",
       duration: 2000
     });
+  }
+
+  function handleStyleDna() {
+    setIsStyleDnaing(true);
+    setLastClickedEffect('styledna');
+
+    // 1. Tokenize meme.name (which contains API metadata like Giphy title, Imgflip name)
+    const allText = (meme.name || "").toLowerCase();
+    const tokens = new Set(allText.split(/\W+/).filter(Boolean));
+
+    // 2. Score each style against the tokens
+    let topStyleId = null;
+    let topScore = 0;
+    for (const [styleId, keywords] of Object.entries(STYLE_KEYWORDS)) {
+      const score = keywords.filter(kw => {
+        return kw.includes(" ") ? allText.includes(kw) : tokens.has(kw);
+      }).length;
+      if (score > topScore) { topScore = score; topStyleId = styleId; }
+    }
+
+    // 3. Select the best preset, or fallback to cycling
+    let currentPreset;
+
+    // If the last clicked effect was ALSO styledna, and we already applied the matching one,
+    // we should let them cycle through the rest so they aren't stuck on just one style.
+    // However, for the FIRST click, we give them the metadata-matched style.
+    if (topScore > 0 && topStyleId && styleDnaIndexRef.current === 0) {
+      currentPreset = STYLE_DNA_PRESETS.find(p => p.id === topStyleId);
+      // Set the index so the next click cycles starting from the one AFTER the matched one
+      const matchedIndex = STYLE_DNA_PRESETS.findIndex(p => p.id === topStyleId);
+      if (matchedIndex !== -1) {
+          styleDnaIndexRef.current = matchedIndex + 1;
+      } else {
+          styleDnaIndexRef.current += 1;
+      }
+    }
+
+    if (!currentPreset) {
+      // Fallback: cycle sequentially
+      currentPreset = STYLE_DNA_PRESETS[styleDnaIndexRef.current % STYLE_DNA_PRESETS.length];
+      styleDnaIndexRef.current += 1;
+    }
+
+    // Trigger visual shimmer effect immediately
+    triggerConfettiBurst(); // Let's use confetti while we build the real shimmer as fallback? Actually, req says 500ms shimmer overlay.
+    // We already have 500ms shimmer overlay in the layout below via isStyleDnaing state true/false
+
+    // Process updates
+    startTransition(() => {
+        // Apply global text properties and text animation
+        updateState((prev) => {
+            return {
+                ...prev,
+                fontFamily: currentPreset.fontFamily,
+                textColor: currentPreset.textColor,
+                textBgColor: currentPreset.textBgColor,
+                textShadow: currentPreset.textShadow,
+                letterSpacing: currentPreset.letterSpacing,
+                texts: prev.texts.map(t => ({
+                  ...t,
+                  animation: t.content.trim() ? (currentPreset.animation === 'none' ? null : currentPreset.animation) : t.animation
+                })),
+                // Apply Image filters to ALL panels
+                panels: prev.panels.map(p => ({
+                    ...p,
+                    filters: { ...p.filters, ...currentPreset.filters },
+                    processedImage: null,
+                    processedDeepFryLevel: 0
+                }))
+            };
+        });
+    });
+
+    toast(`Style DNA applied: ${currentPreset.name}`, {
+      icon: <ToastIcon src="/animations/performing-arts.json" />,
+      id: "styledna",
+      duration: 2000
+    });
+
+    // Remove shimmer after 500ms
+    setTimeout(() => {
+        setIsStyleDnaing(false);
+    }, 500);
   }
 
   function handleFilterFrenzy() {
@@ -4527,6 +4613,8 @@ export default function Main({ onOpenInstructions }) {
                       isAutoLayouting={isAutoLayouting}
                       onMemeIQ={handleMemeIQ}
                       isMemeIQing={isMemeIQing}
+                      onStyleDna={handleStyleDna}
+                      isStyleDnaing={isStyleDnaing}
                       onChaos={handleChaos}
                       onExportStickers={handleExportStickers}
                       onEditingChange={setEditingId}
@@ -5036,6 +5124,8 @@ export default function Main({ onOpenInstructions }) {
                       isAutoLayouting={isAutoLayouting}
                       onMemeIQ={handleMemeIQ}
                       isMemeIQing={isMemeIQing}
+                      onStyleDna={handleStyleDna}
+                      isStyleDnaing={isStyleDnaing}
                       onChaos={handleChaos}
                       onExportStickers={handleExportStickers}
                       onEditingChange={setEditingId}
@@ -5099,6 +5189,8 @@ export default function Main({ onOpenInstructions }) {
                 isAutoLayouting={isAutoLayouting}
                 onMemeIQ={handleMemeIQ}
                 isMemeIQing={isMemeIQing}
+                onStyleDna={handleStyleDna}
+                isStyleDnaing={isStyleDnaing}
                 onAddText={() => addTextAtPosition(50, 50)}
                 onAddSticker={addSticker}
                 canvasActiveTool={activeTool}

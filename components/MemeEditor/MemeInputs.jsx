@@ -7,7 +7,7 @@ import LottieAnimation from "../Animations/LottieAnimation";
 // Preload the animation JSON to prevent pop-in on re-render
 const WALKING_PENCIL_SRC = "/animations/walking-pencil.json";
 
-export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAddSticker, onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
+export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAddSticker, onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onStyleDna, isStyleDnaing, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
   const [isPending, startTransition] = useTransition();
 
   // Preload animation on mount to ensure it's cached
@@ -153,6 +153,27 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
               <Brain className="w-5 h-5 group-hover/iq:scale-110 transition-transform duration-300" />
             )}
              <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Meme IQ</span>
+          </button>
+
+          <div className="w-px h-5 bg-white/10 shrink-0" />
+
+          {/* Style DNA */}
+          <button
+            onClick={() => startTransition(() => onStyleDna())}
+            disabled={isStyleDnaing}
+            className={`relative flex-1 flex items-center justify-center gap-2 h-10 px-2 rounded-lg transition-all group/styledna ${
+              isStyleDnaing
+                ? 'opacity-50'
+                : 'hover:bg-amber-500/20 text-slate-400 hover:text-amber-400 hover:scale-[1.02] active:scale-[0.98]'
+            }`}
+            title="Style DNA Preset"
+          >
+             {isStyleDnaing ? (
+              <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+            ) : (
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover/styledna:scale-110 transition-transform duration-300"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+            )}
+             <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Style DNA</span>
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Wand2, Loader2, RefreshCw, LayoutGrid, Brain, CircleHelp, X, Sparkles, Zap, Grid, Lightbulb } from "lucide-react";
+import { Wand2, Loader2, RefreshCw, LayoutGrid, Brain, CircleHelp, X, Sparkles, Zap, Grid, Lightbulb, Palette } from "lucide-react";
 
 const AI_TOOL_INFO = [
   {
@@ -46,10 +46,21 @@ const AI_TOOL_INFO = [
     activeBg: "active:bg-pink-500/20",
     description: "Analyzes your text to suggest the perfect meme template.",
     useCase: "Best when you have a joke but need the right image format."
+  },
+  {
+    id: "styledna",
+    label: "Style DNA",
+    icon: Palette,
+    color: "text-amber-400",
+    borderColor: "border-amber-500/30",
+    bgColor: "bg-amber-500/10",
+    activeBg: "active:bg-amber-500/20",
+    description: "Applies a curated visual style preset across all elements.",
+    useCase: "One tap to completely transform the aesthetic of your meme."
   }
 ];
 
-export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing }) {
+export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onStyleDna, isStyleDnaing }) {
   const [showInfo, setShowInfo] = useState(false);
 
   // Map handlers to IDs
@@ -59,6 +70,7 @@ export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShi
       case 'vibeshift': return { onClick: onVibeShift, loading: isVibeShifting, loadingText: "Shifting..." };
       case 'autolayout': return { onClick: onAutoLayout, loading: isAutoLayouting, loadingText: "Analyzing..." };
       case 'memeiq': return { onClick: onMemeIQ, loading: isMemeIQing, loadingText: "Thinking..." };
+      case 'styledna': return { onClick: onStyleDna, loading: isStyleDnaing, loadingText: "Styling..." };
       default: return {};
     }
   };

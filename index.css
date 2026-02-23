@@ -1584,20 +1584,6 @@ body {
   background: rgba(34, 197, 94, 0.2);
 }
 
-/* Drag handle pill for swipeable sheets */
-.drag-handle {
-  display: block;
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.18);
-  pointer-events: none;
-  flex-shrink: 0;
-}
 
 /* Tool pill stagger slide-in when tool row opens */
 @keyframes pill-slide-in {
@@ -1742,9 +1728,6 @@ body {
   border-radius: 16px 16px 0 0;
 }
 
-.mobile-active-control:not([data-visible]) .drag-handle {
-  display: none;
-}
 
 .mobile-active-control[data-visible] {
   grid-template-rows: 1fr;

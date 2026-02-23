@@ -400,7 +400,6 @@ export default function MobileBottomBar({
     <div className="lg:hidden" data-html2canvas-ignore="true">
       {/* Layer 2: Active Control — expands above Layer 1 */}
       <div className="mobile-active-control" data-visible={layer2Content ? true : undefined} {...swipeHandlers}>
-        <span className="drag-handle" />
         <div className="mobile-active-control-inner">
           <div className={isStickerLayer2 ? "h-[50vh] max-h-[400px] overflow-y-auto" : "flex items-center h-[52px]"}>
             {layer2Content}
@@ -410,7 +409,6 @@ export default function MobileBottomBar({
 
       {/* Layer 1: Tool Row — slides up when a tab is active */}
       <div className="mobile-tool-row" data-visible={activeTab ? true : undefined} {...swipeHandlers}>
-        <span className="drag-handle" />
         <Suspense fallback={null}>
           {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} onVibeShift={onVibeShift} isVibeShifting={isVibeShifting} onAutoLayout={onAutoLayout} isAutoLayouting={isAutoLayouting} onMemeIQ={onMemeIQ} isMemeIQing={isMemeIQing} onStyleDna={onStyleDna} isStyleDnaing={isStyleDnaing} onEmojiSauce={onEmojiSauce} isEmojiSaucing={isEmojiSaucing} />}
           {activeTab === "text"    && <TextToolRow    {...toolRowProps} onAddText={onAddText} />}

@@ -2925,11 +2925,25 @@ export default function Main({ onOpenInstructions }) {
       setIsProcessing(true);
       const { x, y, width, height } = cropBounds;
 
-      // Get the canvas container dimensions for scaling
+      // Get both the outer container rect (where crop coords originate) and the
+      // actual canvas rect (memeRef). The outer container has min-h constraints
+      // that can create black bars above/below the canvas; we must account for
+      // this vertical offset when mapping crop selection → export coordinates.
       const containerRect = canvasContainerRef.current?.getBoundingClientRect();
-      if (!containerRect) {
+      const canvasRect = memeRef.current?.getBoundingClientRect();
+      if (!containerRect || !canvasRect) {
         throw new Error("Container not found");
       }
+
+      // Offset of the actual canvas within the outer container (usually only Y differs)
+      const offsetX = canvasRect.left - containerRect.left;
+      const offsetY = canvasRect.top - containerRect.top;
+
+      // Convert crop bounds from container space → canvas space and clamp to canvas
+      const canvasX = Math.max(0, x - offsetX);
+      const canvasY = Math.max(0, y - offsetY);
+      const canvasW = Math.min(width, canvasRect.width - canvasX);
+      const canvasH = Math.min(height, canvasRect.height - canvasY);
 
       // First, export the full meme using the existing reliable method
       const { exportImageAsPng } = await import("../../services/gifExporter");
@@ -2943,14 +2957,14 @@ export default function Main({ onOpenInstructions }) {
         img.src = URL.createObjectURL(fullBlob);
       });
 
-      // Calculate the scale factor between display size and export size
-      const scaleX = fullImage.width / containerRect.width;
-      const scaleY = fullImage.height / containerRect.height;
+      // Scale factors: actual canvas display size → export pixel size
+      const scaleX = fullImage.width / canvasRect.width;
+      const scaleY = fullImage.height / canvasRect.height;
 
       // Create a canvas for the cropped region
       const cropCanvas = document.createElement("canvas");
-      const cropWidth = Math.round(width * scaleX);
-      const cropHeight = Math.round(height * scaleY);
+      const cropWidth = Math.round(canvasW * scaleX);
+      const cropHeight = Math.round(canvasH * scaleY);
       cropCanvas.width = cropWidth;
       cropCanvas.height = cropHeight;
 
@@ -2961,8 +2975,8 @@ export default function Main({ onOpenInstructions }) {
       // Draw the cropped portion
       ctx.drawImage(
         fullImage,
-        Math.round(x * scaleX), // source x
-        Math.round(y * scaleY), // source y
+        Math.round(canvasX * scaleX), // source x
+        Math.round(canvasY * scaleY), // source y
         cropWidth, // source width
         cropHeight, // source height
         0, 0, // dest x, y

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from "react";
-import { Wand2, Type, ImageIcon, Zap, Pencil, Smile } from "lucide-react";
+import { MagicWand, TextT, Image, Lightning, PencilSimple, Smiley } from "@phosphor-icons/react";
 import ToolPill from "./ToolPill";
 import SliderControl from "./SliderControl";
 import ColorSwatchRow from "./ColorSwatchRow";
@@ -16,12 +16,12 @@ const StickerToolRow = lazy(() => import("./layers/StickerToolRow"));
 const QuickToolRow   = lazy(() => import("./layers/QuickToolRow"));
 
 const TABS = [
-  { id: "ai",      label: "AI",      icon: Wand2 },
-  { id: "text",    label: "Text",    icon: Type },
-  { id: "image",   label: "Image",   icon: ImageIcon },
-  { id: "quick",   label: "Quick",   icon: Zap },
-  { id: "draw",    label: "Draw",    icon: Pencil },
-  { id: "sticker", label: "Sticker", icon: Smile },
+  { id: "ai",      label: "AI",      Icon: MagicWand,   activeWeight: "duotone", inactiveWeight: "light" },
+  { id: "text",    label: "Text",    Icon: TextT,        activeWeight: "bold",    inactiveWeight: "light" },
+  { id: "image",   label: "Image",   Icon: Image,        activeWeight: "bold",    inactiveWeight: "light" },
+  { id: "draw",    label: "Draw",    Icon: PencilSimple, activeWeight: "bold",    inactiveWeight: "light" },
+  { id: "sticker", label: "Sticker", Icon: Smiley,       activeWeight: "bold",    inactiveWeight: "light" },
+  { id: "quick",   label: "Quick",   Icon: Lightning,    activeWeight: "bold",    inactiveWeight: "light" },
 ];
 
 const FONTS = [
@@ -248,6 +248,8 @@ export default function MobileBottomBar({
   isMemeIQing,
   onStyleDna,
   isStyleDnaing,
+  onEmojiSauce,
+  isEmojiSaucing,
   // Text tab
   onAddText,
   // Sticker tab
@@ -398,6 +400,7 @@ export default function MobileBottomBar({
     <div className="lg:hidden" data-html2canvas-ignore="true">
       {/* Layer 2: Active Control — expands above Layer 1 */}
       <div className="mobile-active-control" data-visible={layer2Content ? true : undefined} {...swipeHandlers}>
+        <span className="drag-handle" />
         <div className="mobile-active-control-inner">
           <div className={isStickerLayer2 ? "h-[50vh] max-h-[400px] overflow-y-auto" : "flex items-center h-[52px]"}>
             {layer2Content}
@@ -407,8 +410,9 @@ export default function MobileBottomBar({
 
       {/* Layer 1: Tool Row — slides up when a tab is active */}
       <div className="mobile-tool-row" data-visible={activeTab ? true : undefined} {...swipeHandlers}>
+        <span className="drag-handle" />
         <Suspense fallback={null}>
-          {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} onVibeShift={onVibeShift} isVibeShifting={isVibeShifting} onAutoLayout={onAutoLayout} isAutoLayouting={isAutoLayouting} onMemeIQ={onMemeIQ} isMemeIQing={isMemeIQing} onStyleDna={onStyleDna} isStyleDnaing={isStyleDnaing} />}
+          {activeTab === "ai"      && <AiToolRow onMagicCaption={onMagicCaption} isMagicGenerating={isMagicGenerating} onVibeShift={onVibeShift} isVibeShifting={isVibeShifting} onAutoLayout={onAutoLayout} isAutoLayouting={isAutoLayouting} onMemeIQ={onMemeIQ} isMemeIQing={isMemeIQing} onStyleDna={onStyleDna} isStyleDnaing={isStyleDnaing} onEmojiSauce={onEmojiSauce} isEmojiSaucing={isEmojiSaucing} />}
           {activeTab === "text"    && <TextToolRow    {...toolRowProps} onAddText={onAddText} />}
           {activeTab === "image"   && <ImageToolRow   {...toolRowProps} />}
           {activeTab === "draw"    && (
@@ -445,11 +449,15 @@ export default function MobileBottomBar({
       </div>
 
       {/* Layer 0: Main Tab Bar */}
-      <nav className="mobile-tab-bar">
-        {TABS.map(({ id, label, icon: Icon }) => (
+      <nav
+        className="mobile-tab-bar"
+        style={activeTab != null ? { '--tab-idx': TABS.findIndex(t => t.id === activeTab) } : {}}
+      >
+        <span className="tab-sliding-indicator" />
+        {TABS.map(({ id, label, Icon, activeWeight, inactiveWeight }) => (
           <ToolPill
             key={id}
-            icon={<Icon className="w-4 h-4" />}
+            icon={<Icon size={18} weight={activeTab === id ? activeWeight : inactiveWeight} />}
             label={label}
             isActive={activeTab === id}
             onClick={() => handleTabTap(id)}

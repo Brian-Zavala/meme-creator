@@ -7,7 +7,7 @@ import LottieAnimation from "../Animations/LottieAnimation";
 // Preload the animation JSON to prevent pop-in on re-render
 const WALKING_PENCIL_SRC = "/animations/walking-pencil.json";
 
-export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAddSticker, onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onStyleDna, isStyleDnaing, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
+export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAddSticker, onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onStyleDna, isStyleDnaing, onEmojiSauce, isEmojiSaucing, onChaos, hasStickers, onExportStickers, selectedId, editingId, onEditingChange, embedded = false, hasText = false }) {
   const [isPending, startTransition] = useTransition();
 
   // Preload animation on mount to ensure it's cached
@@ -174,6 +174,27 @@ export default function MemeInputs({ texts, handleTextChange, onTextCommit, onAd
              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover/styledna:scale-110 transition-transform duration-300"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
             )}
              <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Style DNA</span>
+          </button>
+
+          <div className="w-px h-5 bg-white/10 shrink-0" />
+
+          {/* Emoji Sauce */}
+          <button
+            onClick={() => startTransition(() => onEmojiSauce())}
+            disabled={isEmojiSaucing}
+            className={`relative flex-1 flex items-center justify-center gap-2 h-10 px-2 rounded-lg transition-all group/emoji ${
+              isEmojiSaucing
+                ? 'opacity-50'
+                : 'hover:bg-yellow-500/20 text-slate-400 hover:text-yellow-400 hover:scale-[1.02] active:scale-[0.98]'
+            }`}
+            title="Emoji Sauce (Auto-Stickers)"
+          >
+             {isEmojiSaucing ? (
+              <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+            ) : (
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover/emoji:scale-110 transition-transform duration-300"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            )}
+             <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Emoji Sauce</span>
           </button>
         </div>
       </div>

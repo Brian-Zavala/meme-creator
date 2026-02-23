@@ -1,6 +1,8 @@
+import SlidingPillRow from "./SlidingPillRow";
+
 export default function PillSelector({ items, value, onSelect, getId, getLabel, getStyle }) {
   return (
-    <div className="flex items-center gap-2 w-full overflow-x-auto h-full px-2 scrollbar-none">
+    <SlidingPillRow activeId={value} className="w-full overflow-x-auto h-full px-2 scrollbar-none">
       {items.map((item) => {
         const id = getId(item);
         const label = getLabel(item);
@@ -23,6 +25,6 @@ export default function PillSelector({ items, value, onSelect, getId, getLabel, 
           </button>
         );
       })}
-    </div>
+    </SlidingPillRow>
   );
 }

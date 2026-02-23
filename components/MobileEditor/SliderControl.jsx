@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { ArrowCounterClockwise } from "@phosphor-icons/react";
 import OptimizedSlider from "../ui/OptimizedSlider";
 
 export default function SliderControl({
@@ -56,7 +56,7 @@ export default function SliderControl({
           aria-label="Reset to default"
           tabIndex={Number(value) !== Number(defaultValue) ? 0 : -1}
         >
-          <RotateCcw size={15} />
+          <ArrowCounterClockwise size={14} />
         </button>
       )}
     </div>

@@ -1,34 +1,34 @@
 import {
   Shuffle,
-  MessageSquare,
-  Paintbrush,
+  Chat,
+  PaintBrush,
   SlidersHorizontal,
   Thermometer,
-  Flame,
+  Fire,
   Sticker,
-  Radiation,
-  MonitorX,
+  Radioactive,
+  MonitorPlay,
   Skull,
-  PartyPopper,
+  Confetti,
   Timer,
-  Trash2,
-  Sparkles,
-} from "lucide-react";
+  Trash,
+  Sparkle,
+} from "@phosphor-icons/react";
 
 const ACTIONS = [
-  { id: "removeAll",     label: "Remove All",     Icon: Trash2,    danger: true },
-  { id: "removeEffects", label: "Clear FX",       Icon: Sparkles,  teal: true },
+  { id: "removeAll",     label: "Remove All",     Icon: Trash,            danger: true },
+  { id: "removeEffects", label: "Clear FX",       Icon: Sparkle,          teal: true },
   { id: "chaos",         label: "Chaos",          Icon: Shuffle },
-  { id: "captionRemix",  label: "Caption",        Icon: MessageSquare },
-  { id: "styleShuffle",  label: "Style",          Icon: Paintbrush },
+  { id: "captionRemix",  label: "Caption",        Icon: Chat },
+  { id: "styleShuffle",  label: "Style",          Icon: PaintBrush },
   { id: "filterFrenzy",  label: "Filter",         Icon: SlidersHorizontal },
   { id: "vibeCheck",     label: "Vibe",           Icon: Thermometer },
-  { id: "deepFry",       label: "Deep Fry",       Icon: Flame },
+  { id: "deepFry",       label: "Deep Fry",       Icon: Fire },
   { id: "stickerfy",     label: "Stickerfy",      Icon: Sticker },
-  { id: "nuked",         label: "Nuked",          Icon: Radiation },
-  { id: "glitch",        label: "Glitch",         Icon: MonitorX },
+  { id: "nuked",         label: "Nuked",          Icon: Radioactive },
+  { id: "glitch",        label: "Glitch",         Icon: MonitorPlay },
   { id: "cursed",        label: "Cursed",         Icon: Skull },
-  { id: "confetti",      label: "Confetti",       Icon: PartyPopper },
+  { id: "confetti",      label: "Confetti",       Icon: Confetti },
   { id: "timeWarp",      label: "Time Warp",      Icon: Timer },
 ];
 
@@ -81,7 +81,7 @@ export default function QuickToolRow({
               : undefined
           }
         >
-          <Icon className="w-4 h-4" />
+          <Icon size={16} />
           <span>{label}</span>
         </button>
       ))}

@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Upload,
-  Undo2,
-  Redo2,
-  Download,
-  MoreVertical,
-  Share2,
-  LayoutGrid,
-  Film,
-  Trash2,
-  Sparkles,
-  HelpCircle,
+  ArrowCounterClockwise,
+  ArrowClockwise,
+  DownloadSimple,
+  DotsThreeVertical,
+  ShareNetwork,
+  SquaresFour,
+  FilmSlate,
+  Trash,
+  Sparkle,
+  Question,
   Coffee,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 
 const LAYOUTS = [
   { id: "single",       label: "Single" },
@@ -92,7 +92,7 @@ export default function MobileTopBar({
           className="mobile-top-btn"
           aria-label="Upload image"
         >
-          <Upload className="w-5 h-5" />
+          <Upload size={20} />
         </button>
         <input
           ref={fileInputRef}
@@ -110,7 +110,7 @@ export default function MobileTopBar({
           className="mobile-top-btn"
           aria-label="Undo"
         >
-          <Undo2 className="w-4 h-4" />
+          <ArrowCounterClockwise size={17} />
         </button>
 
         {/* Redo */}
@@ -121,7 +121,7 @@ export default function MobileTopBar({
           className="mobile-top-btn"
           aria-label="Redo"
         >
-          <Redo2 className="w-4 h-4" />
+          <ArrowClockwise size={17} />
         </button>
 
         {/* Spacer */}
@@ -131,20 +131,20 @@ export default function MobileTopBar({
         <button
           type="button"
           onClick={onDownload}
-          className="mobile-top-btn"
+          className="mobile-top-btn mobile-top-btn-action"
           aria-label="Save"
         >
-          <Download className="w-5 h-5" />
+          <DownloadSimple size={20} />
         </button>
 
         {/* Share */}
         <button
           type="button"
           onClick={onShare}
-          className="mobile-top-btn"
+          className="mobile-top-btn mobile-top-btn-action"
           aria-label="Share"
         >
-          <Share2 className="w-5 h-5" />
+          <ShareNetwork size={20} />
         </button>
 
         {/* More menu */}
@@ -156,7 +156,7 @@ export default function MobileTopBar({
             aria-label="More options"
             aria-expanded={menuOpen}
           >
-            <MoreVertical className="w-5 h-5" />
+            <DotsThreeVertical size={20} />
           </button>
 
           {menuOpen && (
@@ -169,7 +169,7 @@ export default function MobileTopBar({
               {/* Layout */}
               <div className="mobile-more-section">
                 <div className="mobile-more-section-label">
-                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <SquaresFour size={14} />
                   <span>Layout</span>
                 </div>
                 <div className="mobile-more-segment">
@@ -193,7 +193,7 @@ export default function MobileTopBar({
               {/* Mode */}
               <div className="mobile-more-section">
                 <div className="mobile-more-section-label">
-                  <Film className="w-3.5 h-3.5" />
+                  <FilmSlate size={14} />
                   <span>Mode</span>
                 </div>
                 <div className="mobile-more-segment">
@@ -225,7 +225,7 @@ export default function MobileTopBar({
                   onOpenInstructions?.();
                 }}
               >
-                <HelpCircle className="w-4 h-4" />
+                <Question size={17} />
                 <span>Instructions</span>
               </button>
 
@@ -237,7 +237,7 @@ export default function MobileTopBar({
                 className="mobile-more-item text-yellow-400"
                 onClick={closeMenu}
               >
-                <Coffee className="w-4 h-4" />
+                <Coffee size={17} />
                 <span>Buy me a coffee</span>
               </a>
 
@@ -252,7 +252,7 @@ export default function MobileTopBar({
                   onRemoveAll?.();
                 }}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash size={17} />
                 <span>Remove All</span>
               </button>
 
@@ -265,7 +265,7 @@ export default function MobileTopBar({
                   onRemoveEffects?.();
                 }}
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkle size={17} weight="duotone" />
                 <span>Remove Effects</span>
               </button>
             </div>

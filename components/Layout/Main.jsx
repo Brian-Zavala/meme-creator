@@ -17,6 +17,7 @@ import { processFileInWorker } from "../../services/fileLoader";
 import { MEME_QUOTES } from "../../constants/memeQuotes";
 import { TEMPLATE_KEYWORDS, TRENDING_TEMPLATES, MEME_IQ_THRESHOLD } from "../../constants/memeIQKeywords";
 import { STICKER_KEYWORDS } from "../../constants/stickerKeywords";
+import { COMPILED_EMOJI_MAP, FALLBACK_EMOJIS } from "../../constants/emojiSauceMap";
 import { TONE_BANK, TONE_NAMES, TONE_LABELS } from "../../constants/toneBank";
 import { computeAutoLayout } from "../../services/autoLayoutService";
 import { saveState, loadState } from "../../services/storage"; // moved up from below
@@ -792,6 +793,7 @@ export default function Main({ onOpenInstructions }) {
   const [isStyleDnaing, setIsStyleDnaing] = useState(false);
   const [isAutoLayouting, setIsAutoLayouting] = useState(false);
   const [isMemeIQing, setIsMemeIQing] = useState(false);
+  const [isEmojiSaucing, setIsEmojiSaucing] = useState(false);
   const vibeShiftIndexRef = useRef(0);
   const styleDnaIndexRef = useRef(0);
   const fineTuneRef = useRef(null);
@@ -3672,6 +3674,89 @@ export default function Main({ onOpenInstructions }) {
     }, 500);
   }
 
+  // --- 11. AI FEATURE: EMOJI SAUCE (Context-Aware Stickers) ---
+  function handleEmojiSauce() {
+    setIsEmojiSaucing(true);
+
+    try {
+      // 1. Tokenize all text currently on the canvas
+      const allText = (meme.texts || []).map(t => t.content).join(" ").toLowerCase();
+
+      if (allText.trim().length === 0) {
+        toast("Type some text first to add Emoji Sauce!", { icon: "✍️", duration: 3000 });
+        setIsEmojiSaucing(false);
+        return;
+      }
+
+      updateState((prev) => {
+        const prevTexts = prev.texts || [];
+
+        const updatedTexts = prevTexts.map(t => {
+          const content = t.content || "";
+          if (content.trim().length > 0) {
+            // Strip trailing whitespace and extended pictographics (emojis)
+            // so clicking the button multiple times acts as a "reroll" rather than stacking infinitely
+            let cleanContent = content.replace(/[\s\p{Extended_Pictographic}]+$/gu, "");
+            if (cleanContent.length === 0) cleanContent = content.trim();
+
+            // 1. Prepare text with spaces explicitly so word bounds \b can match edges securely
+            const textToTest = " " + cleanContent.toLowerCase() + " ";
+
+            // 2. Find matching emojis using pre-compiled regex arrays
+            let matchedEmojis = [];
+            for (const { emojis, regexes } of COMPILED_EMOJI_MAP) {
+              for (const regex of regexes) {
+                if (regex.test(textToTest)) {
+                  const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+                  matchedEmojis.push(randomEmoji);
+                  break; // Move to next category for diversity
+                }
+              }
+            }
+
+            // 3. Determine how many emojis to add (1 to 2 max)
+            let emojisToAdd = [];
+            const uniqueMatched = [...new Set(matchedEmojis)];
+
+            if (uniqueMatched.length > 0) {
+              // Only take 1 or 2 matched emojis to keep it clean
+              const count = Math.random() > 0.5 ? 1 : 2;
+              emojisToAdd = uniqueMatched.slice(0, count);
+            } else {
+              // Fallback for this line (only 1 or 2 universal emojis)
+              const count = Math.random() > 0.6 ? 1 : 2;
+              const shuffledFallback = [...FALLBACK_EMOJIS].sort(() => 0.5 - Math.random());
+              emojisToAdd = shuffledFallback.slice(0, count);
+            }
+
+            // Append natively to the raw cleaned string
+            const suffix = " " + emojisToAdd.join("");
+
+            return {
+              ...t,
+              content: cleanContent + suffix
+            };
+          }
+          return t;
+        });
+
+        return {
+          ...prev,
+          texts: updatedTexts
+        };
+      });
+
+      toast.success("Emoji Sauce applied! 💥");
+
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to add Emoji Sauce");
+    } finally {
+      setIsEmojiSaucing(false);
+    }
+  }
+
+
   function handleMemeIQ() {
     setIsMemeIQing(true);
 
@@ -4647,6 +4732,8 @@ export default function Main({ onOpenInstructions }) {
                       isMemeIQing={isMemeIQing}
                       onStyleDna={handleStyleDna}
                       isStyleDnaing={isStyleDnaing}
+                      onEmojiSauce={handleEmojiSauce}
+                      isEmojiSaucing={isEmojiSaucing}
                       onChaos={handleChaos}
                       onExportStickers={handleExportStickers}
                       onEditingChange={setEditingId}
@@ -5158,6 +5245,8 @@ export default function Main({ onOpenInstructions }) {
                       isMemeIQing={isMemeIQing}
                       onStyleDna={handleStyleDna}
                       isStyleDnaing={isStyleDnaing}
+                      onEmojiSauce={handleEmojiSauce}
+                      isEmojiSaucing={isEmojiSaucing}
                       onChaos={handleChaos}
                       onExportStickers={handleExportStickers}
                       onEditingChange={setEditingId}
@@ -5223,6 +5312,8 @@ export default function Main({ onOpenInstructions }) {
                 isMemeIQing={isMemeIQing}
                 onStyleDna={handleStyleDna}
                 isStyleDnaing={isStyleDnaing}
+                onEmojiSauce={handleEmojiSauce}
+                isEmojiSaucing={isEmojiSaucing}
                 onAddText={() => addTextAtPosition(50, 50)}
                 onAddSticker={addSticker}
                 canvasActiveTool={activeTool}

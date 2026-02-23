@@ -1,42 +1,43 @@
 import {
   Sun,
-  Contrast,
+  CircleHalf,
   Waves,
   Palette,
-  CircleDot,
-  Droplets,
+  Record,
+  Drop,
   Clock,
-  ArrowUpDown,
-  Flame,
+  ArrowsVertical,
+  Fire,
   Scissors,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import ToolPill from "../ToolPill";
+import SlidingPillRow from "../SlidingPillRow";
 
 const TOOLS = [
   { id: "crop",       label: "Crop",     Icon: Scissors },
   { id: "brightness", label: "Bright",   Icon: Sun },
-  { id: "contrast",   label: "Contrast", Icon: Contrast },
+  { id: "contrast",   label: "Contrast", Icon: CircleHalf },
   { id: "blur",       label: "Blur",     Icon: Waves },
   { id: "hue",        label: "Hue",      Icon: Palette },
-  { id: "grayscale",  label: "Gray",     Icon: CircleDot },
-  { id: "saturate",   label: "Saturate", Icon: Droplets },
+  { id: "grayscale",  label: "Gray",     Icon: Record },
+  { id: "saturate",   label: "Saturate", Icon: Drop },
   { id: "sepia",      label: "Sepia",    Icon: Clock },
-  { id: "invert",     label: "Invert",   Icon: ArrowUpDown },
-  { id: "deepfry",    label: "Deep Fry", Icon: Flame },
+  { id: "invert",     label: "Invert",   Icon: ArrowsVertical },
+  { id: "deepfry",    label: "Deep Fry", Icon: Fire },
 ];
 
 export default function ImageToolRow({ activeTool, onToolTap }) {
   return (
-    <>
+    <SlidingPillRow activeId={activeTool}>
       {TOOLS.map(({ id, label, Icon }) => (
         <ToolPill
           key={id}
-          icon={<Icon className="w-4 h-4" />}
+          icon={<Icon size={16} />}
           label={label}
           isActive={activeTool === id}
           onClick={() => onToolTap(id)}
         />
       ))}
-    </>
+    </SlidingPillRow>
   );
 }

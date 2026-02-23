@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Wand2, Loader2, RefreshCw, LayoutGrid, Brain, CircleHelp, X, Sparkles, Zap, Grid, Lightbulb, Palette } from "lucide-react";
+import { SquaresFour, Brain, Question, X, Sparkle, ArrowClockwise, Lightbulb, Palette, Smiley, CircleNotch, MagicWand } from "@phosphor-icons/react";
 
 const AI_TOOL_INFO = [
   {
     id: "autolayout",
     label: "Auto Layout",
-    icon: LayoutGrid,
+    icon: SquaresFour,
     color: "text-green-400",
     borderColor: "border-green-500/30",
     bgColor: "bg-green-500/10",
@@ -17,7 +17,7 @@ const AI_TOOL_INFO = [
   {
     id: "magic",
     label: "Magic AI",
-    icon: Sparkles,
+    icon: Sparkle,
     color: "text-purple-400",
     borderColor: "border-purple-500/30",
     bgColor: "bg-purple-500/10",
@@ -28,7 +28,7 @@ const AI_TOOL_INFO = [
   {
     id: "vibeshift",
     label: "Vibe Shift",
-    icon: RefreshCw,
+    icon: ArrowClockwise,
     color: "text-blue-400",
     borderColor: "border-blue-500/30",
     bgColor: "bg-blue-500/10",
@@ -57,10 +57,21 @@ const AI_TOOL_INFO = [
     activeBg: "active:bg-amber-500/20",
     description: "Applies a curated visual style preset across all elements.",
     useCase: "One tap to completely transform the aesthetic of your meme."
+  },
+  {
+    id: "emojisauce",
+    label: "Emoji Sauce",
+    icon: Smiley,
+    color: "text-yellow-400",
+    borderColor: "border-yellow-500/30",
+    bgColor: "bg-yellow-500/10",
+    activeBg: "active:bg-yellow-500/20",
+    description: "Adds perfect reaction stickers matching your caption.",
+    useCase: "When your meme just needs that extra literal ✨flavor✨."
   }
 ];
 
-export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onStyleDna, isStyleDnaing }) {
+export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShift, isVibeShifting, onAutoLayout, isAutoLayouting, onMemeIQ, isMemeIQing, onStyleDna, isStyleDnaing, onEmojiSauce, isEmojiSaucing }) {
   const [showInfo, setShowInfo] = useState(false);
 
   // Map handlers to IDs
@@ -71,6 +82,7 @@ export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShi
       case 'autolayout': return { onClick: onAutoLayout, loading: isAutoLayouting, loadingText: "Analyzing..." };
       case 'memeiq': return { onClick: onMemeIQ, loading: isMemeIQing, loadingText: "Thinking..." };
       case 'styledna': return { onClick: onStyleDna, loading: isStyleDnaing, loadingText: "Styling..." };
+      case 'emojisauce': return { onClick: onEmojiSauce, loading: isEmojiSaucing, loadingText: "Saucing..." };
       default: return {};
     }
   };
@@ -84,7 +96,7 @@ export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShi
           onClick={() => setShowInfo(true)}
           className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-slate-300 active:scale-95 transition-all active:bg-white/10 active:text-white"
         >
-          <CircleHelp className="w-5 h-5" />
+          <Question size={20} />
         </button>
 
         {/* Dynamic AI Buttons */}
@@ -101,9 +113,11 @@ export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShi
               className={`tool-pill ${tool.color} ${tool.borderColor} ${tool.bgColor} ${tool.activeBg} border`}
             >
               {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <CircleNotch size={16} className="animate-spin" />
+              ) : tool.id === 'magic' ? (
+                <MagicWand size={16} weight="duotone" />
               ) : (
-                <Icon className="w-4 h-4" />
+                <Icon size={16} />
               )}
               <span>{loading ? loadingText : tool.label}</span>
             </button>
@@ -121,7 +135,7 @@ export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShi
             {/* Header - Brand Color Accent */}
             <div className="flex items-center justify-between p-4 border-b border-[#2f3336] bg-[#181818]">
               <div className="flex items-center gap-2 text-white">
-                <Sparkles className="w-5 h-5 text-brand" />
+                <Sparkle size={20} weight="duotone" className="text-brand" />
                 <h3 className="font-bold text-lg">AI Tools Guide</h3>
               </div>
               <button
@@ -129,7 +143,7 @@ export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShi
                 className="p-2 -mr-2 text-slate-400 hover:text-white transition-colors"
                 aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X size={20} />
               </button>
             </div>
 
@@ -140,12 +154,12 @@ export default function AiToolRow({ onMagicCaption, isMagicGenerating, onVibeShi
                 return (
                   <div key={tool.id} className="flex gap-4 p-3 rounded-xl bg-[#181818] border border-[#2f3336]">
                     <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${tool.bgColor} ${tool.color}`}>
-                      <Icon className="w-5 h-5" />
+                      <Icon size={20} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <h4 className={`font-bold text-base ${tool.color}`}>{tool.label}</h4>
-                      <p className="text-sm text-slate-300 leading-snug">{tool.description}</p>
-                      <p className="text-xs text-slate-500 italic mt-1">"{tool.useCase}"</p>
+                      <p className={`text-sm ${tool.id === 'emojisauce' ? 'text-yellow-200/90' : 'text-slate-300'} leading-snug`}>{tool.description}</p>
+                      <p className={`text-xs ${tool.id === 'emojisauce' ? 'text-yellow-500/80' : 'text-slate-500'} italic mt-1`}>"{tool.useCase}"</p>
                     </div>
                   </div>
                 );

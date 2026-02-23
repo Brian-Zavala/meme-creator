@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from "react";
-import { MagicWand, TextT, Image, Lightning, PencilSimple, Smiley } from "@phosphor-icons/react";
+import { Sparkle, TextAa, FrameCorners, PaintBrush, Sticker, RocketLaunch } from "@phosphor-icons/react";
 import ToolPill from "./ToolPill";
 import SliderControl from "./SliderControl";
 import ColorSwatchRow from "./ColorSwatchRow";
@@ -16,12 +16,12 @@ const StickerToolRow = lazy(() => import("./layers/StickerToolRow"));
 const QuickToolRow   = lazy(() => import("./layers/QuickToolRow"));
 
 const TABS = [
-  { id: "ai",      label: "AI",      Icon: MagicWand,   activeWeight: "duotone", inactiveWeight: "light" },
-  { id: "text",    label: "Text",    Icon: TextT,        activeWeight: "bold",    inactiveWeight: "light" },
-  { id: "image",   label: "Image",   Icon: Image,        activeWeight: "bold",    inactiveWeight: "light" },
-  { id: "draw",    label: "Draw",    Icon: PencilSimple, activeWeight: "bold",    inactiveWeight: "light" },
-  { id: "sticker", label: "Sticker", Icon: Smiley,       activeWeight: "bold",    inactiveWeight: "light" },
-  { id: "quick",   label: "Quick",   Icon: Lightning,    activeWeight: "bold",    inactiveWeight: "light" },
+  { id: "ai",      label: "AI",      Icon: Sparkle,      activeWeight: "duotone", inactiveWeight: "light" },
+  { id: "text",    label: "Text",    Icon: TextAa,        activeWeight: "duotone", inactiveWeight: "light" },
+  { id: "image",   label: "Image",   Icon: FrameCorners,  activeWeight: "duotone", inactiveWeight: "light" },
+  { id: "draw",    label: "Draw",    Icon: PaintBrush,    activeWeight: "duotone", inactiveWeight: "light" },
+  { id: "sticker", label: "Sticker", Icon: Sticker,       activeWeight: "duotone", inactiveWeight: "light" },
+  { id: "quick",   label: "Quick",   Icon: RocketLaunch,  activeWeight: "duotone", inactiveWeight: "light" },
 ];
 
 const FONTS = [

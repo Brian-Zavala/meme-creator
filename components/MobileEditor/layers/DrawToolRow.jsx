@@ -1,13 +1,14 @@
 import { useRef, useState } from "react";
-import { Pen, Eraser, Trash2, Square, Circle, Triangle, Hand, MousePointer2, PaintBucket } from "lucide-react";
+import { Pen, Eraser, Trash, Hand, PaintBucket } from "@phosphor-icons/react";
 import ToolPill from "../ToolPill";
+import SlidingPillRow from "../SlidingPillRow";
 import { SHAPES } from "../../../utils/shapeConstants.js";
 
 const DRAW_TOOLS = [
   { id: "pen",    label: "Pen",    Icon: Pen },
   { id: "eraser", label: "Eraser", Icon: Eraser },
   { id: "move",   label: "Move",   Icon: Hand },
-  // { id: "edit",   label: "Edit",   Icon: MousePointer2 },
+  // { id: "edit",   label: "Edit",   Icon: Cursor },
 ];
 
 const COLORS = [
@@ -44,51 +45,53 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
 
   return (
     <>
-      {DRAW_TOOLS.map(({ id, label, Icon }) => (
+      <SlidingPillRow activeId={canvasActiveTool}>
+        {DRAW_TOOLS.map(({ id, label, Icon }) => (
+          <ToolPill
+            key={id}
+            icon={<Icon size={16} />}
+            label={label}
+            isActive={id === 'edit' ? !canvasActiveTool : canvasActiveTool === id}
+            onClick={() => onToolTap(id)}
+          />
+        ))}
+
+        {/* Clear button */}
+        <button
+          type="button"
+          onClick={onClearDrawings}
+          className="tool-pill"
+          style={{ color: "#f87171", borderColor: "#3f1a1a" }}
+        >
+          <Trash size={16} />
+          <span>Clear</span>
+        </button>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
+
+        {/* Shape Tools (first 4 shapes inline) */}
+        {SHAPES.slice(0, 4).map(shape => (
+          <ToolPill
+            key={`shape-${shape.id}`}
+            icon={<span className="text-base">{shape.icon}</span>}
+            label={shape.label}
+            isActive={canvasActiveTool === `shape-${shape.id}`}
+            onClick={() => onToolTap(`shape-${shape.id}`)}
+          />
+        ))}
+
+        {/* More Shapes Button (remaining 6 shapes) */}
         <ToolPill
-          key={id}
-          icon={<Icon className="w-4 h-4" />}
-          label={label}
-          isActive={id === 'edit' ? !canvasActiveTool : canvasActiveTool === id}
-          onClick={() => onToolTap(id)}
+          icon={<span className="text-base">⋯</span>}
+          label="More"
+          isActive={canvasActiveTool?.startsWith('shape-') && !canvasActiveTool.match(/shape-(rectangle|circle|triangle|line)/)}
+          onClick={() => onToolTap('shape-menu')}
         />
-      ))}
 
-      {/* Clear button */}
-      <button
-        type="button"
-        onClick={onClearDrawings}
-        className="tool-pill"
-        style={{ color: "#f87171", borderColor: "#3f1a1a" }}
-      >
-        <Trash2 className="w-4 h-4" />
-        <span>Clear</span>
-      </button>
-
-      {/* Divider */}
-      <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
-
-      {/* Shape Tools (first 4 shapes inline) */}
-      {SHAPES.slice(0, 4).map(shape => (
-        <ToolPill
-          key={`shape-${shape.id}`}
-          icon={<span className="text-base">{shape.icon}</span>}
-          label={shape.label}
-          isActive={canvasActiveTool === `shape-${shape.id}`}
-          onClick={() => onToolTap(`shape-${shape.id}`)}
-        />
-      ))}
-
-      {/* More Shapes Button (remaining 6 shapes) */}
-      <ToolPill
-        icon={<span className="text-base">⋯</span>}
-        label="More"
-        isActive={canvasActiveTool?.startsWith('shape-') && !canvasActiveTool.match(/shape-(rectangle|circle|triangle|line)/)}
-        onClick={() => onToolTap('shape-menu')}
-      />
-
-      {/* Divider */}
-      <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
+        {/* Divider */}
+        <div className="w-px h-6 bg-[#2f3336] flex-shrink-0 mx-1" />
+      </SlidingPillRow>
 
       {/* Shape Fill Toggle (Only visible when shape is active) */}
       {isShapeActive && (
@@ -111,7 +114,7 @@ export default function DrawToolRow({ activeTool, onToolTap, canvasActiveTool, d
             }`}
             title={isFillMode ? "Editing Fill Color" : "Editing Stroke Color"}
           >
-            <PaintBucket className={`w-4 h-4 transition-transform duration-300 ${isFillMode ? 'rotate-12 scale-110' : ''}`} />
+            <PaintBucket size={16} className={`transition-transform duration-300 ${isFillMode ? 'rotate-12 scale-110' : ''}`} />
             <span className="text-xs font-bold uppercase tracking-wider min-w-[40px] text-center">
               {isFillMode ? "Fill" : "Stroke"}
             </span>

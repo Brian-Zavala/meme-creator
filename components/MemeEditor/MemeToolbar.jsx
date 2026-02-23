@@ -562,11 +562,11 @@ export default function MemeToolbar({ meme, activeTool, setActiveTool, handleSty
                             {hasText && (
                               <div className="flex flex-col w-full gap-2 animate-in fade-in duration-300">
                                 <div className="flex items-center justify-between w-full relative">
-                                  {meme.fontSize != 40 && (
+                                  {meme.fontSize != 30 && (
                                     <button
                                       onClick={() => {
                                         if (navigator.vibrate) navigator.vibrate(10);
-                                        handleStyleChange({ currentTarget: { name: 'fontSize', value: 40 } }, true);
+                                        handleStyleChange({ currentTarget: { name: 'fontSize', value: 30 } }, true);
                                       }}
                                       className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] uppercase font-bold text-slate-500 hover:text-white transition-all active:scale-95 bg-[#181818]/80 px-1.5 py-0.5 rounded whitespace-nowrap backdrop-blur-sm border border-[#2f3336]"
                                     >

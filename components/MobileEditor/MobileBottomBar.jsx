@@ -64,7 +64,7 @@ const IMAGE_FILTER_CONFIGS = {
 };
 
 const TEXT_SLIDER_CONFIGS = {
-  size:    { min: 2,  max: 120, step: 1, defaultValue: 40,  name: "fontSize",      label: "Size" },
+  size:    { min: 2,  max: 120, step: 1, defaultValue: 30,  name: "fontSize",      label: "Size" },
   width:   { min: 20, max: 100, step: 1, defaultValue: 100, name: "maxWidth",      label: "Width" },
   spacing: { min: -5, max: 50,  step: 1, defaultValue: 0,   name: "letterSpacing", label: "Spacing" },
 };

@@ -1,41 +1,12 @@
 import { useState, useEffect } from "react";
 import { preload } from "react-dom";
-import toast, { Toaster, ToastBar, useToasterStore } from "react-hot-toast";
+import { AppToaster } from './components/AppToaster';
 import { ExportRecoveryManager } from './components/ExportRecoveryManager';
 import Header from "./components/Layout/Header";
 import Main from "./components/Layout/Main";
 import { WelcomeModal } from "./components/Modals/WelcomeModal";
 import { InstructionModal } from "./components/Modals/InstructionModal";
 import { PrivacyPolicy } from "./components/Pages/PrivacyPolicy";
-
-const TOAST_LIMIT = 2;
-
-function ToastLimiter() {
-  const { toasts } = useToasterStore();
-
-  useEffect(() => {
-    // Filter out loading toasts so they don't count towards the limit and aren't dismissed
-    const visibleToasts = toasts.filter((t) => t.visible && t.type !== 'loading');
-
-    if (visibleToasts.length > TOAST_LIMIT) {
-      // Dismiss oldest toasts beyond the limit (assuming toasts are ordered new -> old or we should sort)
-      // Note: react-hot-toast usually appends new toasts. If so, [old, new].
-      // If we want to dismiss OLD, we should dismiss from the START of the array if it's [old, new].
-      // The original code used slice(TOAST_LIMIT) which implies it kept the FIRST N and dismissed the REST.
-      // If order is [new, old], slice keeps new and dismisses old. Correct.
-      // If order is [old, new], slice keeps old and dismisses new. Incorrect.
-      // Let's safe-guard by not changing the order assumption too much,
-      // but strictly protecting 'loading'.
-
-      // If the original code worked for normal toasts, we stick to its logic but on the filtered list.
-      visibleToasts
-        .slice(TOAST_LIMIT)
-        .forEach((t) => toast.dismiss(t.id));
-    }
-  }, [toasts]);
-
-  return null;
-}
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
@@ -100,42 +71,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-slate-50 font-sans">
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          duration: 3000,
-          className: "toast-gradient-border",
-          style: {
-            background: "#1e293b",
-            color: "#fff",
-            border: "1px solid #334155",
-          },
-          success: { duration: 2500 },
-          error: { duration: 3500 },
-        }}
-        containerStyle={{
-          bottom: 16,
-          right: 16,
-        }}
-        gutter={8}
-      >
-        {(t) => (
-          <div
-            onClick={() => toast.dismiss(t.id)}
-            style={{
-              cursor: "pointer",
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-            }}
-            title="Tap to dismiss"
-          >
-            {/* Render the default toast bar via react-hot-toast's internal renderer */}
-            <ToastBar toast={t} />
-          </div>
-        )}
-      </Toaster>
-      <ToastLimiter />
+      {/* AppToaster: custom Toaster that fixes stuck-pausedAt and animation-direction bugs.
+          Toast config / durations / limit are all in hooks/useToast.js. */}
+      <AppToaster />
       <ExportRecoveryManager />
 
       <Header onOpenInstructions={openInstructions} />

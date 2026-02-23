@@ -7,6 +7,7 @@ import { removeImageBackground } from "../../services/backgroundRemover";
 import { triggerFireworks, triggerConfettiBurst } from "../ui/Confetti";
 import useHistory from "../../hooks/useHistory";
 import { useExportToast } from '../../hooks/useExportToast';
+import { TOAST_DURATIONS } from '../../hooks/useToast';
 import { searchGiphy, registerShare, getAutocomplete, getCategories } from "../../services/giphy";
 import { searchImages, trackUnsplashDownload, getRandomImage, searchPexelsVideos, getRandomPexelsVideo } from "../../services/imageSearch";
 import VideoSourceTabs from "../MemeEditor/VideoSourceTabs";
@@ -3772,13 +3773,26 @@ export default function Main({ onOpenInstructions }) {
 
 
   function handleMemeIQ() {
+    // Guard: require at least one non-empty text element on the canvas
+    const allText = (meme.texts || [])
+      .map(t => (t.content || "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (!allText) {
+      toast("Add some text to the canvas first, then let Meme IQ work its magic!", {
+        duration: TOAST_DURATIONS.error,
+        icon: "✏️",
+        id: "meme-iq-no-text",
+      });
+      return;
+    }
+
     setIsMemeIQing(true);
 
     setTimeout(() => {
-      // 1. Collect & tokenize all text content
-      const allText = (meme.texts || [])
-        .map(t => (t.content || "").toLowerCase())
-        .join(" ");
+      // 1. Tokenize the collected text
       const tokens = new Set(allText.split(/\W+/).filter(Boolean));
 
       // 2. Score each template in our keyword map against user text
@@ -3793,26 +3807,30 @@ export default function Main({ onOpenInstructions }) {
       }
 
       const isMatch = topScore >= MEME_IQ_THRESHOLD && topTemplate !== null;
-      const suggestionName = isMatch
-        ? topTemplate
-        : TRENDING_TEMPLATES[Math.floor(Math.random() * TRENDING_TEMPLATES.length)];
 
-      const message = isMatch
-        ? `Meme IQ says: This caption is perfect for "${suggestionName}"`
-        : `This would slap on "${suggestionName}"\u2014just saying`;
+      if (!isMatch) {
+        // No keyword match — inform but do NOT change the canvas
+        toast("Meme IQ couldn't find a great template match. Try adding more descriptive text!", {
+          duration: TOAST_DURATIONS.tip,
+          icon: "🧠",
+          id: "meme-iq",
+        });
+        setIsMemeIQing(false);
+        return;
+      }
 
       // 3. Find the matching template from the already-loaded allMemes list
       const templateMeme = allMemes.find(m =>
-        m.name.toLowerCase() === suggestionName.toLowerCase()
+        m.name.toLowerCase() === topTemplate.toLowerCase()
       );
 
-      toast(message, {
-        duration: 5000,
+      toast(`Meme IQ says: This caption is perfect for "${topTemplate}"`, {
+        duration: TOAST_DURATIONS.export,
         icon: "\uD83E\uDDE0",
         id: "meme-iq",
       });
 
-      // 4. Auto-load the suggested template
+      // 4. Auto-load the matched template only when we have a real match
       if (templateMeme) {
         loadSelectedMeme(templateMeme);
       }

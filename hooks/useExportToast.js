@@ -1,5 +1,6 @@
-import { useRef, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useRef, useCallback, useEffect } from 'react';
+import toast, { useToasterStore } from 'react-hot-toast';
+import { TOAST_DURATIONS } from './useToast';
 
 // Stage display names
 const STAGE_NAMES = {
@@ -69,6 +70,12 @@ export function useExportToast() {
   const messageIndexRef = useRef(0);
   const intervalRef = useRef(null);
 
+  // Mirror the current toast store so we can check visibility inside callbacks
+  // without adding toasts as a useCallback dependency.
+  const toastsRef = useRef([]);
+  const { toasts } = useToasterStore();
+  useEffect(() => { toastsRef.current = toasts; }, [toasts]);
+
   // Cleanup helper
   const cleanup = useCallback(() => {
     if (intervalRef.current) {
@@ -80,6 +87,12 @@ export function useExportToast() {
   // Update the toast with current stage + encouragement
   const updateToastMessage = useCallback(() => {
     if (!toastIdRef.current || !currentStageRef.current) return;
+
+    // Bug fix: if the user manually dismissed the loading toast (by clicking it),
+    // UPSERT_TOAST would revive it by spreading { visible: true, dismissed: false }
+    // from createToast() onto the dismissed store entry.  Guard against that here.
+    const liveToast = toastsRef.current.find((t) => t.id === toastIdRef.current);
+    if (liveToast && !liveToast.visible) return; // user dismissed — don't revive
 
     const stageName = STAGE_NAMES[currentStageRef.current] || currentStageRef.current;
     const messages = ENCOURAGEMENT_MESSAGES[currentStageRef.current.replace(/_share|_gif|_clipboard/, '')] || [];
@@ -154,7 +167,7 @@ export function useExportToast() {
   const success = useCallback((message) => {
     cleanup();
     if (toastIdRef.current) {
-      toast.success(message, { id: toastIdRef.current, duration: 5000 });
+      toast.success(message, { id: toastIdRef.current, duration: TOAST_DURATIONS.export });
       toastIdRef.current = null;
     }
   }, [cleanup]);
@@ -162,7 +175,7 @@ export function useExportToast() {
   const error = useCallback((message) => {
     cleanup();
     if (toastIdRef.current) {
-      toast.error(message, { id: toastIdRef.current, duration: 5000 });
+      toast.error(message, { id: toastIdRef.current, duration: TOAST_DURATIONS.export });
       toastIdRef.current = null;
     }
   }, [cleanup]);

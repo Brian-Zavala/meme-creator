@@ -22,6 +22,7 @@ import { COMPILED_EMOJI_MAP, FALLBACK_EMOJIS } from "../../constants/emojiSauceM
 import { TONE_BANK, TONE_NAMES, TONE_LABELS } from "../../constants/toneBank";
 import { computeAutoLayout } from "../../services/autoLayoutService";
 import { saveState, loadState } from "../../services/storage"; // moved up from below
+import { matchCaptions } from '../../services/captionMatcher.js';
 
 // Lazy load heavy components to reduce initial bundle size
 const MemeCanvas = lazy(() => import("../MemeEditor/MemeCanvas"));
@@ -307,7 +308,8 @@ export default function Main({ onOpenInstructions }) {
         objectFit: "contain",
         posX: 50,
         posY: 50,
-        filters: { ...DEFAULT_FILTERS }
+        filters: { ...DEFAULT_FILTERS },
+        assetMeta: null,
       }
     ],
 
@@ -776,6 +778,9 @@ export default function Main({ onOpenInstructions }) {
             filters: { ...DEFAULT_FILTERS },
             processedImage: null,
             processedDeepFryLevel: 0,
+            assetMeta: (memeData.name && memeData.name.trim())
+              ? { raw: memeData.name.trim(), source: memeData.source || 'upload' }
+              : null,
           }
           : p
       );

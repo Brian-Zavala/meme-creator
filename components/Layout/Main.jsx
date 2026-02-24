@@ -3569,76 +3569,57 @@ export default function Main({ onOpenInstructions }) {
     });
   }
 
+  /** Pick up to `n` random items from `arr` without replacement. */
+  function pickRandom(arr, n) {
+    const copy = arr.slice();
+    const result = [];
+    for (let i = 0; i < n && copy.length > 0; i++) {
+      const idx = Math.floor(Math.random() * copy.length);
+      result.push(copy[idx]);
+      copy[idx] = copy[copy.length - 1];
+      copy.pop();
+    }
+    return result;
+  }
+
   function generateMagicCaption() {
     setIsMagicGenerating(true);
 
     setTimeout(() => {
       const activePanel = (meme.panels || []).find(p => p.id === meme.activePanelId);
 
-      // Derive metadata: prefer stored assetMeta, fall back to meme.name (handles
-      // panels restored from IndexedDB or the default panel that bypassed updateSelectedPanel).
       const rawName = meme.name && meme.name !== 'Meme-Name' && meme.name !== 'untitled'
         ? meme.name.replace(/-/g, ' ')
         : null;
       const assetMeta = activePanel?.assetMeta
         || (rawName ? { raw: rawName, source: activePanel?.source || 'upload' } : null);
 
-      // Shared vibe toast builder
-      const fireVibeToast = (raw) => {
-        const _vibe = MEME_IQ_VIBES[Math.floor(Math.random() * MEME_IQ_VIBES.length)];
-        const _title = raw.length > 28 ? raw.slice(0, 28).trimEnd() + '...' : raw;
-        toast(`${_title}... ${_vibe}`, {
-          duration: TOAST_DURATIONS.tip,
-          id: "magic-caption",
-        });
-      };
+      let suggestions = [];
 
-      // Branch A: metadata available → match topics → show caption picker
-      if (assetMeta?.raw) {
-        const suggestions = matchCaptions(assetMeta);
+      // Priority 1: MEME_QUOTES by exact template name (most specific)
+      const templateQuotes = MEME_QUOTES[meme.name];
+      if (Array.isArray(templateQuotes) && templateQuotes.length > 0) {
+        suggestions = pickRandom(templateQuotes, 3).map(arr => ({ texts: arr }));
+      }
 
-        if (suggestions.length > 0) {
-          fireVibeToast(assetMeta.raw);
-          setCaptionSuggestions(suggestions);
-          setCaptionPickerMeta(assetMeta.raw);
-          setShowCaptionPicker(true);
-          setIsMagicGenerating(false);
-          return;
+      // Priority 2: topic-based matching via captionMatcher (now randomized)
+      if (suggestions.length === 0 && assetMeta?.raw) {
+        const matched = matchCaptions(assetMeta);
+        if (matched.length > 0) {
+          suggestions = matched.map(pair => ({ texts: [pair.top, pair.bottom] }));
         }
       }
 
-      // Branch B: fallback — use pre-written MEME_QUOTES for known Imgflip templates
-      const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
-      const randomIndex = Math.floor(Math.random() * category.length);
-      const captions = category[randomIndex];
+      // Priority 3: generic fallback
+      if (suggestions.length === 0) {
+        const generic = MEME_QUOTES["generic"] || [];
+        suggestions = pickRandom(generic, 3).map(arr => ({ texts: arr }));
+      }
 
-      updateState((prev) => {
-        const newTexts = prev.texts.map((t, i) => ({
-          ...t,
-          content: captions[i] || "",
-        }));
-
-        const lastText = newTexts[newTexts.length - 1];
-        if (lastText && lastText.content.trim().length > 0) {
-          newTexts.push({
-            id: crypto.randomUUID(),
-            content: "",
-            x: 50,
-            y: 50,
-          });
-        }
-
-        return {
-          ...prev,
-          texts: newTexts,
-        };
-      });
-
-      // Dynamic vibe toast even on MEME_QUOTES path
-      fireVibeToast(rawName || meme.name || 'meme');
+      setCaptionSuggestions(suggestions);
+      setCaptionPickerMeta(assetMeta?.raw || rawName || meme.name || '');
+      setShowCaptionPicker(true);
       setIsMagicGenerating(false);
-
-      showLongPressHint();
     }, 800);
   }
 
@@ -3815,16 +3796,24 @@ export default function Main({ onOpenInstructions }) {
   }
 
 
-  function handleCaptionApply({ top, bottom }) {
+  function handleCaptionApply({ texts }) {
     updateState(prev => {
-      const texts = prev.texts.map((t, i) => {
-        if (i === 0) return { ...t, content: top };
-        if (i === 1) return { ...t, content: bottom };
-        return t;
-      });
-      return { ...prev, texts };
+      const newTexts = prev.texts.map((t, i) => ({
+        ...t,
+        content: texts[i] != null ? texts[i] : t.content,
+      }));
+      return { ...prev, texts: newTexts };
     });
     setShowCaptionPicker(false);
+
+    // Vibe toast fires AFTER selection, not before
+    const raw = captionPickerMeta || meme.name || 'meme';
+    const vibe = MEME_IQ_VIBES[Math.floor(Math.random() * MEME_IQ_VIBES.length)];
+    const title = raw.length > 28 ? raw.slice(0, 28).trimEnd() + '...' : raw;
+    toast(`${title}... ${vibe}`, {
+      duration: TOAST_DURATIONS.tip,
+      id: "magic-caption",
+    });
   }
 
   function handleCaptionDismiss() {

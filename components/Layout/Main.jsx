@@ -788,7 +788,7 @@ export default function Main({ onOpenInstructions }) {
       return {
         ...prev,
         panels: newPanels,
-        name: memeData.name.replace(/\s+/g, "-"),
+        name: (memeData.name || "untitled").replace(/\s+/g, "-"),
         fontSize: calculateSmartFontSize(memeData.width, memeData.height, prev.texts),
       };
     });

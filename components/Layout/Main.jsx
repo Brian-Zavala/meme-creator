@@ -1131,7 +1131,8 @@ export default function Main({ onOpenInstructions }) {
       .then((data) => {
         const fixedMemes = data.data.memes.map(m => ({
           ...m,
-          url: m.url.replace(/^http:\/\//i, "https://")
+          url: m.url.replace(/^http:\/\//i, "https://"),
+          source: 'imgflip',
         }));
         setAllMemes(fixedMemes);
         setLoading(false);
@@ -3573,21 +3574,31 @@ export default function Main({ onOpenInstructions }) {
 
     setTimeout(() => {
       const activePanel = (meme.panels || []).find(p => p.id === meme.activePanelId);
-      const assetMeta = activePanel?.assetMeta;
 
-      // Branch A: image has rich metadata → match topics → show caption picker
+      // Derive metadata: prefer stored assetMeta, fall back to meme.name (handles
+      // panels restored from IndexedDB or the default panel that bypassed updateSelectedPanel).
+      const rawName = meme.name && meme.name !== 'Meme-Name' && meme.name !== 'untitled'
+        ? meme.name.replace(/-/g, ' ')
+        : null;
+      const assetMeta = activePanel?.assetMeta
+        || (rawName ? { raw: rawName, source: activePanel?.source || 'upload' } : null);
+
+      // Shared vibe toast builder
+      const fireVibeToast = (raw) => {
+        const _vibe = MEME_IQ_VIBES[Math.floor(Math.random() * MEME_IQ_VIBES.length)];
+        const _title = raw.length > 28 ? raw.slice(0, 28).trimEnd() + '...' : raw;
+        toast(`${_title}... ${_vibe}`, {
+          duration: TOAST_DURATIONS.tip,
+          id: "magic-caption",
+        });
+      };
+
+      // Branch A: metadata available → match topics → show caption picker
       if (assetMeta?.raw) {
         const suggestions = matchCaptions(assetMeta);
 
         if (suggestions.length > 0) {
-          const _vibe = MEME_IQ_VIBES[Math.floor(Math.random() * MEME_IQ_VIBES.length)];
-          const _title = assetMeta.raw.length > 28
-            ? assetMeta.raw.slice(0, 28).trimEnd() + '...'
-            : assetMeta.raw;
-          toast(`${_title}... ${_vibe}`, {
-            duration: TOAST_DURATIONS.tip,
-            id: "magic-caption",
-          });
+          fireVibeToast(assetMeta.raw);
           setCaptionSuggestions(suggestions);
           setCaptionPickerMeta(assetMeta.raw);
           setShowCaptionPicker(true);
@@ -3623,11 +3634,8 @@ export default function Main({ onOpenInstructions }) {
         };
       });
 
-      toast("Magic logic applied!", {
-        duration: 2000,
-        icon: <ToastIcon src="/animations/filter-frenzy.json" />,
-        id: "magic-logic"
-      });
+      // Dynamic vibe toast even on MEME_QUOTES path
+      fireVibeToast(rawName || meme.name || 'meme');
       setIsMagicGenerating(false);
 
       showLongPressHint();

@@ -3572,6 +3572,31 @@ export default function Main({ onOpenInstructions }) {
     setIsMagicGenerating(true);
 
     setTimeout(() => {
+      const activePanel = (meme.panels || []).find(p => p.id === meme.activePanelId);
+      const assetMeta = activePanel?.assetMeta;
+
+      // Branch A: image has rich metadata → match topics → show caption picker
+      if (assetMeta?.raw) {
+        const suggestions = matchCaptions(assetMeta);
+
+        if (suggestions.length > 0) {
+          const _vibe = MEME_IQ_VIBES[Math.floor(Math.random() * MEME_IQ_VIBES.length)];
+          const _title = assetMeta.raw.length > 28
+            ? assetMeta.raw.slice(0, 28).trimEnd() + '...'
+            : assetMeta.raw;
+          toast(`${_title}... ${_vibe}`, {
+            duration: TOAST_DURATIONS.tip,
+            id: "magic-caption",
+          });
+          setCaptionSuggestions(suggestions);
+          setCaptionPickerMeta(assetMeta.raw);
+          setShowCaptionPicker(true);
+          setIsMagicGenerating(false);
+          return;
+        }
+      }
+
+      // Branch B: fallback — use pre-written MEME_QUOTES for known Imgflip templates
       const category = MEME_QUOTES[meme.name] || MEME_QUOTES["generic"];
       const randomIndex = Math.floor(Math.random() * category.length);
       const captions = category[randomIndex];
@@ -3799,55 +3824,22 @@ export default function Main({ onOpenInstructions }) {
   }
 
   function handleMemeIQ() {
+    // Guard: require at least one non-empty text element on the canvas
     const allText = (meme.texts || [])
       .map(t => (t.content || "").trim())
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
 
-    // Branch A: no text on canvas → try image → caption flow
     if (!allText) {
-      const activePanel = (meme.panels || []).find(p => p.id === meme.activePanelId);
-      const assetMeta = activePanel?.assetMeta;
-
-      if (!assetMeta?.raw) {
-        toast("Add an image or some text first to use Meme IQ!", {
-          duration: TOAST_DURATIONS.error,
-          id: "meme-iq-no-content",
-        });
-        return;
-      }
-
-      setIsMemeIQing(true);
-      setTimeout(() => {
-        const suggestions = matchCaptions(assetMeta);
-
-        if (suggestions.length === 0) {
-          toast("No caption ideas found for this image. Try adding text instead!", {
-            duration: TOAST_DURATIONS.tip,
-            id: "meme-iq",
-          });
-          setIsMemeIQing(false);
-          return;
-        }
-
-        const _vibe = MEME_IQ_VIBES[Math.floor(Math.random() * MEME_IQ_VIBES.length)];
-        const _title = assetMeta.raw.length > 28
-          ? assetMeta.raw.slice(0, 28).trimEnd() + '...'
-          : assetMeta.raw;
-        toast(`${_title}... ${_vibe}`, {
-          duration: TOAST_DURATIONS.tip,
-          id: "meme-iq-caption",
-        });
-        setCaptionSuggestions(suggestions);
-        setCaptionPickerMeta(assetMeta.raw);
-        setShowCaptionPicker(true);
-        setIsMemeIQing(false);
-      }, 700);
+      toast("Add some text to the canvas first, then let Meme IQ work its magic!", {
+        duration: TOAST_DURATIONS.error,
+        icon: "✏️",
+        id: "meme-iq-no-text",
+      });
       return;
     }
 
-    // Branch B: text exists → original text → template flow (unchanged)
     setIsMemeIQing(true);
 
     setTimeout(() => {
@@ -3859,6 +3851,7 @@ export default function Main({ onOpenInstructions }) {
       let topScore = 0;
       for (const [templateName, keywords] of Object.entries(TEMPLATE_KEYWORDS)) {
         const score = keywords.filter(kw => {
+          // Support multi-word keywords too
           return kw.includes(" ") ? allText.includes(kw) : tokens.has(kw);
         }).length;
         if (score > topScore) { topScore = score; topTemplate = templateName; }
@@ -3867,6 +3860,7 @@ export default function Main({ onOpenInstructions }) {
       const isMatch = topScore >= MEME_IQ_THRESHOLD && topTemplate !== null;
 
       if (!isMatch) {
+        // No keyword match — inform but do NOT change the canvas
         toast("Meme IQ couldn't find a great template match. Try adding more descriptive text!", {
           duration: TOAST_DURATIONS.tip,
           icon: "🧠",

@@ -73,11 +73,12 @@ export function matchCaptions(assetMeta) {
 
   if (topTopics.length === 0) return [];
 
-  // Return the first caption pair from each matched topic.
+  // Return a random caption pair from each matched topic.
   return topTopics
     .map(topic => {
       const pairs = CAPTION_BANK[topic];
-      return Array.isArray(pairs) && pairs.length > 0 ? pairs[0] : null;
+      if (!Array.isArray(pairs) || pairs.length === 0) return null;
+      return pairs[Math.floor(Math.random() * pairs.length)];
     })
     .filter(Boolean);
 }

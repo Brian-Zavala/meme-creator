@@ -33,6 +33,7 @@ import { STYLE_DNA_PRESETS, STYLE_KEYWORDS } from "../../constants/styleDna";
 
 const LayoutSelector = lazy(() => import("../MemeEditor/LayoutSelector").then(module => ({ default: module.LayoutSelector })));
 import { ShareQualityModal } from "../Modals/ShareQualityModal";
+import { CaptionPicker } from '../Modals/CaptionPicker';
 const ExportConfirmModal = lazy(() => import("../Modals/ExportConfirmModal").then(module => ({ default: module.ExportConfirmModal })));
 const SnippetSuccessModal = lazy(() => import("../Modals/SnippetSuccessModal").then(module => ({ default: module.SnippetSuccessModal })));
 import { ToastIcon } from "../ui/ToastIcon";
@@ -799,6 +800,9 @@ export default function Main({ onOpenInstructions }) {
   const [isStyleDnaing, setIsStyleDnaing] = useState(false);
   const [isAutoLayouting, setIsAutoLayouting] = useState(false);
   const [isMemeIQing, setIsMemeIQing] = useState(false);
+  const [showCaptionPicker, setShowCaptionPicker] = useState(false);
+  const [captionSuggestions, setCaptionSuggestions] = useState([]);
+  const [captionPickerMeta, setCaptionPickerMeta] = useState('');
   const [isEmojiSaucing, setIsEmojiSaucing] = useState(false);
   const vibeShiftIndexRef = useRef(0);
   const styleDnaIndexRef = useRef(0);
@@ -3776,6 +3780,22 @@ export default function Main({ onOpenInstructions }) {
     }
   }
 
+
+  function handleCaptionApply({ top, bottom }) {
+    updateState(prev => {
+      const texts = prev.texts.map((t, i) => {
+        if (i === 0) return { ...t, content: top };
+        if (i === 1) return { ...t, content: bottom };
+        return t;
+      });
+      return { ...prev, texts };
+    });
+    setShowCaptionPicker(false);
+  }
+
+  function handleCaptionDismiss() {
+    setShowCaptionPicker(false);
+  }
 
   function handleMemeIQ() {
     // Guard: require at least one non-empty text element on the canvas

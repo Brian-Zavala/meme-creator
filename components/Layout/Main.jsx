@@ -4731,6 +4731,15 @@ export default function Main({ onOpenInstructions }) {
               />
             </Suspense>
 
+            {/* Caption Picker — shown when MemeIQ finds suggestions from image metadata */}
+            <CaptionPicker
+              isOpen={showCaptionPicker}
+              suggestions={captionSuggestions}
+              metaRaw={captionPickerMeta}
+              onApply={handleCaptionApply}
+              onDismiss={handleCaptionDismiss}
+            />
+
             <div className="hidden lg:block lg:col-span-4 space-y-6 order-2 lg:order-1 lg:sticky lg:top-8 self-start">
               {/* Controls moved to Toolbar */}
 

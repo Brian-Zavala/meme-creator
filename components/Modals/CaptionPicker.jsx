@@ -12,9 +12,9 @@ import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
  *
  * @param {object}   props
  * @param {boolean}  props.isOpen
- * @param {Array<{top:string,bottom:string}>} props.suggestions  1–3 pairs
+ * @param {Array<{texts:string[]}>} props.suggestions  1–3 options (each texts[] maps to panels)
  * @param {string}   props.metaRaw   Raw description shown as subtitle (truncated)
- * @param {function} props.onApply   Called with selected { top, bottom }
+ * @param {function} props.onApply   Called with selected { texts }
  * @param {function} props.onDismiss Called when dismissed with no selection
  */
 export function CaptionPicker({ isOpen, suggestions, metaRaw, onApply, onDismiss }) {
@@ -73,8 +73,10 @@ export function CaptionPicker({ isOpen, suggestions, metaRaw, onApply, onDismiss
                   : 'bg-[#181818] border-[#2f3336] hover:border-[#3e4347]',
               ].join(' ')}
             >
-              <p className="text-white text-sm font-semibold leading-snug">{s.top}</p>
-              <p className="text-slate-400 text-xs mt-0.5 leading-snug">{s.bottom}</p>
+              <p className="text-white text-sm font-semibold leading-snug">{s.texts[0]}</p>
+              {s.texts.slice(1).map((line, j) => (
+                <p key={j} className="text-slate-400 text-xs mt-0.5 leading-snug">{line}</p>
+              ))}
             </button>
           ))}
         </div>

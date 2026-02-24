@@ -17,6 +17,7 @@ import { deepFryImage } from "../../services/imageProcessor";
 import { processFileInWorker } from "../../services/fileLoader";
 import { MEME_QUOTES } from "../../constants/memeQuotes";
 import { TEMPLATE_KEYWORDS, TRENDING_TEMPLATES, MEME_IQ_THRESHOLD } from "../../constants/memeIQKeywords";
+import { MEME_IQ_VIBES } from '../../constants/captionBank.js';
 import { STICKER_KEYWORDS } from "../../constants/stickerKeywords";
 import { COMPILED_EMOJI_MAP, FALLBACK_EMOJIS } from "../../constants/emojiSauceMap";
 import { TONE_BANK, TONE_NAMES, TONE_LABELS } from "../../constants/toneBank";
@@ -3830,6 +3831,14 @@ export default function Main({ onOpenInstructions }) {
           return;
         }
 
+        const _vibe = MEME_IQ_VIBES[Math.floor(Math.random() * MEME_IQ_VIBES.length)];
+        const _title = assetMeta.raw.length > 28
+          ? assetMeta.raw.slice(0, 28).trimEnd() + '...'
+          : assetMeta.raw;
+        toast(`${_title}... ${_vibe}`, {
+          duration: TOAST_DURATIONS.tip,
+          id: "meme-iq-caption",
+        });
         setCaptionSuggestions(suggestions);
         setCaptionPickerMeta(assetMeta.raw);
         setShowCaptionPicker(true);

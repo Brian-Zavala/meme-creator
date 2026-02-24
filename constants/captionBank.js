@@ -228,3 +228,28 @@ export const TOKEN_TOPIC_MAP = {
     "flowers", "grass", "hiking", "trail", "outdoor", "outdoors", "wilderness",
   ],
 };
+
+// Rotating funny phrases for the MemeIQ caption discovery toast.
+// Format: "{truncated asset title}... {MEME_IQ_VIBES[random]}"
+export const MEME_IQ_VIBES = [
+  "sauce mode activated",
+  "the algorithm is pleased",
+  "certified dank material detected",
+  "big brain energy: engaged",
+  "your therapist won't believe this",
+  "hold on to your fonts",
+  "we are SO back",
+  "maximum cringe potential unlocked",
+  "the internet called, it wants this back",
+  "sending this to everyone I know",
+  "this has villain arc written all over it",
+  "it's giving main character energy",
+  "the council has approved",
+  "absolutely unhinged. we love it",
+  "this hits different at 2am",
+  "no notes. chef's kiss",
+  "core memory unlocked",
+  "rent free in my head forever",
+  "petition to make this the official meme of the year",
+  "my sides have left the building",
+];

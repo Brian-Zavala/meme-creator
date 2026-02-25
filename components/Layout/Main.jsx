@@ -1231,7 +1231,8 @@ export default function Main({ onOpenInstructions }) {
                 objectFit: "cover",
                 posX: 50,
                 posY: 50,
-                filters: { ...DEFAULT_FILTERS }
+                filters: { ...DEFAULT_FILTERS },
+                assetMeta: { raw: first.name || 'Giphy GIF', source: first.source || 'giphy' },
               }
             : p
         );
@@ -1355,6 +1356,7 @@ export default function Main({ onOpenInstructions }) {
       let sourceUrl = null;
       let finalSource = selectedSource;
       let activeSourceBlob = null; // For Pexels/Unsplash if we fetch separately
+      let mediaName = 'Random Meme';
 
       // HELPER: Random Chaos Keyword
       const getChaosKeyword = () => {
@@ -1380,6 +1382,7 @@ export default function Main({ onOpenInstructions }) {
 
         if (results && results.length > 0) {
           const randomGif = results[Math.floor(Math.random() * results.length)];
+          mediaName = randomGif.name || 'Giphy GIF';
           selectedMedia = randomGif.url;
           sourceUrl = randomGif.shareUrl;
           // Check if it's actually a video file (Giphy sometimes returns mp4s in direct urls)
@@ -1392,6 +1395,7 @@ export default function Main({ onOpenInstructions }) {
          // We use the service function which handles tracking
          const randomImage = await getRandomImage('unsplash');
          if (randomImage) {
+            mediaName = randomImage.name || 'Unsplash Photo';
             // Unsplash requires track download trigger
             trackUnsplashDownload(randomImage);
 
@@ -1424,6 +1428,7 @@ export default function Main({ onOpenInstructions }) {
          if (isPexelsVideo) {
             const randomVideo = await getRandomPexelsVideo();
             if (randomVideo) {
+               mediaName = randomVideo.name || 'Pexels Video';
                selectedMedia = randomVideo.url;
                sourceUrl = randomVideo.photographerUrl;
                isVideo = true;
@@ -1432,6 +1437,7 @@ export default function Main({ onOpenInstructions }) {
          } else {
             const randomPhoto = await getRandomImage('pexels');
              if (randomPhoto) {
+                mediaName = randomPhoto.name || 'Pexels Photo';
                 // Fetch blob for safety
                 try {
                   const response = await fetch(`https://wsrv.nl/?url=${encodeURIComponent(randomPhoto.url)}`);
@@ -1458,6 +1464,7 @@ export default function Main({ onOpenInstructions }) {
       if (!selectedMedia) {
         // Pick random from local meme deck
         const randomMeme = allMemes[Math.floor(Math.random() * allMemes.length)];
+        mediaName = randomMeme.name || 'Random Meme';
 
         // Fetch blob for Imgflip to avoid taint (reusing existing pattern)
         try {
@@ -1537,7 +1544,8 @@ export default function Main({ onOpenInstructions }) {
               objectFit: "cover",
               filters: chaosFilters,
               processedImage: null,
-              processedDeepFryLevel: 0
+              processedDeepFryLevel: 0,
+              assetMeta: { raw: mediaName, source: finalSource },
             }
             : p
         );
@@ -1577,6 +1585,7 @@ export default function Main({ onOpenInstructions }) {
         return {
           ...prev,
           panels: newPanels,
+          name: mediaName.replace(/\s+/g, "-"),
           mode: isVideo ? "video" : "image",
           texts: newTexts,
           fontSize: chaosFontSize,
